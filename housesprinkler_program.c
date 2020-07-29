@@ -37,7 +37,8 @@
  *
  *    Add to the rain delay used to cancel programs during rain periods.
  *
- * void housesprinkler_program_set_index (int value);
+ * void housesprinkler_program_set_index
+ *          (const char *origin, int value, time_t timestamp);
  *
  *    Set the current watering index for all upcoming programs.
  *
@@ -280,11 +281,12 @@ void housesprinkler_program_refresh (void) {
     }
 }
 
-void housesprinkler_program_set_index (const char *origin, int value) {
+void housesprinkler_program_set_index 
+         (const char *origin, int value, time_t timestamp) {
 
     ProgramIndex = value;
     ProgramIndexOrigin = origin;
-    ProgramIndexTimestamp = time(0);
+    ProgramIndexTimestamp = timestamp;
 }
 
 void housesprinkler_program_rain (int enabled) {

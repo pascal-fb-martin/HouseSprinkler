@@ -6,20 +6,20 @@
     "zipcode" : "90275",
     "timezone" : "America/Los_Angeles",
     "raindelay" : true,
-    "wateringindex" : {
-        "enable" : true,
-        "provider" : "waterwise",
-        "url": "http://www.bewaterwise.com/RSS/rsswi.xml",
-        "format": "XML",
-        "value": ".rss.content.channel.content.item[1].content.description.content",
-        "adjust" : {
-            "min" : "10",
-            "max" : "150"
-        },
-        "refresh" : [
-            "21:10"
-        ]
-    },
+    "wateringindex" : [
+        {
+            "enable" : true,
+            "provider" : "waterwise",
+            "url": "http://www.bewaterwise.com/RSS/rsswi.xml",
+            "format": "XML",
+            "path": ".rss.content.channel.content.item[1].content.description.content",
+            "adjust" : {
+                "min" : 10,
+                "max" : 150
+            },
+            "refresh" : [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 ]
+        }
+    ],
     "servers" : ["http://relays1/relays"],
     "zones" : [
         {

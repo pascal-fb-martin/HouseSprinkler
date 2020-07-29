@@ -34,6 +34,7 @@
 #include "houseportalclient.h"
 
 #include "housesprinkler_config.h"
+#include "housesprinkler_index.h"
 #include "housesprinkler_zone.h"
 #include "housesprinkler_program.h"
 
@@ -196,6 +197,7 @@ static void hs_background (int fd, int mode) {
         }
     }
     housesprinkler_zone_periodic(now);
+    housesprinkler_index_periodic (now);
     housesprinkler_program_periodic(now);
 }
 
@@ -219,6 +221,7 @@ int main (int argc, const char **argv) {
         exit(1);
     }
     housesprinkler_zone_refresh ();
+    housesprinkler_index_refresh ();
     housesprinkler_program_refresh ();
 
     echttp_route_uri ("/sprinkler/config", sprinkler_config);
@@ -239,6 +242,9 @@ int main (int argc, const char **argv) {
 
     echttp_static_route ("/sprinkler", "/usr/share/house/public/sprinkler");
     echttp_background (&hs_background);
+
+    housesprinkler_index_register (housesprinkler_program_set_index);
+
     echttp_loop();
 }
 

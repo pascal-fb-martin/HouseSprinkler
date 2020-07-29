@@ -1,5 +1,6 @@
 
 OBJS= housesprinkler.o \
+      housesprinkler_index.o \
       housesprinkler_program.o \
       housesprinkler_zone.o \
       housesprinkler_config.o

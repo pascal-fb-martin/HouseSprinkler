@@ -17,13 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301, USA.
  *
+ *
+ * housesprinkler_index.h - Access watering index services.
  */
 
-void housesprinkler_program_refresh (void);
-void housesprinkler_program_rain (int enabled);
-void housesprinkler_program_set_rain  (int delay);
-void housesprinkler_program_set_index
-         (const char *origin, int value, time_t timestamp);
-void housesprinkler_program_manual   (const char *name);
-void housesprinkler_program_periodic (time_t now);
+void housesprinkler_index_refresh (void);
+
+const char *housesprinkler_index_origin (void);
+time_t housesprinkler_index_timestamp (void);
+int housesprinkler_index_get (void);
+
+void housesprinkler_index_periodic (time_t now);
+
+typedef void housesprinkler_index_listener
+                 (const char *origin, int value, time_t timestamp);
+
+void housesprinkler_index_register (housesprinkler_index_listener *listener);
 
