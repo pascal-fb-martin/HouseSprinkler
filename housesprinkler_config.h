@@ -35,3 +35,5 @@ int housesprinkler_config_array_length (int array);
 int housesprinkler_config_enumerate    (int parent, int *index);
 int housesprinkler_config_object       (int parent, const char *path);
 
+const char *housesprinkler_config_name (void);
+

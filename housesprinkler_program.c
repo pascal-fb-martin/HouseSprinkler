@@ -56,6 +56,8 @@
 #include <echttp.h>
 #include <echttp_json.h>
 
+#include "houselog.h"
+
 #include "housesprinkler.h"
 #include "housesprinkler_config.h"
 #include "housesprinkler_zone.h"
@@ -320,6 +322,9 @@ static void housesprinkler_program_activate
     // Otherwise use the season static schedule, if any.
     //
     time_t now = time(0);
+    houselog_event (now, "PROGRAM", program->name, "START",
+                    "%s mode", manual ? "manual" : "schedule");
+
     if (ProgramIndexTimestamp > now - (3 * 86400)) {
 
         index = ProgramIndex; // A recent explicit index takes priority.

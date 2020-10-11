@@ -77,6 +77,8 @@
 #include <echttp.h>
 #include <echttp_json.h>
 
+#include "houselog.h"
+
 #include "housesprinkler.h"
 #include "housesprinkler_zone.h"
 #include "housesprinkler_config.h"
@@ -142,7 +144,8 @@ void housesprinkler_zone_refresh (void) {
             if (type) Servers[i].type = type + 1;
             DEBUG ("\tServer %s (type %s)\n", Servers[i].url, Servers[i].type);
         } else {
-            fprintf (stderr, "Invalid server at index %d\n", i);
+            houselog_trace (HOUSE_FAILURE, "config",
+                            "Invalid server at index %d", i);
             Servers[i].url[0] = 0;
         }
     }
@@ -222,8 +225,10 @@ void housesprinkler_zone_activate (const char *name, int pulse, int manual) {
 void housesprinkler_zone_stop (void) {
 
     int i;
+    time_t now = time(0);
 
-    DEBUG ("%ld: Stop all zones\n", time(0));
+    DEBUG ("%ld: Stop all zones\n", now);
+    houselog_event (now, "ZONE", "ALL", "STOP", "manual");
     for (i = 0; i < QueueNext; ++i) {
         Queue[i].runtime = 0;
     }
@@ -239,13 +244,13 @@ static void housesprinkler_zone_controlled
        static char url[256];
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {
-           fprintf (stderr, "%s: invalid redirect\n", zone->name);
+           houselog_trace (HOUSE_FAILURE, zone->name, "invalid redirect");
            return;
        }
        strncpy (url, redirect, sizeof(url));
        const char *error = echttp_client ("GET", url);
        if (error) {
-           fprintf (stderr, "%s: %s\n", url, error);
+           houselog_trace (HOUSE_FAILURE, zone->name, "%s: %s", url, error);
            return;
        }
        DEBUG ("Redirected to %s\n", url);
@@ -253,21 +258,25 @@ static void housesprinkler_zone_controlled
        return;
    }
 
-   // TBD: add a log to record that the command was processed.
-   // if (status != 200) return;
-
+   // TBD: add an event to record that the command was processed. Too verbose?
+   if (status != 200)
+       houselog_trace (HOUSE_FAILURE, zone->name,
+                       "HTTP code %d for URL %s", status, zone->server->url);
 }
 
 static int housesprinkler_zone_start (int zone, int pulse) {
+    time_t now = time(0);
     DEBUG ("%ld: Start zone %s for %d seconds\n",
-           time(0), Zones[zone].name, pulse);
+           now, Zones[zone].name, pulse);
+    houselog_event (now, "ZONE", Zones[zone].name, "START",
+                    "for %d seconds", pulse);
     if (Zones[zone].server) {
         static char url[256];
         snprintf (url, sizeof(url), "%s/set?point=%s&state=on&pulse=%d",
                   Zones[zone].server->url, Zones[zone].name, pulse);
         const char *error = echttp_client ("GET", url);
         if (error) {
-            fprintf (stderr, "%s: %s\n", url, error);
+            houselog_trace (HOUSE_FAILURE, Zones[zone].name, "cannot create socket for %s, %s", url, error);
             return 0;
         }
         DEBUG ("GET %s\n", url);
@@ -339,13 +348,14 @@ static void housesprinkler_zone_discovered
        static char url[256];
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {
-           fprintf (stderr, "%s: invalid redirect\n", server->url);
+           houselog_trace (HOUSE_FAILURE, server->url, "invalid redirect");
            return;
        }
        strncpy (url, redirect, sizeof(url));
        const char *error = echttp_client ("GET", url);
        if (error) {
-           fprintf (stderr, "%s: %s\n", url, error);
+           houselog_trace (HOUSE_FAILURE, url,
+                           "cannot open socket, %s", error);
            return;
        }
        echttp_submit (0, 0, housesprinkler_zone_discovered, (void *)server);
@@ -358,7 +368,7 @@ static void housesprinkler_zone_discovered
    // Analyze the answer and retrieve the control points matching our zones.
    const char *error = echttp_json_parse (data, tokens, &count);
    if (error) {
-       fprintf (stderr, "%s/status: syntax error, %s\n", server->url, error);
+       houselog_trace (HOUSE_FAILURE, server->url, "syntax error, %s", error);
        return;
    }
    if (count <= 0) return;
@@ -372,7 +382,7 @@ static void housesprinkler_zone_discovered
 
    error = echttp_json_enumerate (tokens+controls, innerlist);
    if (error) {
-       fprintf (stderr, "%s: %s\n", path, error);
+       houselog_trace (HOUSE_FAILURE, path, "%s", error);
        return;
    }
    int i;
@@ -413,7 +423,7 @@ static void housesprinkler_zone_discovery (time_t now) {
             DEBUG ("Attempting discovery at %s (server %d)\n", url, i);
             const char *error = echttp_client ("GET", url);
             if (error) {
-                fprintf (stderr, "%s: %s\n", url, error);
+                houselog_trace (HOUSE_FAILURE, Servers[i].url, "%s", error);
                 continue;
             }
 

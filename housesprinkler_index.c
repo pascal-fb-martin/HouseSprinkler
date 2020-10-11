@@ -46,6 +46,31 @@
  * void housesprinkler_index_periodic (time_t now);
  *
  *    The periodic function that schedule index requests.
+ *
+ * CONFIGURATION
+ *
+ * This module is driven by the list of index providers provided in the
+ * JSON configuration. Each provider is defined by:
+ * - a provider name.
+ * - an enabled flag (a way to keep the configuration's data without
+ *   activating it).
+ * - an URL to get the index data.
+ * - An indication if the data is XML or JSON format.
+ * - A path to the index value, in JavaScript syntax.
+ * - the minimum and maximum adjustment bounds for the index.
+ * - A list of times of day when to query the server.
+ *
+ * The module does not query a server more often than every six hours,
+ * regardless of the schedule provided. A watering index does not change
+ * every hour anyway.
+ *
+ * The module query the enabled servers from that list, in the order provided,
+ * until one has answered with a valid index value. For the purpose of that
+ * poll logic, an index value becomes stale after six hours.
+ *
+ * The most reasonable use of multiple servers is to use one as the primary
+ * source (listed first) and then schedule a second one at the same time, or
+ * an hour later, as a backup.
  */
 
 #include <string.h>
@@ -54,6 +79,8 @@
 #include <echttp.h>
 #include <echttp_json.h>
 #include <echttp_xml.h>
+
+#include "houselog.h"
 
 #include "housesprinkler.h"
 #include "housesprinkler_index.h"
@@ -108,41 +135,62 @@ void housesprinkler_index_refresh (void) {
 
     for (i = 0; i < ServersCount; ++i) {
         int child = list[i];
-        Servers[i].enabled = housesprinkler_config_boolean (child, ".enable");
-        Servers[i].name = housesprinkler_config_string (child, ".provider");
-        Servers[i].url = housesprinkler_config_string (child, ".url");
+        SprinklerIndexServer *server = Servers + i;
+
+        server->enabled = housesprinkler_config_boolean (child, ".enable");
+        server->name = housesprinkler_config_string (child, ".provider");
+        server->url = housesprinkler_config_string (child, ".url");
         const char *format = housesprinkler_config_string (child, ".format");
-        Servers[i].format = INDEX_FORMAT_UNKNOWN;
-        if (format) {
-            if (strcmp (format, "JSON") == 0)
-                Servers[i].format = INDEX_FORMAT_JSON;
-            else if (strcmp (format, "XML") == 0)
-                Servers[i].format = INDEX_FORMAT_XML;
-        }
-        Servers[i].path = housesprinkler_config_string (child, ".path");
-        Servers[i].adjust[0] = housesprinkler_config_integer (child, ".adjust.min");
-        Servers[i].adjust[1] = housesprinkler_config_integer (child, ".adjust.max");
-        int times[8];
-        int refresh = housesprinkler_config_array (child, ".refresh");
-        int timescount = housesprinkler_config_enumerate (refresh, times);
-        if (timescount > 24) {
-            fprintf (stderr, "More than 24 refresh times per day??\n");
-            exit (1);
-        }
-        for (j = 0; j < timescount; ++j) {
-            Servers[i].refresh[j] =
-                housesprinkler_config_integer (times[j], "");
-        }
-        for (; j < timescount; ++j) {
-            Servers[i].refresh[j] = -1;
-        }
-        Servers[i].lastquery = 0;
-        if (!Servers[i].name || !Servers[i].url || !Servers[i].path) {
-            Servers[i].enabled = 0;
+        server->path = housesprinkler_config_string (child, ".path");
+
+        if (!server->name || !server->url || !server->path || !format) {
+            server->enabled = 0;
+            DEBUG ("\tIndex server at %d disabled (incomplete record)\n", i);
             continue;
         }
+
+        server->lastquery = 0;
+        server->format = INDEX_FORMAT_JSON; // Default.
+        if (format) {
+            if (strcmp (format, "XML") == 0) server->format = INDEX_FORMAT_XML;
+            if (strcmp (format, "JSON") == 0) server->format = INDEX_FORMAT_JSON;
+            else {
+                DEBUG ("\tIndex server at %d disabled (invalid format %s)\n",
+                       i, format);
+            }
+        }
+
+        server->adjust[0] = housesprinkler_config_integer (child, ".adjust.min");
+        server->adjust[1] = housesprinkler_config_integer (child, ".adjust.max");
+        // If no limits provided, use reasonable numbers.
+        if (server->adjust[0] <= 0) server->adjust[0] = 0;
+        if (server->adjust[1] <= 0) server->adjust[1] = 150;
+
+        int refresh = housesprinkler_config_array (child, ".refresh");
+        if (refresh < 0) {
+            server->refresh[0] = 0; // Midnight.
+            for (j = 1; j < 24; ++j) server->refresh[j] = -1;
+            continue;
+        }
+        int times[24];
+        int timescount = housesprinkler_config_enumerate (refresh, times);
+        if (timescount > 24) {
+            houselog_trace (HOUSE_FAILURE, server->name,
+                            "More than 24 refresh times per day?");
+            exit (1); // Array overflow has occurred.
+        }
+        for (j = 0; j < timescount; ++j) {
+            server->refresh[j] = housesprinkler_config_integer (times[j], "");
+            if (server->refresh[j] < 0 || server->refresh[j] >= 24) {
+                DEBUG ("\tIndex server %s invalid time %d\n",
+                       server->refresh[j]);
+                server->refresh[j] = -1; // Ignore invalid time.
+            }
+        }
+        for (; j < 24; ++j) server->refresh[j] = -1;
+
         DEBUG ("\tIndex server %s (url=%s, format = %s, min=%d, max=%d)\n",
-               Servers[i].name, Servers[i].url, format, Servers[i].adjust[0], Servers[i].adjust[1]);
+               server->name, server->url, format, server->adjust[0], server->adjust[1]);
     }
 }
 
@@ -176,18 +224,27 @@ static void housesprinkler_index_response
    SprinklerIndexServer *server = (SprinklerIndexServer *) origin;
    ParserToken tokens[100];
    int  count = 100;
+   time_t now = time(0);
+   int rawindex;
+
+   if (SprinklerIndexTimestamp > now - 3600) {
+       DEBUG ("Ignoring response from %s, received recent index already\n",
+              server->url);
+       return;
+   }
 
    if (status == 302) {
        static char url[256];
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {
-           fprintf (stderr, "%s: invalid redirect\n", server->url);
+           houselog_trace (HOUSE_FAILURE, server->name,
+                           "%s: invalid redirect", url);
            return;
        }
        strncpy (url, redirect, sizeof(url));
        const char *error = echttp_client ("GET", url);
        if (error) {
-           fprintf (stderr, "%s: %s\n", url, error);
+           houselog_trace (HOUSE_FAILURE, server->name, "%s: %s", url, error);
            return;
        }
        echttp_submit (0, 0, housesprinkler_index_response, (void *)server);
@@ -195,7 +252,10 @@ static void housesprinkler_index_response
        return;
    }
 
-   if (status != 200) return;
+   if (status != 200) {
+       houselog_trace (HOUSE_FAILURE, server->name, "HTTP code %d", status);
+       return;
+   }
 
    // Analyze the answer and retrieve the control points matching our zones.
    const char *error;
@@ -207,7 +267,8 @@ static void housesprinkler_index_response
        default: return;
    }
    if (error) {
-       fprintf (stderr, "%s: syntax error, %s\n", server->url, error);
+       houselog_trace (HOUSE_FAILURE, server->name,
+                       "%s: syntax error, %s", server->url, error);
        return;
    }
    if (count <= 0) return;
@@ -216,10 +277,10 @@ static void housesprinkler_index_response
    if (index <= 0) return;
 
    if (tokens[index].type == PARSER_INTEGER) {
-       SprinklerIndex = tokens[index].value.integer;
+       rawindex = tokens[index].value.integer;
    } else if (tokens[index].type == PARSER_STRING) {
        // This happens with XML..
-       SprinklerIndex = atoi(tokens[index].value.string);
+       rawindex = atoi(tokens[index].value.string);
    } else {
        return; // Invalid.
    }
@@ -227,10 +288,18 @@ static void housesprinkler_index_response
        SprinklerIndex = server->adjust[0];
    else if (SprinklerIndex > server->adjust[1])
        SprinklerIndex = server->adjust[1];
-   SprinklerIndexTimestamp = time(0);
+   else
+       SprinklerIndex = rawindex;
+
+   SprinklerIndexTimestamp = now;
    SprinklerIndexOrigin = server->name;
 
    DEBUG ("Received index %d from %s\n", SprinklerIndex, server->name);
+   if (SprinklerIndex == rawindex)
+       houselog_event (now, "INDEX", server->url, "RECEIVED", "%d%%", rawindex);
+   else
+       houselog_event (now, "INDEX", server->url, "RECEIVED",
+                       "%d%% (adjusted from %d%%)", SprinklerIndex, rawindex);
 
    int i;
    for (i = 0; i < INDEX_MAX_LISTENER; ++i) {
@@ -247,7 +316,7 @@ static void housesprinkler_index_query (SprinklerIndexServer *server) {
     DEBUG ("Requesting index from %s at %s\n", server->name, server->url);
     const char *error = echttp_client ("GET", server->url);
     if (error) {
-        fprintf (stderr, "%s: %s\n", server->url, error);
+        houselog_trace (HOUSE_FAILURE, server->name, "%s", error);
         return;
     }
 
@@ -256,17 +325,27 @@ static void housesprinkler_index_query (SprinklerIndexServer *server) {
 
 void housesprinkler_index_periodic (time_t now) {
 
+    static time_t LastCall = 0;
+
     int i, h;
     struct tm local = *localtime(&now);
 
+    if (LastCall > now - 60) return; // Limit to one attempt per minute.
+    LastCall = now;
+
+    // Do not query any more server if we obtained an answer recently.
+    if (SprinklerIndexTimestamp > now - (6 * 3600)) return;
+
+    // Query the first server we did not ask yet.
     for (i = 0; i < ServersCount; ++i) {
         if (Servers[i].enabled) {
-            if (Servers[i].lastquery >= now - 3600) continue;
-            for (h = 0 ; h < 24; ++h)
-                if (local.tm_hour == Servers[i].refresh[h]) break;
-            if (h < 24) {
-                housesprinkler_index_query (Servers+i);
-                Servers[i].lastquery = now;
+            if (Servers[i].lastquery >= now - (6 * 3600)) continue;
+            for (h = 0 ; h < 24; ++h) {
+                if (local.tm_hour == Servers[i].refresh[h]) {
+                    housesprinkler_index_query (Servers+i);
+                    Servers[i].lastquery = now;
+                    return;
+                }
             }
         }
     }

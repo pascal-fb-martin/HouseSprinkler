@@ -32,6 +32,7 @@
 
 #include "echttp_static.h"
 #include "houseportalclient.h"
+#include "houselog.h"
 
 #include "housesprinkler_config.h"
 #include "housesprinkler_index.h"
@@ -107,20 +108,6 @@ static const char *sprinkler_refresh (const char *method, const char *uri,
                                       const char *data, int length) {
 
     return sprinkler_status (method, uri, data, length);;
-}
-
-static const char *sprinkler_history (const char *method, const char *uri,
-                                      const char *data, int length) {
-
-    echttp_content_type_json ();
-    return "";
-}
-
-static const char *sprinkler_latest (const char *method, const char *uri,
-                                     const char *data, int length) {
-
-    echttp_content_type_json ();
-    return "";
 }
 
 static const char *sprinkler_program_on (const char *method, const char *uri,
@@ -199,6 +186,7 @@ static void hs_background (int fd, int mode) {
     housesprinkler_zone_periodic(now);
     housesprinkler_index_periodic (now);
     housesprinkler_program_periodic(now);
+    houselog_background (now);
 }
 
 int main (int argc, const char **argv) {
@@ -215,9 +203,11 @@ int main (int argc, const char **argv) {
         houseportal_initialize (argc, argv);
         use_houseportal = 1;
     }
+    houselog_initialize ("sprinkler", argc, argv);
     const char *error = housesprinkler_config_load (argc, argv);
     if (error) {
-        fprintf (stderr, "Cannot load config: %s\n", error);
+        houselog_trace
+            (HOUSE_FAILURE, housesprinkler_config_name(), "%s", error);
         exit(1);
     }
     housesprinkler_zone_refresh ();
@@ -229,8 +219,6 @@ int main (int argc, const char **argv) {
     echttp_route_uri ("/sprinkler/raindelay", sprinkler_raindelay);
     echttp_route_uri ("/sprinkler/wateringindex", sprinkler_waterindex);
     echttp_route_uri ("/sprinkler/refresh", sprinkler_refresh);
-    echttp_route_uri ("/sprinkler/history", sprinkler_history);
-    echttp_route_uri ("/sprinkler/history/latest", sprinkler_latest);
 
     echttp_route_uri ("/sprinkler/program/on", sprinkler_program_on);
     echttp_route_uri ("/sprinkler/zone/on",    sprinkler_zone_on);
@@ -245,6 +233,9 @@ int main (int argc, const char **argv) {
 
     housesprinkler_index_register (housesprinkler_program_set_index);
 
+    char hostname[80];
+    gethostname (hostname, sizeof(hostname));
+    houselog_event (time(0), "SYSTEM", hostname, "START", "");
     echttp_loop();
 }
 

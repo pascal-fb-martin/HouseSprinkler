@@ -58,6 +58,10 @@
  *
  *    Retrieve an object.
  * 
+ * const char *housesprinkler_config_name (void);
+ *
+ *    Get the name of the current configuration file, for informational
+ *    purpose (e.g. error messages).
  */
 
 #include <string.h>
@@ -86,10 +90,15 @@ static const char *ConfigFile = "/etc/house/sprinkler.json";
 
 static const char *housesprinkler_config_refresh (const char *file) {
 
+    char *newconfig;
+
     DEBUG ("Loading config from %s\n", ConfigFile);
 
+    newconfig = echttp_parser_load (file);
+    if (!newconfig) return "not accessible";
+
     if (ConfigText) echttp_parser_free (ConfigText);
-    ConfigText = echttp_parser_load (file);
+    ConfigText = newconfig;
     ConfigTextLength = strlen(ConfigText);
 
     ConfigTokenCount = CONFIGMAXSIZE;
@@ -183,5 +192,9 @@ int housesprinkler_config_enumerate (int parent, int *index) {
 
 int housesprinkler_config_object (int parent, const char *path) {
     return housesprinkler_config_find(parent, path, PARSER_OBJECT);
+}
+
+const char *housesprinkler_config_name (void) {
+    return ConfigFile;
 }
 
