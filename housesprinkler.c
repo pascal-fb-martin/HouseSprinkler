@@ -43,6 +43,7 @@
 #define RAINDELAYINTERVAL 86340000
 
 static int use_houseportal = 0;
+static char hostname[128];
 
 static void hs_help (const char *argv0) {
 
@@ -81,8 +82,21 @@ static const char *sprinkler_status (const char *method, const char *uri,
                                      const char *data, int length) {
     static char buffer[65537];
 
+    int cursor = 0;
+
+    snprintf (buffer, sizeof(buffer),
+              "{\"sprinkler\":{\"timestamp\":%ld,\"host\":\"%s\",\"control\":{",
+              time(0), hostname);
+    cursor = strlen(buffer);
+    cursor += housesprinkler_zone_status (buffer+cursor, sizeof(buffer)-cursor);
+    snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
+    cursor += strlen(buffer+cursor);
+    cursor += housesprinkler_program_status (buffer+cursor, sizeof(buffer)-cursor);
+    snprintf (buffer+cursor,sizeof(buffer)-cursor, "}}}");
+    cursor += strlen(buffer+cursor);
+
     echttp_content_type_json ();
-    return "";
+    return buffer;
 }
 
 static const char *sprinkler_raindelay (const char *method, const char *uri,
@@ -233,7 +247,6 @@ int main (int argc, const char **argv) {
 
     housesprinkler_index_register (housesprinkler_program_set_index);
 
-    char hostname[80];
     gethostname (hostname, sizeof(hostname));
     houselog_event (time(0), "SYSTEM", hostname, "START", "");
     echttp_loop();

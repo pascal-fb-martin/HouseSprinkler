@@ -48,6 +48,10 @@
  *
  *    This is the heart of the sprinkler function: activate and execute
  *    watering schedules.
+ *
+ * int housesprinkler_program_status (char *buffer, int size);
+ *
+ *    Report the status of this module as a JSON string.
  */
 
 #include <string.h>
@@ -455,5 +459,40 @@ void housesprinkler_program_periodic (time_t now) {
             Programs[i].running = 0;
         }
     }
+}
+
+int housesprinkler_program_status (char *buffer, int size) {
+
+    int i;
+    int cursor = 0;
+    const char *prefix = "";
+
+    snprintf (buffer, size, "\"rain\":{\"enabled\":%s,\"delay\":%d}",
+              ProgramRainEnabled?"true":"false", ProgramRainDelay);
+    cursor = strlen(buffer);
+    if (cursor >= size) goto overflow;
+
+    snprintf (buffer+cursor, size-cursor, ",\"active\":[");
+    cursor = strlen(buffer);
+    if (cursor >= size) goto overflow;
+
+    for (i = 0; i < ProgramsCount; ++i) {
+        if (Programs[i].running) {
+            snprintf (buffer+cursor, size-cursor,
+                      "%s\"%s\"", prefix, Programs[i].name);
+            prefix = ",";
+        }
+    }
+
+    snprintf (buffer+cursor, size-cursor, "]");
+    cursor += strlen(buffer+cursor);
+    if (cursor >= size) goto overflow;
+
+    return cursor;
+
+overflow:
+    houselog_trace (HOUSE_FAILURE, "BUFFER", "overflow");
+    buffer[0] = 0;
+    return 0;
 }
 

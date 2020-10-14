@@ -69,6 +69,11 @@
  * int  housesprinkler_zone_idle (void);
  *
  *    Return true if at least one zone is active, false otherwise.
+ *
+ * int housesprinkler_zone_status (char *buffer, int size);
+ *
+ *    A function that populates a complete status in JSON.
+ *
  */
 
 #include <string.h>
@@ -90,6 +95,7 @@
 typedef struct {
     char url[256];
     char *type;
+    char status;
 } SprinklerControlServer;
 
 static SprinklerControlServer *Servers = 0;
@@ -99,7 +105,8 @@ typedef struct {
     const char *name;
     int pulse;
     int pause;
-    int manual;
+    char manual;
+    char status;
     SprinklerControlServer *server;
 } SprinklerZone;
 
@@ -114,6 +121,8 @@ typedef struct {
 
 static SprinklerQueue *Queue = 0;
 static int             QueueNext = 0;
+
+static int ZoneIndexValvePause = 1; // An optional pause for indexing valves.
 
 void housesprinkler_zone_refresh (void) {
 
@@ -132,6 +141,9 @@ void housesprinkler_zone_refresh (void) {
         ServersCount = housesprinkler_config_enumerate (content, list);
     }
 
+    ZoneIndexValvePause = housesprinkler_config_integer (0, "pause");
+    if (ZoneIndexValvePause < 1) ZoneIndexValvePause = 1;
+
     Servers = calloc (ServersCount, sizeof(SprinklerControlServer));
     DEBUG ("Loading %d servers\n", ServersCount);
 
@@ -142,11 +154,13 @@ void housesprinkler_zone_refresh (void) {
             strncpy (Servers[i].url, name, sizeof(Servers[i].url));
             char *type = strrchr (Servers[i].url, '/');
             if (type) Servers[i].type = type + 1;
+            Servers[i].status = 'u';
             DEBUG ("\tServer %s (type %s)\n", Servers[i].url, Servers[i].type);
         } else {
             houselog_trace (HOUSE_FAILURE, "config",
                             "Invalid server at index %d", i);
             Servers[i].url[0] = 0;
+            Servers[i].status = 'f';
         }
     }
 
@@ -172,6 +186,7 @@ void housesprinkler_zone_refresh (void) {
             Zones[i].pause = housesprinkler_config_integer (zone, ".pause");
             Zones[i].manual = housesprinkler_config_boolean (zone, ".manual");
             Zones[i].server = 0;
+            Zones[i].status = 'u';
         }
         DEBUG ("\tZone %s (pulse=%d, pause=%d, manual=%s)\n",
                Zones[i].name, Zones[i].pulse, Zones[i].pause,
@@ -259,9 +274,13 @@ static void housesprinkler_zone_controlled
    }
 
    // TBD: add an event to record that the command was processed. Too verbose?
-   if (status != 200)
-       houselog_trace (HOUSE_FAILURE, zone->name,
-                       "HTTP code %d for URL %s", status, zone->server->url);
+   if (status != 200) {
+       if (zone->status != 'e')
+           houselog_trace (HOUSE_FAILURE, zone->name,
+                           "HTTP code %d for zone %s", status, zone->name);
+       zone->status  = 'e';
+   }
+   zone->status  = 'a';
 }
 
 static int housesprinkler_zone_start (int zone, int pulse) {
@@ -288,6 +307,7 @@ static int housesprinkler_zone_start (int zone, int pulse) {
 
 static void housesprinkler_zone_schedule (time_t now) {
 
+    static SprinklerZone *ZoneActive = 0; // One zone active at a time.
     static time_t ZonesBusy = 0; // Do not schedule while a zone is running.
 
     int i;
@@ -307,6 +327,12 @@ static void housesprinkler_zone_schedule (time_t now) {
 
     if (now <= ZonesBusy) return;
 
+    if (ZoneActive) {
+        if (ZoneActive->status == 'a') ZoneActive->status = 'i';
+        ZoneActive = 0;
+    }
+
+    // Search for the first zone to be started next.
     for (i = 0; i < QueueNext; ++i) {
         if (Queue[i].runtime == 0) continue;
         time_t nexton = Queue[i].nexton;
@@ -330,8 +356,12 @@ static void housesprinkler_zone_schedule (time_t now) {
         // to ever skip the pause.
         //
         Queue[nextzone].nexton = now + pulse + Zones[zone].pause;
-        if (housesprinkler_zone_start (zone, pulse))
-            ZonesBusy = now + pulse + 1; // Schedule next zone after the pulse
+        if (housesprinkler_zone_start (zone, pulse)) {
+            // Schedule the next zone after the pulse and the optional index
+            // valve pause have been exhausted.
+            ZonesBusy = now + pulse + ZoneIndexValvePause;
+            ZoneActive = Zones + zone;
+        }
     }
 }
 
@@ -343,6 +373,7 @@ static void housesprinkler_zone_discovered
    int  innerlist[100];
    char path[256];
    int  count = 100;
+   int  i;
 
    if (status == 302) {
        static char url[256];
@@ -363,37 +394,62 @@ static void housesprinkler_zone_discovered
        return;
    }
 
-   if (status != 200) return;
+   if (status != 200) {
+       if (server->status != 'e')
+           houselog_trace (HOUSE_FAILURE, server->url, "HTTP error %d", status);
+       server->status = 'e';
+       return;
+   }
 
    // Analyze the answer and retrieve the control points matching our zones.
    const char *error = echttp_json_parse (data, tokens, &count);
    if (error) {
-       houselog_trace (HOUSE_FAILURE, server->url, "syntax error, %s", error);
+       if (server->status != 'e')
+           houselog_trace (HOUSE_FAILURE, server->url,
+                           "JSON syntax error, %s", error);
+       server->status = 'e';
        return;
    }
-   if (count <= 0) return;
+   if (count <= 0) {
+       if (server->status != 'e')
+           houselog_trace (HOUSE_FAILURE, server->url, "no data");
+       server->status = 'e';
+       return;
+   }
 
    snprintf (path, sizeof(path), ".%s.status", server->type);
    int controls = echttp_json_search (tokens, path);
-   if (controls <= 0) return;
+   if (controls <= 0) {
+       if (server->status != 'e')
+           houselog_trace (HOUSE_FAILURE, server->url, "no zone data");
+       return;
+   }
 
    int n = tokens[controls].length;
-   if (n <= 0) return;
+   if (n <= 0) {
+       if (server->status != 'e')
+           houselog_trace (HOUSE_FAILURE, server->url, "empty zone data");
+       return;
+   }
 
    error = echttp_json_enumerate (tokens+controls, innerlist);
    if (error) {
-       houselog_trace (HOUSE_FAILURE, path, "%s", error);
+       if (server->status != 'e')
+           houselog_trace (HOUSE_FAILURE, path, "%s", error);
+       server->status = 'e';
        return;
    }
-   int i;
+
    for (i = 0; i < n; ++i) {
        ParserToken *inner = tokens + controls + innerlist[i];
        int zone = housesprinkler_zone_search (inner->key);
        if (zone < 0) continue;
        Zones[zone].server = server;
+       Zones[zone].status = 'i';
        DEBUG ("Zone %s discovered on %s, type %s\n",
               Zones[zone].name, server->url, server->type);
    }
+   server->status = 'a';
 }
 
 static void housesprinkler_zone_discovery (time_t now) {
@@ -423,7 +479,9 @@ static void housesprinkler_zone_discovery (time_t now) {
             DEBUG ("Attempting discovery at %s (server %d)\n", url, i);
             const char *error = echttp_client ("GET", url);
             if (error) {
-                houselog_trace (HOUSE_FAILURE, Servers[i].url, "%s", error);
+                if (Servers[i].status != 'f')
+                   houselog_trace (HOUSE_FAILURE, Servers[i].url, "%s", error);
+                Servers[i].status = 'f';
                 continue;
             }
 
@@ -441,5 +499,47 @@ void housesprinkler_zone_periodic (time_t now) {
 
 int housesprinkler_zone_idle (void) {
     return QueueNext == 0;
+}
+
+int housesprinkler_zone_status (char *buffer, int size) {
+
+    int i;
+    int cursor = 0;
+    const char *prefix = "";
+
+    snprintf (buffer, size, "\"servers\":[");
+    cursor = strlen(buffer);
+    if (cursor >= size) goto overflow;
+
+    for (i = 0; i < ServersCount; ++i) {
+        snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"]",
+                  prefix, Servers[i].url, Servers[i].status);
+        prefix = ",";
+        cursor += strlen(buffer+cursor);
+        if (cursor >= size) goto overflow;
+    }
+
+    snprintf (buffer+cursor, size-cursor, "],\"zones\":[");
+    cursor += strlen(buffer+cursor);
+    prefix = "";
+
+    for (i = 0; i < ZonesCount; ++i) {
+        snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"]",
+                  prefix, Zones[i].name, Zones[i].status);
+        prefix = ",";
+        cursor += strlen(buffer+cursor);
+        if (cursor >= size) goto overflow;
+    }
+
+    snprintf (buffer+cursor, size-cursor, "]");
+    cursor += strlen(buffer+cursor);
+    if (cursor >= size) goto overflow;
+
+    return cursor;
+
+overflow:
+    houselog_trace (HOUSE_FAILURE, "BUFFER", "overflow");
+    buffer[0] = 0;
+    return 0;
 }
 
