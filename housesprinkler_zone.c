@@ -519,8 +519,16 @@ int housesprinkler_zone_status (char *buffer, int size) {
     prefix = "";
 
     for (i = 0; i < ZonesCount; ++i) {
-        snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"]",
-                  prefix, Zones[i].name, Zones[i].status);
+        char server[512];
+
+        if (Zones[i].server)
+            snprintf (server, sizeof(server),
+                      ",\"%s\"", Zones[i].server->url);
+        else
+            server[0] = 0;
+
+        snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"%s]",
+                  prefix, Zones[i].name, Zones[i].status, server);
         prefix = ",";
         cursor += strlen(buffer+cursor);
         if (cursor >= size) goto overflow;
