@@ -94,7 +94,6 @@
 
 typedef struct {
     char url[256];
-    char *type;
     char status;
 } SprinklerControlServer;
 
@@ -152,10 +151,8 @@ void housesprinkler_zone_refresh (void) {
         const char *name = housesprinkler_config_string (child, "");
         if (name) {
             strncpy (Servers[i].url, name, sizeof(Servers[i].url));
-            char *type = strrchr (Servers[i].url, '/');
-            if (type) Servers[i].type = type + 1;
             Servers[i].status = 'u';
-            DEBUG ("\tServer %s (type %s)\n", Servers[i].url, Servers[i].type);
+            DEBUG ("\tServer %s\n", Servers[i].url);
         } else {
             houselog_trace (HOUSE_FAILURE, "config",
                             "Invalid server at index %d", i);
@@ -417,8 +414,7 @@ static void housesprinkler_zone_discovered
        return;
    }
 
-   snprintf (path, sizeof(path), ".%s.status", server->type);
-   int controls = echttp_json_search (tokens, path);
+   int controls = echttp_json_search (tokens, ".control.status");
    if (controls <= 0) {
        if (server->status != 'e')
            houselog_trace (HOUSE_FAILURE, server->url, "no zone data");
@@ -446,8 +442,7 @@ static void housesprinkler_zone_discovered
        if (zone < 0) continue;
        Zones[zone].server = server;
        Zones[zone].status = 'i';
-       DEBUG ("Zone %s discovered on %s, type %s\n",
-              Zones[zone].name, server->url, server->type);
+       DEBUG ("Zone %s discovered on %s\n", Zones[zone].name, server->url);
    }
    server->status = 'a';
 }
