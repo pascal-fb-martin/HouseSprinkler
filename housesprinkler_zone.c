@@ -83,6 +83,7 @@
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "housediscover.h"
 
 #include "housesprinkler.h"
 #include "housesprinkler_zone.h"
@@ -92,13 +93,10 @@
 
 #define DEFAULTSERVER "http://localhost/relay"
 
-typedef struct {
-    char url[256];
-    char status;
-} SprinklerControlServer;
+#define MAX_PROVIDER 64
 
-static SprinklerControlServer *Servers = 0;
-static int                     ServersCount = 0;
+static char *Providers[MAX_PROVIDER];
+static int   ProvidersCount = 0;
 
 typedef struct {
     const char *name;
@@ -106,7 +104,7 @@ typedef struct {
     int pause;
     char manual;
     char status;
-    SprinklerControlServer *server;
+    char url[256];
 } SprinklerZone;
 
 static SprinklerZone *Zones = 0;
@@ -131,36 +129,6 @@ void housesprinkler_zone_refresh (void) {
     char path[128];
     int list[256];
 
-    // Reload all servers.
-    //
-    if (Servers) free (Servers);
-    ServersCount = 0;
-    content = housesprinkler_config_array (0, ".servers");
-    if (content > 0) {
-        ServersCount = housesprinkler_config_enumerate (content, list);
-    }
-
-    ZoneIndexValvePause = housesprinkler_config_integer (0, "pause");
-    if (ZoneIndexValvePause < 1) ZoneIndexValvePause = 1;
-
-    Servers = calloc (ServersCount, sizeof(SprinklerControlServer));
-    DEBUG ("Loading %d servers\n", ServersCount);
-
-    for (i = 0; i < ServersCount; ++i) {
-        int child = list[i];
-        const char *name = housesprinkler_config_string (child, "");
-        if (name) {
-            strncpy (Servers[i].url, name, sizeof(Servers[i].url));
-            Servers[i].status = 'u';
-            DEBUG ("\tServer %s\n", Servers[i].url);
-        } else {
-            houselog_trace (HOUSE_FAILURE, "config",
-                            "Invalid server at index %d", i);
-            Servers[i].url[0] = 0;
-            Servers[i].status = 'f';
-        }
-    }
-
     // Reload all zones.
     //
     if (Zones) free (Zones);
@@ -182,7 +150,7 @@ void housesprinkler_zone_refresh (void) {
             Zones[i].pulse = housesprinkler_config_integer (zone, ".pulse");
             Zones[i].pause = housesprinkler_config_integer (zone, ".pause");
             Zones[i].manual = housesprinkler_config_boolean (zone, ".manual");
-            Zones[i].server = 0;
+            Zones[i].url[0] = 0;
             Zones[i].status = 'u';
         }
         DEBUG ("\tZone %s (pulse=%d, pause=%d, manual=%s)\n",
@@ -286,10 +254,10 @@ static int housesprinkler_zone_start (int zone, int pulse) {
            now, Zones[zone].name, pulse);
     houselog_event (now, "ZONE", Zones[zone].name, "START",
                     "for %d seconds", pulse);
-    if (Zones[zone].server) {
+    if (Zones[zone].url[0]) {
         static char url[256];
         snprintf (url, sizeof(url), "%s/set?point=%s&state=on&pulse=%d",
-                  Zones[zone].server->url, Zones[zone].name, pulse);
+                  Zones[zone].url, Zones[zone].name, pulse);
         const char *error = echttp_client ("GET", url);
         if (error) {
             houselog_trace (HOUSE_FAILURE, Zones[zone].name, "cannot create socket for %s, %s", url, error);
@@ -365,7 +333,7 @@ static void housesprinkler_zone_schedule (time_t now) {
 static void housesprinkler_zone_discovered
                (void *origin, int status, char *data, int length) {
 
-   SprinklerControlServer *server = (SprinklerControlServer *) origin;
+   const char *provider = (const char *) origin;
    ParserToken tokens[100];
    int  innerlist[100];
    char path[256];
@@ -376,63 +344,52 @@ static void housesprinkler_zone_discovered
        static char url[256];
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {
-           houselog_trace (HOUSE_FAILURE, server->url, "invalid redirect");
+           houselog_trace (HOUSE_FAILURE, provider, "invalid redirect");
            return;
        }
        strncpy (url, redirect, sizeof(url));
        const char *error = echttp_client ("GET", url);
        if (error) {
-           houselog_trace (HOUSE_FAILURE, url,
-                           "cannot open socket, %s", error);
+           houselog_trace (HOUSE_FAILURE, url, "cannot connect to %s", error);
            return;
        }
-       echttp_submit (0, 0, housesprinkler_zone_discovered, (void *)server);
+       echttp_submit (0, 0, housesprinkler_zone_discovered, origin);
        DEBUG ("Redirected to %s\n", url);
        return;
    }
 
    if (status != 200) {
-       if (server->status != 'e')
-           houselog_trace (HOUSE_FAILURE, server->url, "HTTP error %d", status);
-       server->status = 'e';
+       houselog_trace (HOUSE_FAILURE, provider, "HTTP error %d", status);
        return;
    }
 
    // Analyze the answer and retrieve the control points matching our zones.
    const char *error = echttp_json_parse (data, tokens, &count);
    if (error) {
-       if (server->status != 'e')
-           houselog_trace (HOUSE_FAILURE, server->url,
-                           "JSON syntax error, %s", error);
-       server->status = 'e';
+       houselog_trace
+           (HOUSE_FAILURE, provider, "JSON syntax error, %s", error);
        return;
    }
    if (count <= 0) {
-       if (server->status != 'e')
-           houselog_trace (HOUSE_FAILURE, server->url, "no data");
-       server->status = 'e';
+       houselog_trace (HOUSE_FAILURE, provider, "no data");
        return;
    }
 
    int controls = echttp_json_search (tokens, ".control.status");
    if (controls <= 0) {
-       if (server->status != 'e')
-           houselog_trace (HOUSE_FAILURE, server->url, "no zone data");
+       houselog_trace (HOUSE_FAILURE, provider, "no zone data");
        return;
    }
 
    int n = tokens[controls].length;
    if (n <= 0) {
-       if (server->status != 'e')
-           houselog_trace (HOUSE_FAILURE, server->url, "empty zone data");
+       houselog_trace (HOUSE_FAILURE, provider, "empty zone data");
        return;
    }
 
    error = echttp_json_enumerate (tokens+controls, innerlist);
    if (error) {
-       if (server->status != 'e')
-           houselog_trace (HOUSE_FAILURE, path, "%s", error);
-       server->status = 'e';
+       houselog_trace (HOUSE_FAILURE, path, "%s", error);
        return;
    }
 
@@ -440,11 +397,28 @@ static void housesprinkler_zone_discovered
        ParserToken *inner = tokens + controls + innerlist[i];
        int zone = housesprinkler_zone_search (inner->key);
        if (zone < 0) continue;
-       Zones[zone].server = server;
+       snprintf (Zones[zone].url, sizeof(Zones[zone].url), provider);
        Zones[zone].status = 'i';
-       DEBUG ("Zone %s discovered on %s\n", Zones[zone].name, server->url);
+       DEBUG ("Zone %s discovered on %s\n", Zones[zone].name, Zones[zone].url);
    }
-   server->status = 'a';
+}
+
+static void housesprinkler_zone_scan_server
+                (const char *service, void *context, const char *provider) {
+
+    char url[256];
+
+    Providers[ProvidersCount++] = strdup(provider); // Keep the string.
+
+    snprintf (url, sizeof(url), "%s/status", provider);
+
+    DEBUG ("Attempting discovery at %s\n", url);
+    const char *error = echttp_client ("GET", url);
+    if (error) {
+        houselog_trace (HOUSE_FAILURE, provider, "%s", error);
+        return;
+    }
+    echttp_submit (0, 0, housesprinkler_zone_discovered, (void *)provider);
 }
 
 static void housesprinkler_zone_discovery (time_t now) {
@@ -452,38 +426,27 @@ static void housesprinkler_zone_discovery (time_t now) {
     static time_t starting = 0;
     static time_t latestdiscovery = 0;
 
-    int scan = 0;
-
     if (starting == 0) starting = now;
 
-    // Start fast for the first 2 minutes, then slow down.
-    // The fast start is to make the whole network recover fast from an outage.
+    // Scan every 15s for the first 2 minutes, then slow down to every 30mn.
+    // The fast start is to make the whole network recover fast from
+    // an outage, when we do not know in which order the systems start.
     // Later on, there is no need to create more traffic.
     //
-    if (now - latestdiscovery > 15) {
-        scan = (now - latestdiscovery > 120 || now - starting < 120);
+    if (now - latestdiscovery <= 15) return;
+    if (now - latestdiscovery <= 1800 && now - starting >= 120) return;
+
+    // Rebuild the list of control servers, and then launch a discovery
+    // refresh. This way we never walk the cache while doing discovery.
+    //
+    int i;
+    for (i = 0; i < ProvidersCount; ++i) {
+        if (Providers[i]) free(Providers[i]);
+        Providers[i] = 0;
     }
-
-    if (scan) {
-        int i;
-        for (i = 0; i < ServersCount; ++i) {
-            char url[256];
-            if (Servers[i].url[0] == 0) continue;
-            snprintf (url, sizeof(url), "%s/status", Servers[i].url);
-
-            DEBUG ("Attempting discovery at %s (server %d)\n", url, i);
-            const char *error = echttp_client ("GET", url);
-            if (error) {
-                if (Servers[i].status != 'f')
-                   houselog_trace (HOUSE_FAILURE, Servers[i].url, "%s", error);
-                Servers[i].status = 'f';
-                continue;
-            }
-
-            echttp_submit (0, 0, housesprinkler_zone_discovered, (void *)(Servers+i));
-        }
-        latestdiscovery = now;
-    }
+    ProvidersCount = 0;
+    housediscovered ("control", 0, housesprinkler_zone_scan_server);
+    housediscover ("control"); // Initiate the next discovery.
 }
 
 void housesprinkler_zone_periodic (time_t now) {
@@ -506,9 +469,8 @@ int housesprinkler_zone_status (char *buffer, int size) {
     cursor = strlen(buffer);
     if (cursor >= size) goto overflow;
 
-    for (i = 0; i < ServersCount; ++i) {
-        snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"]",
-                  prefix, Servers[i].url, Servers[i].status);
+    for (i = 0; i < ProvidersCount; ++i) {
+        snprintf (buffer+cursor, size-cursor, "%s\"%s\"", prefix, Providers[i]);
         prefix = ",";
         cursor += strlen(buffer+cursor);
         if (cursor >= size) goto overflow;
@@ -521,9 +483,8 @@ int housesprinkler_zone_status (char *buffer, int size) {
     for (i = 0; i < ZonesCount; ++i) {
         char server[512];
 
-        if (Zones[i].server)
-            snprintf (server, sizeof(server),
-                      ",\"%s\"", Zones[i].server->url);
+        if (Zones[i].url[0])
+            snprintf (server, sizeof(server), ",\"%s\"", Zones[i].url);
         else
             server[0] = 0;
 

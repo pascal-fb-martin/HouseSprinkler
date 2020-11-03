@@ -33,6 +33,7 @@
 #include "echttp_static.h"
 #include "houseportalclient.h"
 #include "houselog.h"
+#include "housediscover.h"
 
 #include "housesprinkler_config.h"
 #include "housesprinkler_index.h"
@@ -246,6 +247,7 @@ int main (int argc, const char **argv) {
     echttp_background (&hs_background);
 
     housesprinkler_index_register (housesprinkler_program_set_index);
+    housediscover_initialize (argc, argv);
 
     gethostname (hostname, sizeof(hostname));
     houselog_event (time(0), "SYSTEM", hostname, "START", "");
