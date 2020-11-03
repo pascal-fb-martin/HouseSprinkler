@@ -433,8 +433,9 @@ static void housesprinkler_zone_discovery (time_t now) {
     // an outage, when we do not know in which order the systems start.
     // Later on, there is no need to create more traffic.
     //
-    if (now - latestdiscovery <= 15) return;
-    if (now - latestdiscovery <= 1800 && now - starting >= 120) return;
+    if (now <= latestdiscovery + 15) return;
+    if (now <= latestdiscovery + 1800 && now >= starting + 120) return;
+    latestdiscovery = now;
 
     // Rebuild the list of control servers, and then launch a discovery
     // refresh. This way we never walk the cache while doing discovery.
