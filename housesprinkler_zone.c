@@ -132,6 +132,7 @@ void housesprinkler_zone_refresh (void) {
     // Reload all zones.
     //
     if (Zones) free (Zones);
+    Zones = 0;
     ZonesCount = 0;
     content = housesprinkler_config_array (0, ".zones");
     if (content > 0) {
@@ -440,12 +441,14 @@ static void housesprinkler_zone_discovery (time_t now) {
     // Rebuild the list of control servers, and then launch a discovery
     // refresh. This way we never walk the cache while doing discovery.
     //
+    DEBUG ("Reset providers cache\n");
     int i;
     for (i = 0; i < ProvidersCount; ++i) {
         if (Providers[i]) free(Providers[i]);
         Providers[i] = 0;
     }
     ProvidersCount = 0;
+    DEBUG ("Proceeding with discovery\n");
     housediscovered ("control", 0, housesprinkler_zone_scan_server);
     housediscover ("control"); // Initiate the next discovery.
 }

@@ -162,6 +162,7 @@ void housesprinkler_program_refresh (void) {
     // Recalculate all seasons.
     //
     if (Seasons) free (Seasons);
+    Seasons = 0;
     SeasonsCount = 0;
     content = housesprinkler_config_array (0, ".seasons");
     if (content > 0) {
@@ -208,6 +209,7 @@ void housesprinkler_program_refresh (void) {
 
     // Recalculate all watering programs.
     if (Programs) free (Programs);
+    Programs = 0;
     ProgramsCount = 0;
     content = housesprinkler_config_array (0, ".programs");
     if (content > 0) {
