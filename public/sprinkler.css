@@ -3,7 +3,7 @@
 
 .sprkrpanel {
    float: left;
-   width: 35%;
+   width: 40%;
 }
 
 .sprkrpane {
@@ -52,7 +52,7 @@
    font-family:'Metrophobic', sans-serif;
    text-align: right;
    color: blue;
-   width: 50%;
+   width: 45%;
    display: inline-table;
    float: right;
 }
@@ -240,7 +240,7 @@ td {border: 0}
 input[type=text] {
    font-family:'Metrophobic', sans-serif;
    font-weight: 500;
-   font-size: 14px;
+   font-size: 30px;
    border: 2px solid #3673ad;
    padding: 5px;
    border-radius: 5px;
