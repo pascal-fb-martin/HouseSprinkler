@@ -150,15 +150,19 @@ function sprinklerApplyUpdate (text) {
    document.getElementsByTagName ('title')[0].innerHTML = title;
 }
 
-function sprinklerUpdate () {
+function sprinklerRequest (uri) {
    var command = new XMLHttpRequest();
-   command.open("GET", "/sprinkler/status");
+   command.open("GET", uri);
    command.onreadystatechange = function () {
        if (command.readyState === 4 && command.status === 200) {
            sprinklerApplyUpdate(command.responseText);
        }
    }
    command.send(null);
+}
+
+function sprinklerUpdate () {
+   sprinklerRequest ("/sprinkler/status");
 }
 
 function sprinklerInfo () {
@@ -221,21 +225,19 @@ function sprinklerHardwareInfo (callback) {
 }
 
 function sprinklerOnOff () {
-   var command = new XMLHttpRequest();
-   command.open("GET", "/sprinkler/onoff");
-   command.send(null);
+   sprinklerRequest ("/sprinkler/onoff");
 }
 
 function sprinklerZoneOn (name, duration) {
-   var command = new XMLHttpRequest();
-   command.open("GET", "/sprinkler/zone/on?name="+name+"&pulse="+duration);
-   command.send(null);
+   sprinklerRequest("/sprinkler/zone/on?name="+name+"&pulse="+duration);
 }
 
 function sprinklerZoneOff () {
-   var command = new XMLHttpRequest();
-   command.open("GET", "/zone/off");
-   command.send(null);
+   sprinklerRequest ("/sprinkler/zone/off");
+}
+
+function sprinklerRainDelay () {
+   sprinklerRequest ("/sprinkler/raindelay");
 }
 
 function sprinklerRefresh () {
