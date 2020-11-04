@@ -93,6 +93,9 @@ static const char *sprinkler_status (const char *method, const char *uri,
     snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
     cursor += strlen(buffer+cursor);
     cursor += housesprinkler_program_status (buffer+cursor, sizeof(buffer)-cursor);
+    snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"index\":{");
+    cursor += strlen(buffer+cursor);
+    cursor += housesprinkler_index_status (buffer+cursor, sizeof(buffer)-cursor);
     snprintf (buffer+cursor,sizeof(buffer)-cursor, "}}}");
     cursor += strlen(buffer+cursor);
 
@@ -103,13 +106,18 @@ static const char *sprinkler_status (const char *method, const char *uri,
 static const char *sprinkler_raindelay (const char *method, const char *uri,
                                         const char *data, int length) {
     static char buffer[65537];
+    int duration;
 
-    housesprinkler_program_set_rain (RAINDELAYINTERVAL);
+    const char *amount = echttp_parameter_get ("amount");
+    if (amount) duration = atoi(amount);
+    else        duration = RAINDELAYINTERVAL;
+
+    housesprinkler_program_set_rain (duration);
     return sprinkler_status (method, uri, data, length);
 }
 
-static const char *sprinkler_waterindex (const char *method, const char *uri,
-                                         const char *data, int length) {
+static const char *sprinkler_rain (const char *method, const char *uri,
+                                   const char *data, int length) {
     static char buffer[65537];
 
     const char *active = echttp_parameter_get ("active");
@@ -119,10 +127,28 @@ static const char *sprinkler_waterindex (const char *method, const char *uri,
     return sprinkler_status (method, uri, data, length);
 }
 
+static const char *sprinkler_index (const char *method, const char *uri,
+                                    const char *data, int length) {
+    static char buffer[65537];
+
+    const char *active = echttp_parameter_get ("active");
+    if (!active) active = "true";
+
+    housesprinkler_program_index (strcmp ("true", active) == 0);
+    return sprinkler_status (method, uri, data, length);
+}
+
 static const char *sprinkler_refresh (const char *method, const char *uri,
                                       const char *data, int length) {
 
     return sprinkler_status (method, uri, data, length);;
+}
+
+static const char *sprinkler_onoff (const char *method, const char *uri,
+                                    const char *data, int length) {
+
+    housesprinkler_program_switch ();
+    return sprinkler_status (method, uri, data, length);
 }
 
 static const char *sprinkler_program_on (const char *method, const char *uri,
@@ -232,18 +258,20 @@ int main (int argc, const char **argv) {
     echttp_route_uri ("/sprinkler/config", sprinkler_config);
     echttp_route_uri ("/sprinkler/status", sprinkler_status);
     echttp_route_uri ("/sprinkler/raindelay", sprinkler_raindelay);
-    echttp_route_uri ("/sprinkler/wateringindex", sprinkler_waterindex);
+    echttp_route_uri ("/sprinkler/rain", sprinkler_rain);
+    echttp_route_uri ("/sprinkler/index", sprinkler_index);
     echttp_route_uri ("/sprinkler/refresh", sprinkler_refresh);
 
     echttp_route_uri ("/sprinkler/program/on", sprinkler_program_on);
     echttp_route_uri ("/sprinkler/zone/on",    sprinkler_zone_on);
     echttp_route_uri ("/sprinkler/zone/off",   sprinkler_zone_off);
+    echttp_route_uri ("/sprinkler/onoff",      sprinkler_onoff);
 
     echttp_route_uri ("/sprinkler/weather/on",  sprinkler_weatheron);
     echttp_route_uri ("/sprinkler/weather/off", sprinkler_weatheroff);
     echttp_route_uri ("/sprinkler/weather",     sprinkler_weather);
 
-    echttp_static_route ("/sprinkler", "/usr/share/house/public/sprinkler");
+    echttp_static_route ("/sprinkler", "/usr/local/share/house/public/sprinkler");
     echttp_background (&hs_background);
 
     housesprinkler_index_register (housesprinkler_program_set_index);

@@ -20,11 +20,17 @@
  */
 
 void housesprinkler_program_refresh (void);
+
 void housesprinkler_program_rain (int enabled);
 void housesprinkler_program_set_rain  (int delay);
+
+void housesprinkler_program_index (int state);
 void housesprinkler_program_set_index
          (const char *origin, int value, time_t timestamp);
+
 void housesprinkler_program_manual   (const char *name);
 void housesprinkler_program_periodic (time_t now);
 int  housesprinkler_program_status (char *buffer, int size);
+
+void housesprinkler_program_switch (void);
 

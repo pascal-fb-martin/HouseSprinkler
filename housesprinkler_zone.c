@@ -110,6 +110,8 @@ typedef struct {
 static SprinklerZone *Zones = 0;
 static int            ZonesCount = 0;
 
+static SprinklerZone *ZoneActive = 0; // One zone active at a time.
+
 typedef struct {
     int zone;
     int runtime;
@@ -277,7 +279,6 @@ static int housesprinkler_zone_start (int zone, int pulse) {
 
 static void housesprinkler_zone_schedule (time_t now) {
 
-    static SprinklerZone *ZoneActive = 0; // One zone active at a time.
     static time_t ZonesBusy = 0; // Do not schedule while a zone is running.
 
     int i;
@@ -473,19 +474,18 @@ int housesprinkler_zone_status (char *buffer, int size) {
     int cursor = 0;
     const char *prefix = "";
 
-    snprintf (buffer, size, "\"servers\":[");
-    cursor = strlen(buffer);
+    cursor = snprintf (buffer, size, "\"servers\":[");
     if (cursor >= size) goto overflow;
 
     for (i = 0; i < ProvidersCount; ++i) {
-        snprintf (buffer+cursor, size-cursor, "%s\"%s\"", prefix, Providers[i]);
-        prefix = ",";
-        cursor += strlen(buffer+cursor);
+        cursor += snprintf (buffer+cursor, size-cursor,
+                            "%s\"%s\"", prefix, Providers[i]);
         if (cursor >= size) goto overflow;
+        prefix = ",";
     }
 
-    snprintf (buffer+cursor, size-cursor, "],\"zones\":[");
-    cursor += strlen(buffer+cursor);
+    cursor += snprintf (buffer+cursor, size-cursor, "],\"zones\":[");
+    if (cursor >= size) goto overflow;
     prefix = "";
 
     for (i = 0; i < ZonesCount; ++i) {
@@ -496,31 +496,35 @@ int housesprinkler_zone_status (char *buffer, int size) {
         else
             server[0] = 0;
 
-        snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"%s]",
-                  prefix, Zones[i].name, Zones[i].status, server);
+        cursor += snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"%s]",
+                            prefix, Zones[i].name, Zones[i].status, server);
+        if (cursor >= size) goto overflow;
         prefix = ",";
-        cursor += strlen(buffer+cursor);
+    }
+
+    if (ZoneActive) {
+        cursor += snprintf (buffer+cursor, size-cursor,
+                            ",\"active\":\"%s\"", ZoneActive->name);
         if (cursor >= size) goto overflow;
     }
 
-    snprintf (buffer+cursor, size-cursor, "],\"queue\":[");
-    cursor += strlen(buffer+cursor);
+    cursor += snprintf (buffer+cursor, size-cursor, "],\"queue\":[");
     if (cursor >= size) goto overflow;
     prefix = "";
 
     for (i = 0; i < QueueNext; ++i) {
         if (Queue[i].runtime > 0) {
-            snprintf (buffer+cursor, size-cursor,
-                      "%s[\"%s\",%d]",
-                      prefix, Zones[Queue[i].zone].name, Queue[i].runtime);
-            cursor += strlen(buffer+cursor);
+            cursor += snprintf (buffer+cursor, size-cursor,
+                                "%s[\"%s\",%d]",
+                                prefix,
+                                Zones[Queue[i].zone].name,
+                                Queue[i].runtime);
             if (cursor >= size) goto overflow;
             prefix = ",";
         }
     }
 
-    snprintf (buffer+cursor, size-cursor, "]");
-    cursor += strlen(buffer+cursor);
+    cursor += snprintf (buffer+cursor, size-cursor, "]");
     if (cursor >= size) goto overflow;
 
     return cursor;

@@ -47,6 +47,11 @@
  *
  *    The periodic function that schedule index requests.
  *
+ * int housesprinkler_index_status (char *buffer, int size);
+ *
+ *    Populate the buffer with a JSON object that represents the state
+ *    of the watering index.
+ *
  * CONFIGURATION
  *
  * This module is driven by the list of index providers provided in the
@@ -349,5 +354,11 @@ void housesprinkler_index_periodic (time_t now) {
             }
         }
     }
+}
+
+int housesprinkler_index_status (char *buffer, int size) {
+
+    return snprintf (buffer, size, "\"origin\":\"%s\",\"value\":%d",
+                     SprinklerIndexOrigin, SprinklerIndex);
 }
 

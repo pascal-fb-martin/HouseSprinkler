@@ -34,3 +34,5 @@ typedef void housesprinkler_index_listener
 
 void housesprinkler_index_register (housesprinkler_index_listener *listener);
 
+int housesprinkler_index_status (char *buffer, int size);
+

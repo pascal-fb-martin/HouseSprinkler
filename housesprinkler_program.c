@@ -37,6 +37,10 @@
  *
  *    Add to the rain delay used to cancel programs during rain periods.
  *
+ * void housesprinkler_program_index (int state);
+ *
+ *    Enable/disable the index mechanism (independently of the index value).
+ *
  * void housesprinkler_program_set_index
  *          (const char *origin, int value, time_t timestamp);
  *
@@ -48,6 +52,10 @@
  *
  *    This is the heart of the sprinkler function: activate and execute
  *    watering schedules.
+ *
+ * void housesprinkler_program_switch (void);
+ *
+ *    Alternate the sprinkler system between on and off.
  *
  * int housesprinkler_program_status (char *buffer, int size);
  *
@@ -80,6 +88,9 @@ typedef struct {
 
 static SprinklerSeason *Seasons = 0;
 static int SeasonsCount = 0;
+
+static int SprinklerState = 1;
+static int ProgramIndexState = 1;
 
 typedef struct {
     const char *name;
@@ -289,6 +300,10 @@ void housesprinkler_program_refresh (void) {
     }
 }
 
+void housesprinkler_program_index (int state) {
+    ProgramIndexState = state;
+}
+
 void housesprinkler_program_set_index 
          (const char *origin, int value, time_t timestamp) {
 
@@ -299,9 +314,12 @@ void housesprinkler_program_set_index
 
 void housesprinkler_program_rain (int enabled) {
     ProgramRainEnabled = enabled;
+    if (!enabled) ProgramRainDelay;
 }
 
 void housesprinkler_program_set_rain (int delay) {
+
+    if (!ProgramRainEnabled) return;
 
     time_t now = time(0);
 
@@ -331,43 +349,45 @@ static void housesprinkler_program_activate
     houselog_event (now, "PROGRAM", program->name, "START",
                     "%s mode", manual ? "manual" : "schedule");
 
-    if (ProgramIndexTimestamp > now - (3 * 86400)) {
+    if (ProgramIndexState) {
+        if (ProgramIndexTimestamp > now - (3 * 86400)) {
 
-        index = ProgramIndex; // A recent explicit index takes priority.
-        DEBUG ("Activate %s using index %d from %s%s\n",
-               program->name, index, ProgramIndexOrigin, manual?" (manual)":"");
+            index = ProgramIndex; // A recent explicit index takes priority.
+            DEBUG ("Activate %s using index %d from %s%s\n",
+                   program->name, index, ProgramIndexOrigin, manual?" (manual)":"");
 
-    } else if (program->season >= 0) {
+        } else if (program->season >= 0) {
 
-        // Week of the year. We do not care about getting the exact
-        // result, just having something matching the period of the year.
-        //
-        struct tm local = *localtime(&now);
-        int week = (local.tm_yday - local.tm_wday + 4) / 7;
-        if (week < 0) week = 51;
-        else if (week >= 52) week -= 52;
+            // Week of the year. We do not care about getting the exact
+            // result, just having something matching the period of the year.
+            //
+            struct tm local = *localtime(&now);
+            int week = (local.tm_yday - local.tm_wday + 4) / 7;
+            if (week < 0) week = 51;
+            else if (week >= 52) week -= 52;
 
-        switch (Seasons[program->season].unit) {
-            case SPRINKLER_SEASON_WEEKLY:
-                index = Seasons[program->season].index[week];
-                break;
-            case SPRINKLER_SEASON_MONTHLY:
-                index = Seasons[program->season].index[local.tm_mon];
-                break;
-            default:
-                index = 0;
+            switch (Seasons[program->season].unit) {
+                case SPRINKLER_SEASON_WEEKLY:
+                    index = Seasons[program->season].index[week];
+                    break;
+                case SPRINKLER_SEASON_MONTHLY:
+                    index = Seasons[program->season].index[local.tm_mon];
+                    break;
+                default:
+                    index = 0;
+            }
+            if (index == 0) {
+                DEBUG ("Season %s index is 0\n", Seasons[program->season].name);
+                if (!manual) return;
+                index = 100;
+            }
+            DEBUG ("Activate %s using index %d from %s%s\n",
+                   program->name, index, Seasons[program->season].name, manual?" (manual)":"");
+
+        } else {
+
+            DEBUG ("Activate %s%s\n", program->name, manual?" (manual)":"");
         }
-        if (index == 0) {
-            DEBUG ("Season %s index is 0\n", Seasons[program->season].name);
-            if (!manual) return;
-            index = 100;
-        }
-        DEBUG ("Activate %s using index %d from %s%s\n",
-               program->name, index, Seasons[program->season].name, manual?" (manual)":"");
-
-    } else {
-
-        DEBUG ("Activate %s%s\n", program->name, manual?" (manual)":"");
     }
 
     int i;
@@ -402,57 +422,60 @@ void housesprinkler_program_periodic (time_t now) {
 
     if (ProgramRainEnabled && ProgramRainDelay > now) return;
 
-    DEBUG ("Checking schedule at %02d:%02d\n", local.tm_hour, local.tm_min);
+    if (SprinklerState) {
 
-    for (i = 0; i < ProgramsCount; ++i) {
+        DEBUG ("Checking schedule at %02d:%02d\n", local.tm_hour, local.tm_min);
 
-        SprinklerProgram *program = Programs + i;
+        for (i = 0; i < ProgramsCount; ++i) {
 
-        if (!program->running && program->enabled)  {
+            SprinklerProgram *program = Programs + i;
 
-            DEBUG ("Checking schedule for program %s\n", program->name);
+            if (!program->running && program->enabled)  {
 
-            // Start only at the time specified.
-            //
-            if (local.tm_hour != program->start.hour
-                || local.tm_min != program->start.minute) continue;
+                DEBUG ("Checking schedule for program %s\n", program->name);
 
-            DEBUG ("Program %s: time of day matches\n", program->name);
+                // Start only at the time specified.
+                //
+                if (local.tm_hour != program->start.hour
+                    || local.tm_min != program->start.minute) continue;
 
-            // Start only if the program is active.
-            //
-            if (program->begin > now) continue;
-            if (program->until > 0 && program->until < now) continue;
+                DEBUG ("Program %s: time of day matches\n", program->name);
 
-            DEBUG ("Program %s: active\n", program->name);
+                // Start only if the program is active.
+                //
+                if (program->begin > now) continue;
+                if (program->until > 0 && program->until < now) continue;
 
-            // Start only on the days specified, or at the daily interval
-            // specified.
-            //
-            int delta;
-            int match = 0;
-            switch (program->repeat) {
-                case SPRINKLER_REPEAT_WEEKLY:
-                    match = program->days[local.tm_wday];
-                    break;
-                case SPRINKLER_REPEAT_DAILY:
-                    match = (((now - program->lastlaunch) / 86400) >= program->interval);
-                    break;
-                case SPRINKLER_REPEAT_ONCE:
-                    delta = program->begin - now;
-                    match = (program->lastlaunch == 0 && delta > 0 && delta < 60);
-                    break;
-                default:
-                    match = 0;
+                DEBUG ("Program %s: active\n", program->name);
+
+                // Start only on the days specified, or at the daily interval
+                // specified.
+                //
+                int delta;
+                int match = 0;
+                switch (program->repeat) {
+                    case SPRINKLER_REPEAT_WEEKLY:
+                        match = program->days[local.tm_wday];
+                        break;
+                    case SPRINKLER_REPEAT_DAILY:
+                        match = (((now - program->lastlaunch) / 86400) >= program->interval);
+                        break;
+                    case SPRINKLER_REPEAT_ONCE:
+                        delta = program->begin - now;
+                        match = (program->lastlaunch == 0 && delta > 0 && delta < 60);
+                        break;
+                    default:
+                        match = 0;
+                }
+                if (!match) {
+                    DEBUG ("This program not active this day\n");
+                    continue;
+                }
+
+                housesprinkler_program_activate (program, 0);
+                program->running = 1;
+                program->lastlaunch = now;
             }
-            if (!match) {
-                DEBUG ("This program not active this day\n");
-                continue;
-            }
-
-            housesprinkler_program_activate (program, 0);
-            program->running = 1;
-            program->lastlaunch = now;
         }
     }
 
@@ -463,31 +486,42 @@ void housesprinkler_program_periodic (time_t now) {
     }
 }
 
+void housesprinkler_program_switch (void) {
+    SprinklerState = !SprinklerState;
+}
+
 int housesprinkler_program_status (char *buffer, int size) {
 
     int i;
     int cursor = 0;
     const char *prefix = "";
 
-    snprintf (buffer, size, "\"rain\":{\"enabled\":%s,\"delay\":%d}",
-              ProgramRainEnabled?"true":"false", ProgramRainDelay);
-    cursor = strlen(buffer);
+    cursor = snprintf (buffer, size,
+                       "\"enabled\":%s", SprinklerState?"true":"false");
     if (cursor >= size) goto overflow;
 
-    snprintf (buffer+cursor, size-cursor, ",\"active\":[");
-    cursor = strlen(buffer);
+    cursor += snprintf (buffer+cursor, size-cursor,
+                        ",\"index\":%s", ProgramIndexState?"true":"false");
+    if (cursor >= size) goto overflow;
+
+    if (ProgramRainEnabled && ProgramRainDelay > 0) {
+        cursor += snprintf (buffer+cursor, size-cursor,
+                            ",\"rain\":%d", ProgramRainDelay);
+        if (cursor >= size) goto overflow;
+    }
+
+    cursor += snprintf (buffer+cursor, size-cursor, ",\"active\":[");
     if (cursor >= size) goto overflow;
 
     for (i = 0; i < ProgramsCount; ++i) {
         if (Programs[i].running) {
-            snprintf (buffer+cursor, size-cursor,
-                      "%s\"%s\"", prefix, Programs[i].name);
+            cursor += snprintf (buffer+cursor, size-cursor,
+                                "%s\"%s\"", prefix, Programs[i].name);
             prefix = ",";
         }
     }
 
-    snprintf (buffer+cursor, size-cursor, "]");
-    cursor += strlen(buffer+cursor);
+    cursor += snprintf (buffer+cursor, size-cursor, "]");
     if (cursor >= size) goto overflow;
 
     return cursor;
