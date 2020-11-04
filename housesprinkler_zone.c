@@ -115,6 +115,7 @@ static SprinklerZone *ZoneActive = 0; // One zone active at a time.
 typedef struct {
     int zone;
     int runtime;
+    int manual;
     time_t nexton;
 } SprinklerQueue;
 
@@ -201,6 +202,7 @@ void housesprinkler_zone_activate (const char *name, int pulse, int manual) {
             // This zone was not queued yet: create a new entry.
             Queue[QueueNext].zone = zone;
             Queue[QueueNext].runtime = pulse;
+            Queue[QueueNext].manual = manual;
             Queue[QueueNext].nexton = time(0);
             DEBUG ("Activated zone %s for %d seconds (%s, queue entry %d)\n",
                    name, pulse, manual?"manual":"auto", QueueNext);
@@ -316,17 +318,23 @@ static void housesprinkler_zone_schedule (time_t now) {
     if (nextzone >= 0) {
         int zone = Queue[nextzone].zone;
         int pulse = Zones[zone].pulse;
-        if (pulse == 0 || Queue[nextzone].runtime <= pulse) {
+        if (Queue[nextzone].manual) {
             pulse = Queue[nextzone].runtime;
             Queue[nextzone].runtime = 0;
+            Queue[nextzone].nexton = now + pulse;
         } else {
-            Queue[nextzone].runtime -= pulse;
+            if (pulse == 0 || Queue[nextzone].runtime <= pulse) {
+                pulse = Queue[nextzone].runtime;
+                Queue[nextzone].runtime = 0;
+            } else {
+                Queue[nextzone].runtime -= pulse;
+            }
+            // Always waits until the end of the pause, even if this is the
+            // last pulse: if the same zone is activated again, we don't want
+            // to ever skip the pause.
+            //
+            Queue[nextzone].nexton = now + pulse + Zones[zone].pause;
         }
-        // Always waits until the end of the pause, even if this is the
-        // last pulse: if the same zone is activated again, we don't want
-        // to ever skip the pause.
-        //
-        Queue[nextzone].nexton = now + pulse + Zones[zone].pause;
         if (housesprinkler_zone_start (zone, pulse)) {
             // Schedule the next zone after the pulse and the optional index
             // valve pause have been exhausted.
