@@ -491,8 +491,16 @@ int housesprinkler_zone_status (char *buffer, int size) {
         if (cursor >= size) goto overflow;
         prefix = ",";
     }
+    cursor += snprintf (buffer+cursor, size-cursor, "]");
+    if (cursor >= size) goto overflow;
 
-    cursor += snprintf (buffer+cursor, size-cursor, "],\"zones\":[");
+    if (ZoneActive) {
+        cursor += snprintf (buffer+cursor, size-cursor,
+                            ",\"active\":\"%s\"", ZoneActive->name);
+        if (cursor >= size) goto overflow;
+    }
+
+    cursor += snprintf (buffer+cursor, size-cursor, ",\"zones\":[");
     if (cursor >= size) goto overflow;
     prefix = "";
 
@@ -508,12 +516,6 @@ int housesprinkler_zone_status (char *buffer, int size) {
                             prefix, Zones[i].name, Zones[i].status, server);
         if (cursor >= size) goto overflow;
         prefix = ",";
-    }
-
-    if (ZoneActive) {
-        cursor += snprintf (buffer+cursor, size-cursor,
-                            ",\"active\":\"%s\"", ZoneActive->name);
-        if (cursor >= size) goto overflow;
     }
 
     cursor += snprintf (buffer+cursor, size-cursor, "],\"queue\":[");
