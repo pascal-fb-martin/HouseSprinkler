@@ -83,9 +83,9 @@ function sprinklerShowDuration (seconds) {
    if (minutes > 60) {
       var hours = Math.floor(minutes / 60);
       minutes = Math.floor(minutes % 60);
-      return ('00'+hours).slice(-2)+':'+('00'+minutes).slice(-2)+':'+('00'+seconds).slice(-2);
+      return ('00'+hours).slice(-2)+':'+('00'+minutes).slice(-2);
    }
-   return ('00'+minutes).slice(-2)+':'+('00'+seconds).slice(-2);
+   return '00:'+('00'+minutes).slice(-2);
 }
 
 function sprinklerSetContent (classname, content) {
@@ -100,33 +100,33 @@ function sprinklerApplyUpdate (text) {
    // var type = command.getResponseHeader("Content-Type");
    var response = JSON.parse(text);
    var content;
-   var content2;
+   var program;
 
    sprinklerSetContent ('hostname', response.sprinkler.host);
 
    if (response.sprinkler.program.active) {
-      content2 = response.sprinkler.program.active[0];
+      program = response.sprinkler.program.active[0];
    } else {
-      content2 = null;
+      program = null;
    }
    if (response.sprinkler.control.active) {
       content = 'ZONE '+response.sprinkler.control.active+' ACTIVE';
-      if (! content2) content2 = 'MANUAL';
+      if (! program) program = 'MANUAL';
    } else {
       content = 'IDLE';
-      if (! content2) content2 = 'IDLE';
+      if (! program) program = 'IDLE';
    }
 
-   if (response.on == false) {
-      content2 = 'OFF';
+   if (response.sprinkler.program.enabled == false) {
+      program = 'OFF';
    }
+   sprinklerSetContent ('activeprogram', program);
    sprinklerSetContent ('activezone', content);
-   sprinklerSetContent ('activeprogram', content2);
 
    if (response.sprinkler.program.raindelay == null) {
       content = 'DISABLED';
    } else if (response.sprinkler.program.raindelay > 0) {
-      var deadline = new Date(response.sprinkler.program.raindelay).getTime();
+      var deadline = response.sprinkler.program.raindelay * 1000;
       var delta = Math.floor((deadline - new Date().getTime()) / 1000);
       if (delta <= 0) {
          content = 'NONE';

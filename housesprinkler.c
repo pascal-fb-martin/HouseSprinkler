@@ -41,7 +41,7 @@
 #include "housesprinkler_program.h"
 
 // Rain delay in 1 day increment:
-#define RAINDELAYINTERVAL 86340000
+#define RAINDELAYINTERVAL 86400
 
 static int use_houseportal = 0;
 static char hostname[128];
