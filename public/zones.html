@@ -42,7 +42,18 @@ window.onload = function() {
    <title>Sprinkler Zones</title>
 </head>
 <body>
-   <div class="sprkrpanel">
+   <table class="sprkrtopcontainer">
+   <tr><td>
+   <table class="sprkrtop">
+   <tr>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/index.html">Home</A></td>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
+   </tr>
+   </table> 
+   </td></tr>
+   </table> 
+   <table class="sprkrpanel">
+   <tr><td>
    <div class="sprkrpane">
    <table class="sprkrstatus">
    <tr><td colspan="2"><span class="sprkrtitle">Zone Manual Start</span></td></tr>
@@ -58,13 +69,16 @@ window.onload = function() {
    <td><span class="sprkrdata adjustment"></span></td></tr>
    </table>
    </div>
+   </td></tr>
+   <tr><td>
    <form name="zonedata">
    <div>
      <br>
      Zone Time:<input type="text" size="6" name="zoneruntime" placeholder="Seconds">
    </div>
    </form>
-   </div>
+   </td></tr>
+   </table> 
    <table class="sprkrbuttons"><tr><td><button class="panelbutton" onclick="sprinklerZoneOff()"><span class="zonename">All Zones Off</span></button></td></tr></table>
 </body>
 </html>

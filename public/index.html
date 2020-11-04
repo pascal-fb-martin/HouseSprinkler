@@ -12,7 +12,18 @@ window.onload = function() {
 <title></title>
 </head>
 <body>
-   <div class="sprkrpanel">
+   <table class="sprkrtopcontainer">
+   <tr><td>
+   <table class="sprkrtop">
+   <tr>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/index.html">Home</A></td>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
+   </tr>
+   </table> 
+   </td></tr>
+   </table> 
+   <table class="sprkrpanel">
+   <tr><td>
    <div class="sprkrpane">
    <table class="sprkrstatus">
    <tr><td colspan="2"><span class="sprkrtitle">Main Menu</span></td></tr>
@@ -28,12 +39,12 @@ window.onload = function() {
    <td><span class="sprkrdata adjustment"></span></td></tr>
    </table>
    </div>
-   </div>
+   </td></tr>
+   </table> 
    <table class="sprkrmenu">
    <tr><td><button class="panelbutton" onclick="sprinklerOnOff()"><span class="zonename">On/Off</span></button></td></tr>
    <tr><td><button class="panelbutton" onclick="sprinklerRainDelay()"><span class=zonename">Add Rain Delay</span></button></td></tr>
    <tr><td class="sprkrmenucell"><A class="sprkrmenuitem" HREF="/sprinkler/history.html">History</A></td></tr>
-   <tr><td class="sprkrmenucell"><A class="sprkrmenuitem" HREF="/sprinkler/zones.html">Zones</A></td></tr>
    <tr><td class="sprkrmenucell"><A class="sprkrmenuitem" HREF="/sprinkler/programs.html">Manual Start</A></td></tr>
    <tr><td class="sprkrmenucell"><A class="sprkrmenuitem" HREF="/sprinkler/weather.html">Weather Info</A></td></tr>
    <tr><td class="sprkrmenucell"><A class="sprkrmenuitem" HREF="/sprinkler/config.html">Configure</A></td></tr>

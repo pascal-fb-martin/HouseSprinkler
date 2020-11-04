@@ -31,6 +31,23 @@
    float: right
 }
 
+.sprkrtopcontainer {
+   float: top;
+   width: 100%;
+}
+.sprkrtop {
+   text-align: center;
+   float: top;
+   width: 100%;
+   background-color: #2f2f2f;
+}
+.sprkrtopitem {
+   font-family:'Metrophobic', sans-serif;
+   font-size: 30px;
+   color: #f5f5f5;
+   text-decoration: none;
+}
+
 .sprkrmenu {
    font-family:'Metrophobic', sans-serif;
    text-align: right;
