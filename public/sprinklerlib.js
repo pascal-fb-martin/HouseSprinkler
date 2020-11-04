@@ -82,6 +82,9 @@ function sprinklerShowDuration (seconds) {
    seconds = Math.floor(seconds % 60);
    if (minutes > 60) {
       var hours = Math.floor(minutes / 60);
+      if (hours > 48) {
+          return Math.floor(hours/24)+' Days';
+      }
       minutes = Math.floor(minutes % 60);
       return ('00'+hours).slice(-2)+':'+('00'+minutes).slice(-2);
    }
