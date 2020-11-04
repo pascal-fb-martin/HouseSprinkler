@@ -211,6 +211,39 @@ void housesprinkler_zone_activate (const char *name, int pulse, int manual) {
     }
 }
 
+static void housesprinkler_zone_cancelled
+               (void *origin, int status, char *data, int length) {
+
+    SprinklerZone *zone = (SprinklerZone *)origin;
+
+   if (status == 302) {
+       static char url[256];
+       const char *redirect = echttp_attribute_get ("Location");
+       if (!redirect) {
+           houselog_trace (HOUSE_FAILURE, zone->name, "invalid redirect");
+           return;
+       }
+       strncpy (url, redirect, sizeof(url));
+       const char *error = echttp_client ("GET", url);
+       if (error) {
+           houselog_trace (HOUSE_FAILURE, zone->name, "%s: %s", url, error);
+           return;
+       }
+       DEBUG ("Redirected to %s\n", url);
+       echttp_submit (0, 0, housesprinkler_zone_cancelled, origin);
+       return;
+   }
+
+   // TBD: add an event to record that the command was processed. Too verbose?
+   if (status != 200) {
+       if (zone->status != 'e')
+           houselog_trace (HOUSE_FAILURE, zone->name,
+                           "HTTP code %d for zone %s", status, zone->name);
+       zone->status  = 'e';
+   }
+   zone->status  = 'i';
+}
+
 void housesprinkler_zone_stop (void) {
 
     int i;
@@ -218,6 +251,23 @@ void housesprinkler_zone_stop (void) {
 
     DEBUG ("%ld: Stop all zones\n", now);
     houselog_event (now, "ZONE", "ALL", "STOP", "manual");
+    if (ZoneActive) {
+        if (ZoneActive->url[0]) {
+            houselog_event (now, "ZONE", ZoneActive->name, "CANCEL", "manual");
+            static char url[256];
+            snprintf (url, sizeof(url), "%s/set?point=%s&state=off",
+                      ZoneActive->url, ZoneActive->name);
+            const char *error = echttp_client ("GET", url);
+            if (error) {
+                houselog_trace (HOUSE_FAILURE, ZoneActive->name, "cannot create socket for %s, %s", url, error);
+                return;
+            }
+            DEBUG ("GET %s\n", url);
+            echttp_submit (0, 0, housesprinkler_zone_cancelled, (void *)ZoneActive);
+        }
+        ZoneActive = 0;
+    }
+
     for (i = 0; i < QueueNext; ++i) {
         Queue[i].runtime = 0;
     }
