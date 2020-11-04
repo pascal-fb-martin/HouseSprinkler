@@ -110,7 +110,9 @@ typedef struct {
 static SprinklerZone *Zones = 0;
 static int            ZonesCount = 0;
 
+static time_t ZonesBusy = 0; // Do not schedule while a zone is running.
 static SprinklerZone *ZoneActive = 0; // One zone active at a time.
+
 
 typedef struct {
     int zone;
@@ -221,12 +223,14 @@ static void housesprinkler_zone_cancelled
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {
            houselog_trace (HOUSE_FAILURE, zone->name, "invalid redirect");
+           zone->status  = 'e';
            return;
        }
        strncpy (url, redirect, sizeof(url));
        const char *error = echttp_client ("GET", url);
        if (error) {
            houselog_trace (HOUSE_FAILURE, zone->name, "%s: %s", url, error);
+           zone->status  = 'e';
            return;
        }
        DEBUG ("Redirected to %s\n", url);
@@ -237,11 +241,27 @@ static void housesprinkler_zone_cancelled
    // TBD: add an event to record that the command was processed. Too verbose?
    if (status != 200) {
        if (zone->status != 'e')
-           houselog_trace (HOUSE_FAILURE, zone->name,
-                           "HTTP code %d for zone %s", status, zone->name);
+           houselog_trace (HOUSE_FAILURE, zone->name, "HTTP code %d", status);
        zone->status  = 'e';
    }
-   zone->status  = 'i';
+}
+
+void housesprinkler_zone_cancel (SprinklerZone *zone) {
+
+    if (zone->url[0]) {
+        houselog_event (time(0), "ZONE", zone->name, "CANCEL", "manual");
+        static char url[256];
+        snprintf (url, sizeof(url),
+                  "%s/set?point=%s&state=off", zone->url, zone->name);
+        const char *error = echttp_client ("GET", url);
+        if (error) {
+            houselog_trace (HOUSE_FAILURE, zone->name,
+                            "cannot create socket for %s, %s", url, error);
+            return;
+        }
+        DEBUG ("GET %s\n", url);
+        echttp_submit (0, 0, housesprinkler_zone_cancelled, (void *)zone);
+    }
 }
 
 void housesprinkler_zone_stop (void) {
@@ -251,27 +271,11 @@ void housesprinkler_zone_stop (void) {
 
     DEBUG ("%ld: Stop all zones\n", now);
     houselog_event (now, "ZONE", "ALL", "STOP", "manual");
-    if (ZoneActive) {
-        if (ZoneActive->url[0]) {
-            houselog_event (now, "ZONE", ZoneActive->name, "CANCEL", "manual");
-            static char url[256];
-            snprintf (url, sizeof(url), "%s/set?point=%s&state=off",
-                      ZoneActive->url, ZoneActive->name);
-            const char *error = echttp_client ("GET", url);
-            if (error) {
-                houselog_trace (HOUSE_FAILURE, ZoneActive->name, "cannot create socket for %s, %s", url, error);
-                return;
-            }
-            DEBUG ("GET %s\n", url);
-            echttp_submit (0, 0, housesprinkler_zone_cancelled, (void *)ZoneActive);
-        }
-        ZoneActive = 0;
-    }
-
     for (i = 0; i < QueueNext; ++i) {
         Queue[i].runtime = 0;
     }
     QueueNext = 0;
+    ZonesBusy = 0;
 }
 
 static void housesprinkler_zone_controlled
@@ -300,8 +304,7 @@ static void housesprinkler_zone_controlled
    // TBD: add an event to record that the command was processed. Too verbose?
    if (status != 200) {
        if (zone->status != 'e')
-           houselog_trace (HOUSE_FAILURE, zone->name,
-                           "HTTP code %d for zone %s", status, zone->name);
+           houselog_trace (HOUSE_FAILURE, zone->name, "HTTP code %d", status);
        zone->status  = 'e';
    }
    zone->status  = 'a';
@@ -331,8 +334,6 @@ static int housesprinkler_zone_start (int zone, int pulse) {
 
 static void housesprinkler_zone_schedule (time_t now) {
 
-    static time_t ZonesBusy = 0; // Do not schedule while a zone is running.
-
     int i;
     int    nextzone = -1;
     time_t nexttime = now + 1;
@@ -351,6 +352,10 @@ static void housesprinkler_zone_schedule (time_t now) {
     if (now <= ZonesBusy) return;
 
     if (ZoneActive) {
+        if (ZonesBusy == 0) {
+            // Clear sign that a stop was requested: cancel the zone.
+            housesprinkler_zone_cancel (ZoneActive);
+        }
         if (ZoneActive->status == 'a') ZoneActive->status = 'i';
         ZoneActive = 0;
     }
