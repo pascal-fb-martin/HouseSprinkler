@@ -152,7 +152,7 @@ function sprinklerApplyUpdate (text) {
 
 function sprinklerUpdate () {
    var command = new XMLHttpRequest();
-   command.open("GET", "/status");
+   command.open("GET", "/sprinkler/status");
    command.onreadystatechange = function () {
        if (command.readyState === 4 && command.status === 200) {
            sprinklerApplyUpdate(command.responseText);
@@ -168,7 +168,7 @@ function sprinklerInfo () {
 
 function sprinklerConfig (callback) {
    var command = new XMLHttpRequest();
-   command.open("GET", "/config");
+   command.open("GET", "/sprinkler/config");
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
          var config = JSON.parse(command.responseText);
@@ -194,7 +194,7 @@ function sprinklerConfigZones(callback) {
 
 function sprinklerSaveConfig (config) {
    var command = new XMLHttpRequest();
-   command.open("POST", "/config");
+   command.open("POST", "/sprinkler/config");
    command.setRequestHeader('Content-Type', 'application/json');
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status !== 200) {
@@ -206,7 +206,7 @@ function sprinklerSaveConfig (config) {
 
 function sprinklerStatus (callback) {
    var command = new XMLHttpRequest();
-   command.open("GET", "/status");
+   command.open("GET", "/sprinkler/status");
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
          var status = JSON.parse(command.responseText);
@@ -218,27 +218,17 @@ function sprinklerStatus (callback) {
 }
 
 function sprinklerHardwareInfo (callback) {
-   var command = new XMLHttpRequest();
-   command.open("GET", "/hardware/info");
-   command.onreadystatechange = function () {
-      if (command.readyState === 4 && command.status === 200) {
-         var status = JSON.parse(command.responseText);
-         // var type = command.getResponseHeader("Content-Type");
-         callback(status);
-      }
-   }
-   command.send(null);
 }
 
 function sprinklerOnOff () {
    var command = new XMLHttpRequest();
-   command.open("GET", "/onoff");
+   command.open("GET", "/sprinkler/onoff");
    command.send(null);
 }
 
 function sprinklerZoneOn (name, duration) {
    var command = new XMLHttpRequest();
-   command.open("GET", "/zone/on?name="+name+"&pulse="+duration);
+   command.open("GET", "/sprinkler/zone/on?name="+name+"&pulse="+duration);
    command.send(null);
 }
 
@@ -253,7 +243,7 @@ function sprinklerRefresh () {
 
 function sprinklerHistory (callback) {
    var command = new XMLHttpRequest();
-   command.open("GET", "/history");
+   command.open("GET", "/sprinkler/history");
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
          var response = JSON.parse(command.responseText);
@@ -266,7 +256,7 @@ function sprinklerHistory (callback) {
 
 function sprinklerLatestEvent (callback) {
    var command = new XMLHttpRequest();
-   command.open("GET", "/history/latest");
+   command.open("GET", "/sprinkler/history/latest");
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
          var event = JSON.parse(command.responseText);
