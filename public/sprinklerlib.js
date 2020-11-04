@@ -113,7 +113,7 @@ function sprinklerApplyUpdate (text) {
       program = null;
    }
    if (response.sprinkler.control.active) {
-      content = 'ZONE '+response.sprinkler.control.active+' ACTIVE';
+      content = response.sprinkler.control.active+' ACTIVE';
       if (! program) program = 'MANUAL';
    } else {
       content = 'IDLE';
