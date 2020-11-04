@@ -123,10 +123,10 @@ function sprinklerApplyUpdate (text) {
    sprinklerSetContent ('activezone', content);
    sprinklerSetContent ('activeprogram', content2);
 
-   if (! response.sprinkler.program.rain.enabled) {
+   if (response.sprinkler.program.raindelay == null) {
       content = 'DISABLED';
-   } else if (response.sprinkler.program.rain.delay) {
-      var deadline = new Date(response.raintimer).getTime();
+   } else if (response.sprinkler.program.raindelay > 0) {
+      var deadline = new Date(response.sprinkler.program.raindelay).getTime();
       var delta = Math.floor((deadline - new Date().getTime()) / 1000);
       if (delta <= 0) {
          content = 'NONE';
@@ -138,11 +138,11 @@ function sprinklerApplyUpdate (text) {
    }
    sprinklerSetContent ('raindelay', content);
 
-   if (response.sprinkler.program.index) {
+   if (response.sprinkler.program.useindex) {
       sprinklerSetContent ('adjustment',
           ''+response.sprinkler.index.value+'%'+' FROM '+response.sprinkler.index.origin);
    } else {
-      sprinklerSetContent ('adjustment','NOT AVAILABLE');
+      sprinklerSetContent ('adjustment','DISABLED');
    }
 
    title = document.getElementsByClassName ('hostname');

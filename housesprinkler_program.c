@@ -501,12 +501,12 @@ int housesprinkler_program_status (char *buffer, int size) {
     if (cursor >= size) goto overflow;
 
     cursor += snprintf (buffer+cursor, size-cursor,
-                        ",\"index\":%s", ProgramIndexState?"true":"false");
+                        ",\"useindex\":%s", ProgramIndexState?"true":"false");
     if (cursor >= size) goto overflow;
 
-    if (ProgramRainEnabled && ProgramRainDelay > 0) {
+    if (ProgramRainEnabled) {
         cursor += snprintf (buffer+cursor, size-cursor,
-                            ",\"rain\":%d", ProgramRainDelay);
+                            ",\"raindelay\":%d", ProgramRainDelay);
         if (cursor >= size) goto overflow;
     }
 
