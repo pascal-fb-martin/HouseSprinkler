@@ -503,6 +503,22 @@ int housesprinkler_zone_status (char *buffer, int size) {
         if (cursor >= size) goto overflow;
     }
 
+    snprintf (buffer+cursor, size-cursor, "],\"queue\":[");
+    cursor += strlen(buffer+cursor);
+    if (cursor >= size) goto overflow;
+    prefix = "";
+
+    for (i = 0; i < QueueNext; ++i) {
+        if (Queue[i].runtime > 0) {
+            snprintf (buffer+cursor, size-cursor,
+                      "%s[\"%s\",%d]",
+                      prefix, Zones[Queue[i].zone].name, Queue[i].runtime);
+            cursor += strlen(buffer+cursor);
+            if (cursor >= size) goto overflow;
+            prefix = ",";
+        }
+    }
+
     snprintf (buffer+cursor, size-cursor, "]");
     cursor += strlen(buffer+cursor);
     if (cursor >= size) goto overflow;
