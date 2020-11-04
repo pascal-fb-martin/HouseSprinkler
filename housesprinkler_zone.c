@@ -182,7 +182,11 @@ void housesprinkler_zone_activate (const char *name, int pulse, int manual) {
         int zone = housesprinkler_zone_search (name);
         if (zone >= 0) {
             int i;
+            time_t now = time(0);
             if (Zones[zone].manual && !manual) return;
+            houselog_event (now, "ZONE", name, "QUEUE",
+                            "%s for a %d seconds pulse",
+                            manual?"manually":"scheduled", pulse);
             for (i = 0; i < QueueNext; ++i) {
                 if (Queue[i].zone == zone) {
                     // This zone was already queued. Add this pulse
@@ -265,7 +269,7 @@ static int housesprinkler_zone_start (int zone, int pulse) {
             return 0;
         }
         DEBUG ("GET %s\n", url);
-        echttp_submit (0, 0, housesprinkler_zone_controlled, (void *)Zones+zone);
+        echttp_submit (0, 0, housesprinkler_zone_controlled, (void *)(Zones+zone));
         return 1;
     }
     return 0;
