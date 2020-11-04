@@ -153,7 +153,7 @@ function sprinklerApplyUpdate (text) {
 function sprinklerUpdate () {
    var command = new XMLHttpRequest();
    command.open("GET", "/status");
-   command.onreadystatechange = function {} {
+   command.onreadystatechange = function () {
        if (command.readyState === 4 && command.status === 200) {
            sprinklerApplyUpdate(command.responseText);
        }
