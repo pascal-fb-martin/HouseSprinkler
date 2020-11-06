@@ -403,6 +403,7 @@ void housesprinkler_program_manual (const char *name) {
     for (i = 0; i < ProgramsCount; ++i) {
         if (strcmp (name, Programs[i].name) == 0) {
             housesprinkler_program_activate (Programs+i, 1);
+            Programs[i].running = 1;
             return;
         }
     }
