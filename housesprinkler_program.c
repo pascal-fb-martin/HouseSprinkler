@@ -417,13 +417,17 @@ void housesprinkler_program_periodic (time_t now) {
     int i;
     struct tm local = *localtime(&now);
 
+    if (housesprinkler_zone_idle()) {
+        for (i = 0; i < ProgramsCount; ++i) {
+            Programs[i].running = 0;
+        }
+    }
+
     if (local.tm_hour == lasthour && local.tm_min == lastminute) return;
     lasthour = local.tm_hour;
     lastminute = local.tm_min;
 
-    if (ProgramRainEnabled && ProgramRainDelay > now) return;
-
-    if (SprinklerState) {
+    if (SprinklerState && (!ProgramRainEnabled || ProgramRainDelay < now)) {
 
         DEBUG ("Checking schedule at %02d:%02d\n", local.tm_hour, local.tm_min);
 
@@ -477,12 +481,6 @@ void housesprinkler_program_periodic (time_t now) {
                 program->running = 1;
                 program->lastlaunch = now;
             }
-        }
-    }
-
-    if (housesprinkler_zone_idle()) {
-        for (i = 0; i < ProgramsCount; ++i) {
-            Programs[i].running = 0;
         }
     }
 }
