@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel=stylesheet type="text/css"
+      href="/sprinkler/sprinkler.css" title="Sprinkler">
+<script src="/sprinkler/sprinklerlib.js"></script>
+<script>
+window.onload = function() {
+
+   function newColumn (text, index) {
+      var column = document.createElement("td");
+      column.innerHTML = text;
+      if (index & 1) column.setAttribute('bgcolor', '#E0E0E0');
+      return column;
+   }
+
+   var lastEventId = null;
+
+   function updateEvents(zones) {
+
+      sprinklerEvents (function (response) {
+
+         lastEventId = response.sprinkler.latest;
+
+         var table = document.getElementsByClassName ('sprkrevent')[0];
+         for (var i = table.childNodes.length - 1; i > 1; i--) {
+            table.removeChild(table.childNodes[i]);
+         }
+         for (var i = response.sprinkler.events.length-1; i >= 0; --i) {
+            var event = response.sprinkler.events[i];
+            var timestamp = new Date(event[0]);
+            var row = document.createElement("tr");
+            row.appendChild(newColumn(timestamp.toLocaleString(), i));
+            row.appendChild(newColumn(response.events[1], i));
+            row.appendChild(newColumn(response.events[2], i));
+            row.appendChild(newColumn(response.events[3], i));
+            row.appendChild(newColumn(response.events[4], i));
+            table.appendChild(row);
+         }
+      });
+   }
+
+   function checkEvents (zones) {
+      sprinklerLatestEvent (function (latest) {
+         if ((lastEventId == null) || (lastEventId != latest)) {
+            updateEvents (zones);
+         }
+      });
+   }
+
+   sprinklerUpdate();
+
+   sprinklerConfigZones (function (zones) {
+      updateEvents(zones);
+      setInterval (function() {checkEvents(zones)}, 1000);
+   });
+}
+</script>
+<head>
+   <title></title>
+</head>
+<body>
+   <table class="sprkrtopcontainer">
+   <tr><td>
+   <table class="sprkrtop">
+   <tr>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/index.html">Home</A></td>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
+   <td><span class="sprkrtopitem">Events</span></td>
+   </tr>
+   </table> 
+   </td></tr>
+   </table> 
+   <table class="sprkrpanel">
+   <tr><td>
+   <h1><span class="hostname"></span></h1>
+   <table class="sprkrevent" border="0">
+      <tr>
+         <th width="20%">Time</th>
+         <th width="15%">Type</th>
+         <th width="25%">Object</th>
+         <th width="5%">Action</th>
+         <th width="35%">Description</th>
+      </tr>
+   </table>
+</body>
+</html>
+

@@ -68,9 +68,9 @@
 //      This function requests the controler to refresh all information
 //      from the outsid world: weather, calendar programs.
 //
-//   sprinklerHistory(callback);
+//   sprinklerEvents(callback);
 //
-//      This function requests the complete history.
+//      This function requests the complete event log.
 //
 //   sprinklerLatestEvent(callback);
 //
@@ -179,7 +179,6 @@ function sprinklerConfig (callback) {
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
          var config = JSON.parse(command.responseText);
-         // var type = command.getResponseHeader("Content-Type");
          callback(config);
       }
    }
@@ -192,7 +191,6 @@ function sprinklerConfigZones(callback) {
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
          var config = JSON.parse(command.responseText);
-         // var type = command.getResponseHeader("Content-Type");
          callback(config);
       }
    }
@@ -217,7 +215,6 @@ function sprinklerStatus (callback) {
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
          var status = JSON.parse(command.responseText);
-         // var type = command.getResponseHeader("Content-Type");
          callback(status);
       }
    }
@@ -246,14 +243,13 @@ function sprinklerRainDelay () {
 function sprinklerRefresh () {
 }
 
-function sprinklerHistory (callback) {
+function sprinklerEvents (callback) {
    var command = new XMLHttpRequest();
-   command.open("GET", "/sprinkler/history");
+   command.open("GET", "/sprinkler/log/events");
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
          var response = JSON.parse(command.responseText);
-         // var type = command.getResponseHeader("Content-Type");
-         callback(response.history);
+         callback(response);
       }
    }
    command.send(null);
@@ -261,12 +257,11 @@ function sprinklerHistory (callback) {
 
 function sprinklerLatestEvent (callback) {
    var command = new XMLHttpRequest();
-   command.open("GET", "/sprinkler/history/latest");
+   command.open("GET", "/sprinkler/log/latest");
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
-         var event = JSON.parse(command.responseText);
-         // var type = command.getResponseHeader("Content-Type");
-         callback(event);
+         var response = JSON.parse(command.responseText);
+         callback(response.sprinkler.latest);
       }
    }
    command.send(null);
