@@ -82,11 +82,14 @@
 
 static ParserToken ConfigParsed[CONFIGMAXSIZE];
 static int   ConfigTokenCount = 0;
-static char *ConfigText;
+static char *ConfigText = 0;
 static int   ConfigTextSize = 0;
 static int   ConfigTextLength = 0;
 
 static const char *ConfigFile = "/etc/house/sprinkler.json";
+
+static const char FactoryDefaultConfigFile[] =
+                      "/usr/local/share/house/public/sprinkler/defaults.json";
 
 static const char *housesprinkler_config_refresh (const char *file) {
 
@@ -95,7 +98,11 @@ static const char *housesprinkler_config_refresh (const char *file) {
     DEBUG ("Loading config from %s\n", ConfigFile);
 
     newconfig = echttp_parser_load (file);
-    if (!newconfig) return "not accessible";
+    if (!newconfig) {
+        DEBUG ("Loading config from %s\n", FactoryDefaultConfigFile);
+        newconfig = echttp_parser_load (FactoryDefaultConfigFile);
+        if (!newconfig) return "not accessible";
+    }
 
     if (ConfigText) echttp_parser_free (ConfigText);
     ConfigText = newconfig;

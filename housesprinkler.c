@@ -249,7 +249,6 @@ int main (int argc, const char **argv) {
     if (error) {
         houselog_trace
             (HOUSE_FAILURE, housesprinkler_config_name(), "%s", error);
-        exit(1);
     }
     housesprinkler_zone_refresh ();
     housesprinkler_index_refresh ();

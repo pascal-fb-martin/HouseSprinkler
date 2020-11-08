@@ -1,0 +1,96 @@
+{
+    "on" : true,
+    "raindelay" : true,
+    "wateringindex" : [
+        {
+            "enable" : true,
+            "provider" : "waterwise",
+            "url": "http://www.bewaterwise.com/RSS/rsswi.xml",
+            "format": "XML",
+            "path": ".rss.content.channel.content.item[1].content.description.content",
+            "adjust" : {
+                "min" : 10,
+                "max" : 150
+            },
+            "refresh" : [ 7, 20 ]
+        }
+    ],
+    "zones" : [],
+    "programs" : [],
+    "seasons" : [
+        {
+            "name" : "Dry",
+            "weekly" : [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                80,
+                80,
+                80,
+                80,
+                80,
+                80,
+                80,
+                80,
+                80,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                40,
+                40,
+                40,
+                40,
+                40,
+                40,
+                40,
+                40,
+                40,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name" : "Wet",
+            "monthly" : [
+                40,
+                40,
+                60,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                40,
+                40
+            ]
+        }
+    ]
+}

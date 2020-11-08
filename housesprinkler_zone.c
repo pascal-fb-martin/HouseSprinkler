@@ -140,6 +140,7 @@ void housesprinkler_zone_refresh (void) {
     //
     if (Zones) free (Zones);
     Zones = 0;
+    ZoneActive = 0;
     ZonesCount = 0;
     content = housesprinkler_config_array (0, ".zones");
     if (content > 0) {
@@ -171,8 +172,10 @@ void housesprinkler_zone_refresh (void) {
     // accumulate.)
     //
     if (Queue) free (Queue);
+    Queue = 0;
     QueueNext = 0;
-    Queue = calloc (ZonesCount, sizeof(SprinklerQueue));
+    if (ZonesCount)
+         Queue = calloc (ZonesCount, sizeof(SprinklerQueue));
 }
 
 static int housesprinkler_zone_search (const char *name) {
@@ -532,6 +535,8 @@ static void housesprinkler_zone_discovery (time_t now) {
 }
 
 void housesprinkler_zone_periodic (time_t now) {
+
+    if (!ZonesCount) return;
 
     housesprinkler_zone_discovery (now);
     housesprinkler_zone_schedule  (now);
