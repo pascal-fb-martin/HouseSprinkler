@@ -16,7 +16,7 @@ window.onload = function() {
 
    var lastEventId = null;
 
-   function updateEvents(zones) {
+   function updateEvents() {
 
       sprinklerEvents (function (response) {
 
@@ -31,29 +31,26 @@ window.onload = function() {
             var timestamp = new Date(event[0]);
             var row = document.createElement("tr");
             row.appendChild(newColumn(timestamp.toLocaleString(), i));
-            row.appendChild(newColumn(response.events[1], i));
-            row.appendChild(newColumn(response.events[2], i));
-            row.appendChild(newColumn(response.events[3], i));
-            row.appendChild(newColumn(response.events[4], i));
+            row.appendChild(newColumn(event[1], i));
+            row.appendChild(newColumn(event[2], i));
+            row.appendChild(newColumn(event[3], i));
+            row.appendChild(newColumn(event[4], i));
             table.appendChild(row);
          }
       });
    }
 
-   function checkEvents (zones) {
+   function checkEvents () {
       sprinklerLatestEvent (function (latest) {
          if ((lastEventId == null) || (lastEventId != latest)) {
-            updateEvents (zones);
+            updateEvents ();
          }
       });
    }
 
    sprinklerUpdate();
-
-   sprinklerConfigZones (function (zones) {
-      updateEvents(zones);
-      setInterval (function() {checkEvents(zones)}, 1000);
-   });
+   updateEvents();
+   setInterval (function() {checkEvents()}, 1000);
 }
 </script>
 <head>
@@ -72,8 +69,6 @@ window.onload = function() {
    </table> 
    </td></tr>
    </table> 
-   <table class="sprkrpanel">
-   <tr><td>
    <h1><span class="hostname"></span></h1>
    <table class="sprkrevent" border="0">
       <tr>

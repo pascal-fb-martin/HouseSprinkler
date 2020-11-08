@@ -301,10 +301,12 @@ static void housesprinkler_index_response
 
    DEBUG ("Received index %d from %s\n", SprinklerIndex, server->name);
    if (SprinklerIndex == rawindex)
-       houselog_event (now, "INDEX", server->url, "RECEIVED", "%d%%", rawindex);
+       houselog_event (now, "INDEX", server->name, "RECEIVED",
+                       "%d%% from %s", rawindex, server->url);
    else
-       houselog_event (now, "INDEX", server->url, "RECEIVED",
-                       "%d%% (adjusted from %d%%)", SprinklerIndex, rawindex);
+       houselog_event (now, "INDEX", server->name, "RECEIVED",
+                       "%d%% (adjusted to %d%%) from %s",
+                       rawindex, SprinklerIndex, server->url);
 
    int i;
    for (i = 0; i < INDEX_MAX_LISTENER; ++i) {
