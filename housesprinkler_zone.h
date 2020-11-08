@@ -20,7 +20,8 @@
  */
 
 void housesprinkler_zone_refresh (void);
-void housesprinkler_zone_activate (const char *name, int pulse, int manual);
+void housesprinkler_zone_activate (const char *name,
+                                   int pulse, const char *context);
 void housesprinkler_zone_stop (void);
 void housesprinkler_zone_periodic (time_t now);
 int  housesprinkler_zone_idle (void);

@@ -52,11 +52,13 @@
  *
  *    This function must be called each time the configuration changes.
  *
- * void housesprinkler_zone_activate (const char *name, int pulse, int manual);
+ * void housesprinkler_zone_activate (const char *name,
+ *                                    int pulse, const char *context);
  *
  *    Activate one zone for the duration set by pulse. If the zone is already
  *    present in the watering queue, this pulse's amount is added to the
- *    remaining runtime.
+ *    remaining runtime. The context is typically the name of the schedule,
+ *    or 0 for manual activation.
  *
  * void housesprinkler_zone_stop (void);
  *
@@ -117,8 +119,8 @@ static SprinklerZone *ZoneActive = 0; // One zone active at a time.
 typedef struct {
     int zone;
     int runtime;
-    int manual;
     time_t nexton;
+    char context[16];
 } SprinklerQueue;
 
 static SprinklerQueue *Queue = 0;
@@ -181,17 +183,18 @@ static int housesprinkler_zone_search (const char *name) {
     return -1;
 }
 
-void housesprinkler_zone_activate (const char *name, int pulse, int manual) {
+void housesprinkler_zone_activate (const char *name,
+                                   int pulse, const char *context) {
 
     if (QueueNext < ZonesCount) {
         int zone = housesprinkler_zone_search (name);
         if (zone >= 0) {
             int i;
             time_t now = time(0);
-            if (Zones[zone].manual && !manual) return;
-            houselog_event (now, "ZONE", name, "QUEUE",
-                            "%s for a %d seconds pulse",
-                            manual?"manually":"scheduled", pulse);
+            if (Zones[zone].manual && context) return;
+            houselog_trace (HOUSE_INFO, name,
+                            "queued (%s) for a %d seconds pulse",
+                            context?"scheduled":"manually", pulse);
             for (i = 0; i < QueueNext; ++i) {
                 if (Queue[i].zone == zone) {
                     // This zone was already queued. Add this pulse
@@ -204,10 +207,14 @@ void housesprinkler_zone_activate (const char *name, int pulse, int manual) {
             // This zone was not queued yet: create a new entry.
             Queue[QueueNext].zone = zone;
             Queue[QueueNext].runtime = pulse;
-            Queue[QueueNext].manual = manual;
+            if (context)
+                snprintf (Queue[QueueNext].context, sizeof(Queue[0].context),
+                          context);
+            else
+                Queue[QueueNext].context[0] = 0;
             Queue[QueueNext].nexton = time(0);
             DEBUG ("Activated zone %s for %d seconds (%s, queue entry %d)\n",
-                   name, pulse, manual?"manual":"auto", QueueNext);
+                   name, pulse, context?"auto":"manual", QueueNext);
             QueueNext += 1;
         }
     }
@@ -310,13 +317,20 @@ static void housesprinkler_zone_controlled
    zone->status  = 'a';
 }
 
-static int housesprinkler_zone_start (int zone, int pulse) {
+static int housesprinkler_zone_start (int zone,
+                                      int pulse, const char *context) {
     time_t now = time(0);
     DEBUG ("%ld: Start zone %s for %d seconds\n",
            now, Zones[zone].name, pulse);
-    houselog_event (now, "ZONE", Zones[zone].name, "START",
-                    "for %d seconds", pulse);
     if (Zones[zone].url[0]) {
+        char program[24];
+        if (context && context[0])
+            snprintf (program, sizeof(program), " (%s)", context);
+        else
+            program[0] = 0;
+        houselog_event (now, "ZONE", Zones[zone].name, "START",
+                        "for %d seconds using %s%s",
+                        pulse, Zones[zone].url, program);
         static char url[256];
         snprintf (url, sizeof(url), "%s/set?point=%s&state=on&pulse=%d",
                   Zones[zone].url, Zones[zone].name, pulse);
@@ -373,7 +387,7 @@ static void housesprinkler_zone_schedule (time_t now) {
     if (nextzone >= 0) {
         int zone = Queue[nextzone].zone;
         int pulse = Zones[zone].pulse;
-        if (Queue[nextzone].manual) {
+        if (Queue[nextzone].context[0] == 0) {
             pulse = Queue[nextzone].runtime;
             Queue[nextzone].runtime = 0;
             Queue[nextzone].nexton = now + pulse;
@@ -390,7 +404,7 @@ static void housesprinkler_zone_schedule (time_t now) {
             //
             Queue[nextzone].nexton = now + pulse + Zones[zone].pause;
         }
-        if (housesprinkler_zone_start (zone, pulse)) {
+        if (housesprinkler_zone_start (zone, pulse, Queue[nextzone].context)) {
             // Schedule the next zone after the pulse and the optional index
             // valve pause have been exhausted.
             ZonesBusy = now + pulse + ZoneIndexValvePause;

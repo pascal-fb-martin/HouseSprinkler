@@ -174,7 +174,7 @@ static const char *sprinkler_zone_on (const char *method, const char *uri,
     const char *zone = echttp_parameter_get ("name");
     const char *runtime = echttp_parameter_get ("pulse");
     if (zone) {
-        housesprinkler_zone_activate (zone, runtime?atoi(runtime):30, 1);
+        housesprinkler_zone_activate (zone, runtime?atoi(runtime):30, 0);
     }
     return sprinkler_status (method, uri, data, length);
 }

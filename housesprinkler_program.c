@@ -393,7 +393,8 @@ static void housesprinkler_program_activate
     int i;
     for (i = 0; i < program->count; ++i) {
         int runtime = (program->zones[i].runtime * index) / 100;
-        housesprinkler_zone_activate (program->zones[i].name, runtime, 0);
+        housesprinkler_zone_activate
+            (program->zones[i].name, runtime, program->name);
     }
 }
 
