@@ -323,7 +323,7 @@ static int housesprinkler_zone_start (int zone,
     DEBUG ("%ld: Start zone %s for %d seconds\n",
            now, Zones[zone].name, pulse);
     if (Zones[zone].url[0]) {
-        if (!context || context[0]) context = "manual";
+        if (!context || context[0] == 0) context = "manual";
         houselog_event (now, "ZONE", Zones[zone].name, "START",
                         "for %d seconds using %s (%s)",
                         pulse, Zones[zone].url, context);
