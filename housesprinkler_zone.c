@@ -323,14 +323,10 @@ static int housesprinkler_zone_start (int zone,
     DEBUG ("%ld: Start zone %s for %d seconds\n",
            now, Zones[zone].name, pulse);
     if (Zones[zone].url[0]) {
-        char program[24];
-        if (context && context[0])
-            snprintf (program, sizeof(program), " (%s)", context);
-        else
-            program[0] = 0;
+        if (!context || context[0]) context = "manual";
         houselog_event (now, "ZONE", Zones[zone].name, "START",
-                        "for %d seconds using %s%s",
-                        pulse, Zones[zone].url, program);
+                        "for %d seconds using %s (%s)",
+                        pulse, Zones[zone].url, context);
         static char url[256];
         snprintf (url, sizeof(url), "%s/set?point=%s&state=on&pulse=%d",
                   Zones[zone].url, Zones[zone].name, pulse);
