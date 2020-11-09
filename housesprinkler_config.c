@@ -92,14 +92,14 @@ static const char FactoryDefaultsConfigFile[] =
                       "/usr/local/share/house/public/sprinkler/defaults.json";
 static int UseFactoryDefaults = 0;
 
-static const char *housesprinkler_config_refresh (const char *file) {
+static const char *housesprinkler_config_refresh (void) {
 
     char *newconfig;
 
     DEBUG ("Loading config from %s\n", ConfigFile);
 
     UseFactoryDefaults = 0;
-    newconfig = echttp_parser_load (file);
+    newconfig = echttp_parser_load (ConfigFile);
     if (!newconfig) {
         DEBUG ("Loading config from %s\n", FactoryDefaultsConfigFile);
         UseFactoryDefaults = 1;
@@ -126,20 +126,22 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
         if (echttp_option_match ("-config=", argv[i], &config))
             ConfigFile = strdup(config);
     }
-    return housesprinkler_config_refresh (ConfigFile);
+    return housesprinkler_config_refresh ();
 }
 
 const char *housesprinkler_config_save (const char *text) {
 
     int fd;
 
+    DEBUG("Saving to %s: %s\n", ConfigFile, text);
     fd = open (ConfigFile, O_WRONLY+O_CREAT, 0777);
     if (fd < 0) {
+        DEBUG("Cannot save to %s\n", ConfigFile);
         return "cannot save to file";
     }
-    write (fd, text, ConfigTextLength);
+    write (fd, text, strlen(text));
     close (fd);
-    return housesprinkler_config_refresh (ConfigFile);
+    return housesprinkler_config_refresh ();
 }
 
 int housesprinkler_config_file (void) {
