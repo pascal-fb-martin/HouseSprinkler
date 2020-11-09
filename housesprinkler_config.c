@@ -88,8 +88,9 @@ static int   ConfigTextLength = 0;
 
 static const char *ConfigFile = "/etc/house/sprinkler.json";
 
-static const char FactoryDefaultConfigFile[] =
+static const char FactoryDefaultsConfigFile[] =
                       "/usr/local/share/house/public/sprinkler/defaults.json";
+static int UseFactoryDefaults = 0;
 
 static const char *housesprinkler_config_refresh (const char *file) {
 
@@ -97,10 +98,12 @@ static const char *housesprinkler_config_refresh (const char *file) {
 
     DEBUG ("Loading config from %s\n", ConfigFile);
 
+    UseFactoryDefaults = 0;
     newconfig = echttp_parser_load (file);
     if (!newconfig) {
-        DEBUG ("Loading config from %s\n", FactoryDefaultConfigFile);
-        newconfig = echttp_parser_load (FactoryDefaultConfigFile);
+        DEBUG ("Loading config from %s\n", FactoryDefaultsConfigFile);
+        UseFactoryDefaults = 1;
+        newconfig = echttp_parser_load (FactoryDefaultsConfigFile);
         if (!newconfig) return "not accessible";
     }
 
@@ -140,6 +143,8 @@ const char *housesprinkler_config_save (const char *text) {
 }
 
 int housesprinkler_config_file (void) {
+    if (UseFactoryDefaults)
+        return open(FactoryDefaultsConfigFile, O_RDONLY);
     return open(ConfigFile, O_RDONLY);
 }
 

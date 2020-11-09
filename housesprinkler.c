@@ -72,8 +72,8 @@ static const char *sprinkler_config (const char *method, const char *uri,
     if (strcmp(method, "POST") == 0) {
        housesprinkler_config_save (data);
     } else if (strcmp(method, "GET") == 0) {
-       echttp_transfer
-           (housesprinkler_config_file(), housesprinkler_config_size());
+       int fd = housesprinkler_config_file();
+       echttp_transfer (fd, housesprinkler_config_size());
     }
     echttp_content_type_json ();
     return "";
