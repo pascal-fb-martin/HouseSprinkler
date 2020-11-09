@@ -50,10 +50,6 @@ function saveConfig () {
             newconfig.programs[i].date = form.program[prefix+'date'].value;
          if (form.program[prefix+'season'].value)
             newconfig.programs[i].season = form.program[prefix+'season'].value;
-         if (form.program[prefix+'append'].checked) {
-            newconfig.programs[i].options = new Object();
-            newconfig.programs[i].options.append = true;
-         }
          newconfig.programs[i].active = form.program[prefix+'active'].checked;
          newconfig.programs[i].repeat = form.program[prefix+'repeat'].value;
          switch (newconfig.programs[i].repeat) {
@@ -73,11 +69,13 @@ function saveConfig () {
          for (var z = 0; z < editing.zones.length; z++) {
             if (form.program[prefix+'zone_'+z+'_seconds'] != undefined) {
                if (form.program[prefix+'zone_'+z+'_seconds'].value.length) {
-                  var zi = newconfig.programs[i].zones.length;
-                  newconfig.programs[i].zones[zi] = new Object();
-                  newconfig.programs[i].zones[zi].zone = z;
-                  newconfig.programs[i].zones[zi].seconds =
-                     form.program[prefix+'zone_'+z+'_seconds'].value;
+                  var value = parseInt(form.program[prefix+'zone_'+z+'_seconds'].value, 10);
+                  if (value != 0) {
+                      var zi = newconfig.programs[i].zones.length;
+                      newconfig.programs[i].zones[zi] = new Object();
+                      newconfig.programs[i].zones[zi].name = newconfig.zones[z].name;
+                      newconfig.programs[i].zones[zi].time = value;
+                  }
                }
             }
          }
@@ -109,19 +107,6 @@ function showInput (name, content) {
    }
 }
 
-function showSelected (name, content) {
-   var elements = document.getElementsByName (name);
-   for (var i = 0; i < elements.length; i++) {
-      var element = elements[i];
-      for (var j = 0; j < element.options.length; j++) {
-         if (element.options[j].value == content) {
-            element.options[j].selected = true;
-            break;
-         }
-      }
-   }
-}
-
 function showCheckbox (name, content) {
    var elements = document.getElementsByName (name);
    for (var i = 0; i < elements.length; i++) {
@@ -150,6 +135,29 @@ function visible (name) {
 function forceVisible (elements) {
    for (var k = 0; k < elements.length; k++) {
       elements[k].style.display = 'block';
+   }
+}
+
+function showZoneTitles (elements) {
+
+   for (var k = 0; k < elements.length; k++) {
+
+      var titleline = document.createElement("tr");
+
+      var titlecolumn = document.createElement("th");
+      titlecolumn.innerHTML = 'Name';
+      titleline.appendChild(titlecolumn);
+      titlecolumn = document.createElement("th");
+      titlecolumn.innerHTML = 'Pulse';
+      titleline.appendChild(titlecolumn);
+      titlecolumn = document.createElement("th");
+      titlecolumn.innerHTML = 'Pause';
+      titleline.appendChild(titlecolumn);
+      titlecolumn = document.createElement("th");
+      titlecolumn.innerHTML = 'Manual';
+      titleline.appendChild(titlecolumn);
+
+      elements[k].appendChild(titleline);
    }
 }
 
@@ -210,8 +218,8 @@ function addZone () {
    }
    var i = editing.zones.length;
    editing.zones[i] = new Object();
-   editing.zones[i].name = 'zone '+i;
-   // No manual (optional)
+   editing.zones[i].name = 'zone'+i;
+   // Not manual by default
 
    var elements = document.getElementsByName('zonetable');
    showOneZone (editing.zones, i, elements);
@@ -266,7 +274,7 @@ function addWaterIndexRefresh () {
    addRefreshSchedule (editing.wateringindex, 'waterindex');
 }
 
-var toWeekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satursday'];
+var toWeekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function showOneProgramString (programs, i, label, name, format, size, value) {
 
@@ -319,6 +327,27 @@ function showOneProgramFlag (programs, i, label, name, value) {
    return parameterline;
 }
 
+function showOneDayFlag (programs, i, label, name, value) {
+
+   var program = programs[i];
+
+   var parameterline = document.createElement("tr");
+
+   column = document.createElement("td");
+   var checkbox = document.createElement("input");
+   checkbox.type = 'checkbox';
+   checkbox.name = 'program_'+i+'_'+name;
+   checkbox.value = value;
+   checkbox.checked = value;
+   column.appendChild(checkbox);
+   var labelitem = document.createElement("span");
+   labelitem.innerHTML = label;
+   column.appendChild(labelitem);
+   parameterline.appendChild(column);
+
+   return parameterline;
+}
+
 function showOneProgramRadio (programs, i, label, name, value) {
 
    var program = programs[i];
@@ -334,18 +363,21 @@ function showOneProgramRadio (programs, i, label, name, value) {
    checkbox.type = 'radio';
    checkbox.name = 'program_'+i+'_'+name;
    checkbox.onchange = function () {
-      switch (editing.programs[i].repeat) {
+      switch (document.forms.program['program_'+i+'_repeat'].value) {
       case 'daily':
          gui.programs[i].weekly.style.display = 'none';
-         gui.programs[i].daily.style.display = 'block';
+         gui.programs[i].daily.childNodes[0].style.display = 'table-cell';
+         gui.programs[i].daily.childNodes[1].style.display = 'table-cell';
          break;
       case 'weekly':
-         gui.programs[i].weekly.style.display = 'block';
-         gui.programs[i].daily.style.display = 'none';
+         gui.programs[i].weekly.style.display = 'table-cell';
+         gui.programs[i].daily.childNodes[0].style.display = 'none';
+         gui.programs[i].daily.childNodes[1].style.display = 'none';
          break;
       default:
          gui.programs[i].weekly.style.display = 'none';
-         gui.programs[i].daily.style.display = 'none';
+         gui.programs[i].daily.childNodes[0].style.display = 'none';
+         gui.programs[i].daily.childNodes[1].style.display = 'none';
       }
    }
    checkbox.checked = (program[name] == value);
@@ -396,10 +428,6 @@ function showOneProgram (programs, i, elements) {
 
       parameterstable.appendChild
          (showOneProgramFlag (programs, i, 'Active', 'active', program.active));
-      var append = false;
-      if (program.options) append = program.options.append;
-      parameterstable.appendChild
-         (showOneProgramFlag (programs, i, 'Append', 'append', append));
       parameterstable.appendChild
          (showOneProgramString (programs, i, 'Name', 'name', '', 16, program.name));
       parameterstable.appendChild
@@ -410,60 +438,54 @@ function showOneProgram (programs, i, elements) {
          (showOneProgramString (programs, i, 'Start date', 'date', 'yyyymmdd', 10, program.date));
 
       parameterstable.appendChild
-         (showOneProgramRadio (programs, i, 'Daily', 'repeat', 'daily'));
-      parameterstable.appendChild
          (showOneProgramRadio (programs, i, 'Weekly', 'repeat', 'weekly'));
-
-      parameterscolumn.appendChild(parameterstable);
-      parameterscolumn.appendChild(document.createElement("br"));
 
       if (! gui.programs) {
          gui.programs = new Array();
       }
       gui.programs[i] = new Object();
 
+      var weeklyline = document.createElement("tr");
+      weeklyline.appendChild (document.createElement("td"));
+      var weeklycell = document.createElement("td");
       var weekly = document.createElement("table");
       weekly.name = 'program_'+i+'_weekly';
       weekly.style.display = 'none';
-      gui.programs[i].weekly = weekly;
+      gui.programs[i].weekly = weeklycell;
       weekly.width = '100%';
       if (program.days) {
          for (var d = 0; d < 7; d++) {
-            weekly.appendChild (showOneProgramFlag (programs, i, toWeekDays[d], 'days_'+d, program.days[d]));
+            weekly.appendChild (showOneDayFlag (programs, i, toWeekDays[d], 'days_'+d, program.days[d]));
          }
       } else {
          for (var d = 0; d < 7; d++) {
-            weekly.appendChild (showOneProgramFlag (programs, i, toWeekDays[d], 'days_'+d, true));
+            weekly.appendChild (showOneDayFlag (programs, i, toWeekDays[d], 'days_'+d, true));
          }
       }
-      parameterscolumn.appendChild(weekly);
+      weeklycell.appendChild(weekly);
+      weeklyline.appendChild (weeklycell);
+      parameterstable.appendChild(weeklyline);
 
-      var daily = document.createElement('table');
-      daily.style.display = 'none';
-      daily.width = '100%';
+      parameterstable.appendChild
+         (showOneProgramRadio (programs, i, 'Daily', 'repeat', 'daily'));
+
+      daily = showOneProgramString (programs, i, 'Interval', 'interval', 'Number', 3, program.name);
+      daily.childNodes[0].style.display = 'none';
+      daily.childNodes[1].style.display = 'none';
       gui.programs[i].daily = daily;
-      var dailylabel = document.createElement('span');
-      dailylabel.innerHTML = 'Interval: ';
-      daily.appendChild(dailylabel);
-      var dailyvalue = document.createElement('input');
-      dailyvalue.type = 'text';
-      dailyvalue.name = prefix+'interval';
-      dailyvalue.size = 6;
-      if (program.interval) {
-         dailyvalue.value = program.interval;
-      }
-      dailyvalue.placeholder = 'Number';
-      daily.appendChild(dailyvalue);
-      parameterscolumn.appendChild(daily);
+      parameterstable.appendChild (daily);
 
       switch (program.repeat) {
       case 'daily':
-         daily.style.display = 'block';
+         daily.childNodes[0].style.display = 'table-cell';
+         daily.childNodes[1].style.display = 'table-cell';
          break;
       case 'weekly':
-         weekly.style.display = 'block';
+         weekly.style.display = 'table-cell';
          break;
       }
+
+      parameterscolumn.appendChild(parameterstable);
 
       programline.appendChild(parameterscolumn);
 
@@ -474,7 +496,7 @@ function showOneProgram (programs, i, elements) {
       for (var d = 0; d < program.zones.length; d++) {
          var zoneline = document.createElement('tr');
          zonetable.appendChild
-            (showOneProgramString (program.zones, i, 'Zone '+program.zones[d].zone, 'zone_'+program.zones[d].zone+'_seconds', 'Seconds', 6, program.zones[d].seconds));
+            (showOneProgramString (program.zones, i, program.zones[d].name, 'zone_'+d+'_seconds', 'Seconds', 6, program.zones[d].time));
       }
 
       zonecolumn.appendChild(zonetable);
@@ -503,7 +525,7 @@ function addProgram () {
    editing.programs[i].zones = new Array();
    for (var z = 0; z < editing.zones.length; z++) {
       editing.programs[i].zones[z] = new Object();
-      editing.programs[i].zones[z].zone = z;
+      editing.programs[i].zones[z].name = editing.zones[z].name;
       editing.programs[i].zones[z].seconds = '';
    }
 
@@ -567,28 +589,9 @@ window.onload = function() {
 
    function showExistingZones (zones) {
 
-      if (! zones) return;
       var elements = document.getElementsByName('zonetable');
 
-      for (var k = 0; k < elements.length; k++) {
-
-         var titleline = document.createElement("tr");
-
-         var titlecolumn = document.createElement("th");
-         titlecolumn.innerHTML = 'Name';
-         titleline.appendChild(titlecolumn);
-         titlecolumn = document.createElement("th");
-         titlecolumn.innerHTML = 'Pulse';
-         titleline.appendChild(titlecolumn);
-         titlecolumn = document.createElement("th");
-         titlecolumn.innerHTML = 'Pause';
-         titleline.appendChild(titlecolumn);
-         titlecolumn = document.createElement("th");
-         titlecolumn.innerHTML = 'Manual';
-         titleline.appendChild(titlecolumn);
-
-         elements[k].appendChild(titleline);
-      }
+      showZoneTitles (elements);
 
       for (var i = 0; i < zones.length; i++) {
          showOneZone (zones, i, elements);
@@ -596,13 +599,18 @@ window.onload = function() {
    }
 
    function showExistingPrograms (programs) {
-      if (! programs) return;
+
       var elements = document.getElementsByName('programtable');
       for (var i = 0; i < programs.length; i++) {
          var zones = new Array();
-         for (var z = 0; z < programs[i].zones.length; z++) {
-            zones[programs[i].zones[z].zone].seconds = 
-               programs[i].zones[z].seconds;
+         for (var z = 0; z < editing.zones.length; z++) {
+            zones[z] = new Object();
+            zones[z].name = editing.zones[z].name;
+            zones[z].time = '';
+            for (var x = 0; x < programs[i].zones.length; x++) {
+                if (zones[z].name == programs[i].zones[x].name)
+                    zones[z].time = ''+programs[i].zones[x].time;
+            }
          }
          programs[i].zones = zones;
          showOneProgram (programs, i, elements);
@@ -610,7 +618,7 @@ window.onload = function() {
    }
 
    function showExistingSeasons (seasons) {
-      if (! seasons) return;
+
       var elements = document.getElementsByName('seasonmonthlytable');
       for (var i = 0; i < seasons.length; i++) {
          if (seasons[i].monthly)
