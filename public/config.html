@@ -50,7 +50,7 @@ function saveConfig () {
             newconfig.programs[i].date = form.program[prefix+'date'].value;
          if (form.program[prefix+'season'].value)
             newconfig.programs[i].season = form.program[prefix+'season'].value;
-         newconfig.programs[i].enabled = form.program[prefix+'enabled'].checked;
+         newconfig.programs[i].disabled = form.program[prefix+'disabled'].checked;
          newconfig.programs[i].repeat = form.program[prefix+'repeat'].value;
          switch (newconfig.programs[i].repeat) {
          case 'weekly':
@@ -427,7 +427,7 @@ function showOneProgram (programs, i, elements) {
       parameterstable.width = '100%';
 
       parameterstable.appendChild
-         (showOneProgramFlag (programs, i, 'Enabled', 'enabled', program.enabled));
+         (showOneProgramFlag (programs, i, 'Disabled', 'disabled', program.disabled));
       parameterstable.appendChild
          (showOneProgramString (programs, i, 'Name', 'name', '', 16, program.name));
       parameterstable.appendChild
@@ -516,7 +516,7 @@ function addProgram () {
    }
    var i = editing.programs.length;
    editing.programs[i] = new Object();
-   editing.programs[i].enabled = true;
+   editing.programs[i].disabled = false;
    editing.programs[i].repeat = 'weekly';
    editing.programs[i].name = '#'+i;
    editing.programs[i].start = '';
