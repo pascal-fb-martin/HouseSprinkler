@@ -293,7 +293,11 @@ void housesprinkler_program_refresh (void) {
             Programs[i].count = count;
             Programs[i].running = 0;
             Programs[i].lastlaunch = 0;
-            Programs[i].enabled = 1;
+            if (housesprinkler_config_exists (program, ".enabled") >= 0)
+                Programs[i].enabled =
+                    housesprinkler_config_boolean (program, ".enabled");
+            else
+                Programs[i].enabled = 1;
             DEBUG ("\tProgram %s at %02d:%02d (%d zones)\n",
                    Programs[i].name, Programs[i].start.hour, Programs[i].start.minute, count);
         }

@@ -26,6 +26,7 @@ int housesprinkler_config_size (void);
 
 const char *housesprinkler_config_save (const char *text);
 
+int         housesprinkler_config_exists  (int parent, const char *path);
 const char *housesprinkler_config_string  (int parent, const char *path);
 int         housesprinkler_config_integer (int parent, const char *path);
 int         housesprinkler_config_boolean (int parent, const char *path);

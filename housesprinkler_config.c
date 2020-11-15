@@ -38,9 +38,10 @@
  *    Update both the live configuration and the configuration file with
  *    the provided text.
  *
+ * int         housesprinkler_config_exists  (int parent, const char *path);
  * const char *housesprinkler_config_string  (int parent, const char *path);
  * int         housesprinkler_config_integer (int parent, const char *path);
- * double      housesprinkler_config_boolean (int parent, const char *path);
+ * int         housesprinkler_config_boolean (int parent, const char *path);
  *
  *    Access individual items starting from the specified parent
  *    (the config root is index 0).
@@ -160,6 +161,11 @@ int housesprinkler_config_find (int parent, const char *path, int type) {
     i = echttp_json_search(ConfigParsed+parent, path);
     if (i >= 0 && ConfigParsed[parent+i].type == type) return parent+i;
     return -1;
+}
+
+int housesprinkler_config_exists  (int parent, const char *path) {
+    if (parent < 0 || parent >= ConfigTokenCount) return 0;
+    return (echttp_json_search(ConfigParsed+parent, path) >= 0);
 }
 
 const char *housesprinkler_config_string (int parent, const char *path) {
