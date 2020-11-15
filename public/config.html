@@ -83,16 +83,20 @@ function saveConfig () {
    }
 
    if (editing.seasons) {
+      var i = 0;
       newconfig.seasons = new Array();
 
-      for (var i = 0; i < countSeasonMonthlyShown; i++) {
+      for (var k = 0; k < countSeasonMonthlyShown; k++) {
          var prefix = 'seasonmonthly_'+i+'_';
+         if (!form.seasonmonthly[prefix+'name']) continue;
+
          newconfig.seasons[i] = new Object();
          newconfig.seasons[i].name = form.seasonmonthly[prefix+'name'].value;
          newconfig.seasons[i].monthly = new Array();
          for (var j = 0; j < 12; j++) {
             newconfig.seasons[i].monthly[j] = form.seasonmonthly[prefix+j].value;
          }
+         i += 1;
       }
    }
 
