@@ -260,6 +260,7 @@ void housesprinkler_index_periodic (time_t now) {
 int housesprinkler_index_status (char *buffer, int size) {
 
     return snprintf (buffer, size, "\"origin\":\"%s\",\"value\":%d",
-                     SprinklerIndexOrigin, SprinklerIndex);
+                     SprinklerIndexOrigin?SprinklerIndexOrigin:"default",
+                     SprinklerIndex);
 }
 
