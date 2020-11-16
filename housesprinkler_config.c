@@ -66,6 +66,7 @@
  */
 
 #include <string.h>
+#include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -74,6 +75,7 @@
 
 #include <echttp_json.h>
 
+#include "houselog.h"
 #include "housesprinkler.h"
 #include "housesprinkler_config.h"
 
@@ -127,6 +129,7 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
         if (echttp_option_match ("-config=", argv[i], &config))
             ConfigFile = strdup(config);
     }
+    houselog_event (time(0), "SYSTEM", "CONFIG", "LOAD", "FROM %s", ConfigFile);
     return housesprinkler_config_refresh ();
 }
 
@@ -134,14 +137,22 @@ const char *housesprinkler_config_save (const char *text) {
 
     int fd;
 
+    // If the configuration did not change, don't save and reload.
+    //
+    if (ConfigText && strcmp (ConfigText, text) == 0) return 0;
+
     DEBUG("Saving to %s: %s\n", ConfigFile, text);
     fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
     if (fd < 0) {
-        DEBUG("Cannot save to %s\n", ConfigFile);
+        char *desc = strdup(strerror(errno));
+        DEBUG("Cannot save to %s: %s\n", ConfigFile, desc);
+        houselog_trace (HOUSE_FAILURE, ConfigFile, desc);
+        free (desc);
         return "cannot save to file";
     }
     write (fd, text, strlen(text));
     close (fd);
+    houselog_event (time(0), "SYSTEM", "CONFIG", "UPDATED", "TO %s", ConfigFile);
     return housesprinkler_config_refresh ();
 }
 
