@@ -31,7 +31,7 @@ install:
 	chmod 755 /usr/local/bin/housesprinkler /etc/init.d/housesprinkler
 	touch /etc/default/housesprinkler
 	mkdir -p /etc/house
-	touch /etc/house/sprinkler.config
+	touch /etc/house/sprinkler.json
 	mkdir -p /usr/local/share/house/public/sprinkler
 	cp public/* /usr/local/share/house/public/sprinkler
 	systemctl daemon-reload
@@ -45,5 +45,5 @@ uninstall:
 	systemctl daemon-reload
 
 purge: uninstall
-	rm -rf /etc/house/sprinkler.config /etc/default/housesprinkler
+	rm -rf /etc/house/sprinkler.json /etc/default/housesprinkler
 
