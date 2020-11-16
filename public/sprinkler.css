@@ -237,7 +237,7 @@ tr {border: 0}
 th {text-align: center; color: #f5f5f5; background-color: darkgreen}
 td {border: 0}
 
-input[type=text] {
+input[type=text], input[type=number] {
    font-family:'Metrophobic', sans-serif;
    font-weight: 500;
    font-size: 20px;

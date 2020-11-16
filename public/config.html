@@ -94,7 +94,10 @@ function saveConfig () {
          newconfig.seasons[i].name = form.seasonmonthly[prefix+'name'].value;
          newconfig.seasons[i].monthly = new Array();
          for (var j = 0; j < 12; j++) {
-            newconfig.seasons[i].monthly[j] = form.seasonmonthly[prefix+j].value;
+            if (form.seasonmonthly[prefix+j].value)
+                newconfig.seasons[i].monthly[j] = form.seasonmonthly[prefix+j].value;
+            else
+                newconfig.seasons[i].monthly[j] = 0;
          }
          i += 1;
       }
@@ -554,7 +557,9 @@ function showOneSeasonMonthly (seasons, i, elements) {
          column = document.createElement("td");
          input = document.createElement("input");
          input.size = 3;
-         input.type = 'text';
+         input.type = 'number';
+         input.min = 0;
+         input.max = 150;
          input.name = prefix+j;
          input.inputmode = 'numeric';
          input.placeholder = '%';
@@ -581,7 +586,7 @@ function addSeasonMonthly () {
    editing.seasons[i].name = '';
    editing.seasons[i].monthly = new Array();
    for (var j = 0; j < 12; j++) {
-      editing.seasons[i].monthly[j] = false;
+      editing.seasons[i].monthly[j] = null;
    }
 
    var elements = document.getElementsByName('seasonmonthlytable');
