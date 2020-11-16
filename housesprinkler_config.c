@@ -135,7 +135,7 @@ const char *housesprinkler_config_save (const char *text) {
     int fd;
 
     DEBUG("Saving to %s: %s\n", ConfigFile, text);
-    fd = open (ConfigFile, O_WRONLY+O_CREAT, 0777);
+    fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
     if (fd < 0) {
         DEBUG("Cannot save to %s\n", ConfigFile);
         return "cannot save to file";
