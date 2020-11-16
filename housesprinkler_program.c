@@ -324,9 +324,15 @@ void housesprinkler_program_set_rain (int delay) {
 
     time_t now = time(0);
 
-    if (ProgramRainDelay < now) {
+    if (delay == 0) {
+
+        ProgramRainDelay = 0; // Cancel.
+
+    } else if (ProgramRainDelay < now) {
+
         // This is a new rain delay period.
         ProgramRainDelay = now + delay;
+
     } else {
         // This is an extension to the ongoing rain delay period.
         ProgramRainDelay += delay;

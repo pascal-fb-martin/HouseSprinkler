@@ -63,6 +63,12 @@
 //
 //      This function requests the controler to stop all zones (and programs).
 //
+//   sprinklerRainDelay (duration);
+//   sprinklerCancelRainDelay ();
+//
+//      These functions control the rain delay function: add a rain delay,
+//      and cancel any pending rain delay.
+//
 //   sprinklerRefresh();
 //
 //      This function requests the controler to refresh all information
@@ -236,8 +242,15 @@ function sprinklerZoneOff () {
    sprinklerRequest ("/sprinkler/zone/off");
 }
 
-function sprinklerRainDelay () {
-   sprinklerRequest ("/sprinkler/raindelay");
+function sprinklerCancelRainDelay () {
+   sprinklerRequest ("/sprinkler/raindelay?amount=0");
+}
+
+function sprinklerRainDelay (duration) {
+   if (duration)
+       sprinklerRequest ("/sprinkler/raindelay?amount="+duration);
+   else
+       sprinklerRequest ("/sprinkler/raindelay");
 }
 
 function sprinklerRefresh () {
