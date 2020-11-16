@@ -346,6 +346,7 @@ static void housesprinkler_program_activate
     // that applies at this time.
 
     int index = 100;
+    const char *indexname = 0;
 
     DEBUG ("Activate %s\n", program->name);
 
@@ -353,13 +354,12 @@ static void housesprinkler_program_activate
     // Otherwise use the season static schedule, if any.
     //
     time_t now = time(0);
-    houselog_event (now, "PROGRAM", program->name, "START",
-                    "%s mode", manual ? "manual" : "schedule");
 
     if (ProgramIndexState) {
         if (ProgramIndexTimestamp > now - (3 * 86400)) {
 
             index = ProgramIndex; // A recent explicit index takes priority.
+            indexname = ProgramIndexOrigin;
             DEBUG ("Activate %s using index %d from %s%s\n",
                    program->name, index, ProgramIndexOrigin, manual?" (manual)":"");
 
@@ -387,6 +387,8 @@ static void housesprinkler_program_activate
                 DEBUG ("Season %s index is 0\n", Seasons[program->season].name);
                 if (!manual) return;
                 index = 100;
+            } else {
+                indexname = Seasons[program->season].name;
             }
             DEBUG ("Activate %s using index %d from %s%s\n",
                    program->name, index, Seasons[program->season].name, manual?" (manual)":"");
@@ -395,6 +397,17 @@ static void housesprinkler_program_activate
 
             DEBUG ("Activate %s%s\n", program->name, manual?" (manual)":"");
         }
+    }
+
+    // Now that we know which index to apply, let's launch this program.
+    //
+    if (indexname) {
+        houselog_event (now, "PROGRAM", program->name, "START",
+                        "%s, INDEX %d%% FROM %s",
+                        manual ? "manual" : "scheduled", index, indexname);
+    } else {
+        houselog_event (now, "PROGRAM", program->name, "START",
+                        "%s, NO INDEX", manual ? "manual" : "scheduled");
     }
 
     int i;
