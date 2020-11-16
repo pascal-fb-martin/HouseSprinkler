@@ -664,29 +664,30 @@ window.onload = function() {
    </table> 
    <div class="sprkrbuttons"><button class="configactionbutton" onclick="saveConfig()">Save</button></div>
    <br>
-   <button class="addbutton" onclick="addZone()">Add</button>
-   <button class="configbuttonwithadd" onclick="visible('configzone')">Zones</button>
-   <br>
+   <table width="100%"><tr>
+   <td width="10%"><button class="addbutton" onclick="addZone()">Add</button></td>
+   <td width="90%"><button class="configbuttonwithadd" onclick="visible('configzone')">Zones</button></td>
+   </tr></table>
    <form name="zones">
    <div name="configzone" class="hidable" display="none">
      <table name="zonetable">
      </table>
    </div>
    </form>
-   <br>
-   <button class="addbutton" onclick="addProgram()">Add</button>
-   <button class="configbuttonwithadd" onclick="visible('configprogram')">Programs</button>
-   <br>
+   <table width="100%"><tr>
+   <td width="10%"><button class="addbutton" onclick="addProgram()">Add</button></td>
+   <td width="90%"><button class="configbuttonwithadd" onclick="visible('configprogram')">Programs</button></td>
+   </tr></table>
    <form name="program">
    <div name="configprogram" class="hidable" display="none">
      <table class="programtable" name="programtable">
      </table>
    </div>
    </form>
-   <br>
-   <button class="addbutton" onclick="addSeasonMonthly()">Add</button>
-   <button class="configbuttonwithadd" onclick="visible('configseasonmonthly')">Seasons</button>
-   <br>
+   <table width="100%"><tr>
+   <td width="10%"><button class="addbutton" onclick="addSeasonMonthly()">Add</button></td>
+   <td width="90%"><button class="configbuttonwithadd" onclick="visible('configseasonmonthly')">Seasons</button></td>
+   </tr></table>
    <form name="seasonmonthly">
    <div name="configseasonmonthly" class="hidable" display="none">
      <table name="seasonmonthlytable">
