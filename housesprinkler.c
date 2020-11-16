@@ -215,7 +215,7 @@ static void hs_background (int fd, int mode) {
 
 
     if (use_houseportal) {
-        static const char *path[] = {"/sprinkler"};
+        static const char *path[] = {"sprinkler:/sprinkler"};
         if (now >= LastRenewal + 60) {
             if (LastRenewal > 0)
                 houseportal_renew();

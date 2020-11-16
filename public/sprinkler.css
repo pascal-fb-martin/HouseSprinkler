@@ -48,6 +48,13 @@
    text-decoration: none;
 }
 
+.sprkrtopcurrent {
+   font-family:'Metrophobic', sans-serif;
+   font-size: 30px;
+   color: #858585;
+   text-decoration: none;
+}
+
 .sprkrmenu {
    font-family:'Metrophobic', sans-serif;
    text-align: right;

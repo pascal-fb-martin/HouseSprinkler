@@ -657,14 +657,12 @@ window.onload = function() {
    <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/events.html">Events</A></td>
-   <td><span class="sprkrtopitem">Config</span></td>
+   <td><span class="sprkrtopcurrent">Config</span></td>
    </tr>
    </table> 
    </td></tr>
    </table> 
    <div class="sprkrbuttons"><button class="configactionbutton" onclick="saveConfig()">Save</button></div>
-   <br>
-   <button class="configbutton" onclick="visible('configglobal')">Global Parameters</button>
    <br>
    <button class="addbutton" onclick="addZone()">Add</button>
    <button class="configbuttonwithadd" onclick="visible('configzone')">Zones</button>
@@ -710,43 +708,6 @@ window.onload = function() {
      </table>
    </div>
    </form>
-   <br>
-   <button class="addbutton" onclick="addWaterIndexRefresh()">Add</button>
-   <button class="configbuttonwithadd" onclick="visible('configwaterindex')">Watering Index Service</button>
-   <br>
-   <form name="waterindex">
-   <div name="configwaterindex" class="hidable" display="none">
-     <table>
-        <tr>
-           <td></td>
-           <td><input type="checkbox" name="waterindexenable"> Allow adjustments based on watering index</td>
-        </tr>
-        <tr>
-           <td>Provider:</td>
-           <td>
-              <select name="waterindexprovider">
-                 <option value="waterdex" selected>Waterdex.com</option> 
-                 <option value="waterwise">Metropolitan Water District of Southern California</option>
-              </select>
-           </td>
-        </tr>
-        <tr>
-           <td style="vertical-align:top">Refresh times:</td>
-           <td>
-              <table name="waterindexrefreshtable"></table>
-           </td>
-        </tr>
-        <tr>
-           <td>Minimal adjustment:</td>
-           <td><input type="text" size="3" name="waterindexmin" placeholder="%"></td>
-        </tr>
-        <tr>
-           <td>Maximal adjustment:</td>
-           <td><input type="text" size="3" name="waterindexmax" placeholder="%"></td>
-        </tr>
-     </table>
-   </form>
-   </div>
    <br>
    <div class="sprkrbuttons"><button class="configactionbutton" onclick="saveConfig()">Save</button></div>
 </body>
