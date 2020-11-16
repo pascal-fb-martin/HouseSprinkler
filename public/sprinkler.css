@@ -87,7 +87,11 @@
    font-size: 20px;
    color: white;
 }
-.sprkrevent {font-family: 'Metrophobic', sans-serif; text-align: left}
+.sprkrevent {
+   font-family: 'Metrophobic', sans-serif;
+   text-align: left;
+   witdh: 100%;
+}
 
 body {background-color: #F5F5F5}
 h1 {
