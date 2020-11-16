@@ -155,7 +155,7 @@ function sprinklerApplyUpdate (text) {
    }
 
    title = document.getElementsByClassName ('hostname');
-   var title = 'Sprinkler Controler '+response.host;
+   var title = response.sprinkler.host + ' - Sprinkler Controler';
    document.getElementsByTagName ('title')[0].innerHTML = title;
 }
 
