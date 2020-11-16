@@ -427,7 +427,10 @@ void housesprinkler_program_periodic (time_t now) {
 
     if (housesprinkler_zone_idle()) {
         for (i = 0; i < ProgramsCount; ++i) {
-            Programs[i].running = 0;
+            if (Programs[i].running) {
+                houselog_event (now, "PROGRAM", Programs[i].name, "STOP", "");
+                Programs[i].running = 0;
+            }
         }
     }
 
