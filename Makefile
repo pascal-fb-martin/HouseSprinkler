@@ -34,6 +34,8 @@ install:
 	touch /etc/house/sprinkler.json
 	mkdir -p /usr/local/share/house/public/sprinkler
 	cp public/* /usr/local/share/house/public/sprinkler
+	chown root:root /usr/local/share/house/public/sprinkler/*
+	chmod 644 /usr/local/share/house/public/sprinkler/*
 	systemctl daemon-reload
 	systemctl enable housesprinkler
 	systemctl start housesprinkler
