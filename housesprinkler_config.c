@@ -129,7 +129,7 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
         if (echttp_option_match ("-config=", argv[i], &config))
             ConfigFile = strdup(config);
     }
-    houselog_event (time(0), "SYSTEM", "CONFIG", "LOAD", "FROM %s", ConfigFile);
+    houselog_event (time(0), "SYSTEM", "CONFIG", "LOAD", "FILE %s", ConfigFile);
     return housesprinkler_config_refresh ();
 }
 
@@ -152,7 +152,7 @@ const char *housesprinkler_config_save (const char *text) {
     }
     write (fd, text, strlen(text));
     close (fd);
-    houselog_event (time(0), "SYSTEM", "CONFIG", "UPDATED", "TO %s", ConfigFile);
+    houselog_event (time(0), "SYSTEM", "CONFIG", "UPDATED", "FILE %s", ConfigFile);
     return housesprinkler_config_refresh ();
 }
 

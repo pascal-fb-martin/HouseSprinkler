@@ -159,14 +159,32 @@ static void housesprinkler_index_response
        houselog_trace (HOUSE_FAILURE, service, "syntax error, %s", error);
        return;
    }
-   if (count <= 0) return;
+   if (count <= 0) {
+       houselog_trace (HOUSE_FAILURE, service, "no data");
+       return;
+   }
 
    int received = echttp_json_search (tokens, ".waterindex.status.received");
    int priority = echttp_json_search (tokens, ".waterindex.status.priority");
-   if (received <= 0 || priority <= 0) return;
+   if (received <= 0 || priority <= 0) {
+       houselog_trace (HOUSE_FAILURE, service, "No timestamp or priority");
+       return;
+   }
+
+   int    index = echttp_json_search (tokens, ".waterindex.status.index");
+   int    name = echttp_json_search (tokens, ".waterindex.status.name");
+   int    source = echttp_json_search (tokens, ".waterindex.status.origin");
+   if (index <= 0 || name <= 0 || source <= 0) {
+       houselog_trace (HOUSE_FAILURE, service, "No index or origin");
+       return;
+   }
 
    time_t timestamp = (time_t) tokens[received].value.integer;
-   int    ipriority = tokens[priority].value.integer;
+   int    ipriority = (int)(tokens[priority].value.integer);
+
+   houselog_event (now, "INDEX", tokens[name].value.string, "RECEIVED",
+                   "%ld%% FROM %s (PRIORITY %d)",
+                   tokens[index].value.integer, tokens[source].value.string, ipriority);
 
    // Ignore any new index if it is of lower priority, or too old.
    //
@@ -179,13 +197,8 @@ static void housesprinkler_index_response
        timestamp <= SprinklerIndexTimestamp) return;
 
    // This index seems to be a better one than we currently have:
-   // retrieve and store the data.
+   // store the data.
    //
-   int index = echttp_json_search (tokens, ".waterindex.status.index");
-   int name = echttp_json_search (tokens, ".waterindex.status.name");
-   int source = echttp_json_search (tokens, ".waterindex.status.origin");
-   if (index <= 0 || name <= 0 || source <= 0) return;
-
    SprinklerIndex = (int)(tokens[index].value.integer);
 
    SprinklerIndexTimestamp = timestamp;
@@ -200,7 +213,7 @@ static void housesprinkler_index_response
    DEBUG ("Received index %d from %s (service %s)\n",
           SprinklerIndex, SprinklerIndexOrigin, service);
 
-   houselog_event (now, "INDEX", tokens[name].value.string, "UPDATE",
+   houselog_event (now, "INDEX", tokens[name].value.string, "APPLY",
                    "%d%% FROM %s (PRIORITY %d)",
                    SprinklerIndex, SprinklerIndexOrigin, ipriority);
 
