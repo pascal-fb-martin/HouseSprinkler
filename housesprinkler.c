@@ -270,7 +270,7 @@ int main (int argc, const char **argv) {
     echttp_route_uri ("/sprinkler/weather/off", sprinkler_weatheroff);
     echttp_route_uri ("/sprinkler/weather",     sprinkler_weather);
 
-    echttp_static_route ("/sprinkler", "/usr/local/share/house/public/sprinkler");
+    echttp_static_route ("/", "/usr/local/share/house/public");
     echttp_background (&hs_background);
 
     housesprinkler_index_register (housesprinkler_program_set_index);
