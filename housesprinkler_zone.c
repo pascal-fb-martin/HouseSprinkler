@@ -479,9 +479,14 @@ static void housesprinkler_zone_discovered
        ParserToken *inner = tokens + controls + innerlist[i];
        int zone = housesprinkler_zone_search (inner->key);
        if (zone < 0) continue;
-       snprintf (Zones[zone].url, sizeof(Zones[zone].url), provider);
-       Zones[zone].status = 'i';
-       DEBUG ("Zone %s discovered on %s\n", Zones[zone].name, Zones[zone].url);
+       if (strcmp (Zones[zone].url, provider)) {
+           snprintf (Zones[zone].url, sizeof(Zones[zone].url), provider);
+           Zones[zone].status = 'i';
+           DEBUG ("Zone %s discovered on %s\n",
+                  Zones[zone].name, Zones[zone].url);
+           houselog_event (time(0), "ZONE", Zones[zone].name, "ROUTE",
+                           "TO %s", Zones[zone].url);
+       }
    }
 }
 
