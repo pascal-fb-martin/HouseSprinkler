@@ -531,7 +531,6 @@ static void housesprinkler_zone_discovery (time_t now) {
     ProvidersCount = 0;
     DEBUG ("Proceeding with discovery\n");
     housediscovered ("control", 0, housesprinkler_zone_scan_server);
-    housediscover ("control"); // Initiate the next discovery.
 }
 
 void housesprinkler_zone_periodic (time_t now) {

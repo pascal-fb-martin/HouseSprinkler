@@ -228,6 +228,7 @@ static void hs_background (int fd, int mode) {
     housesprinkler_index_periodic (now);
     housesprinkler_program_periodic(now);
     houselog_background (now);
+    housediscover (now);
 }
 
 int main (int argc, const char **argv) {

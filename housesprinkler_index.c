@@ -267,7 +267,6 @@ void housesprinkler_index_periodic (time_t now) {
     }
 
     housediscovered ("waterindex", 0, housesprinkler_index_query);
-    housediscover ("waterindex");
 }
 
 int housesprinkler_index_status (char *buffer, int size) {
