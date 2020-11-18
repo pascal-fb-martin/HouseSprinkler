@@ -154,7 +154,6 @@ function sprinklerApplyUpdate (text) {
       sprinklerSetContent ('adjustment','DISABLED');
    }
 
-   title = document.getElementsByClassName ('hostname');
    var title = response.sprinkler.host + ' - Sprinkler Controler';
    document.getElementsByTagName ('title')[0].innerHTML = title;
 }
