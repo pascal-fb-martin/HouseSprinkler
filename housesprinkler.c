@@ -240,7 +240,10 @@ int main (int argc, const char **argv) {
     open ("/dev/null", O_RDONLY);
     dup(open ("/dev/null", O_WRONLY));
 
-    echttp_open (argc, argv);
+    static const char *defaultoptions[] = {"-http-service=dynamic"};
+    echttp_defaults (1, defaultoptions);
+
+    argc = echttp_open (argc, argv);
     if (echttp_dynamic_port()) {
         houseportal_initialize (argc, argv);
         use_houseportal = 1;

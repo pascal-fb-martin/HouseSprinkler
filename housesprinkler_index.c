@@ -182,9 +182,8 @@ static void housesprinkler_index_response
    time_t timestamp = (time_t) tokens[received].value.integer;
    int    ipriority = (int)(tokens[priority].value.integer);
 
-   houselog_event (now, "INDEX", tokens[name].value.string, "RECEIVED",
-                   "%ld%% FROM %s (PRIORITY %d)",
-                   tokens[index].value.integer, tokens[source].value.string, ipriority);
+   DEBUG ("Received index %d at priority %d from %s (service %s)\n",
+          SprinklerIndex, ipriority, SprinklerIndexOrigin, service);
 
    // Ignore any new index if it is of lower priority, or too old.
    //
@@ -210,9 +209,6 @@ static void housesprinkler_index_response
    // Now that we do got a brand new index, it is time to let everyone
    // know about it.
    //
-   DEBUG ("Received index %d from %s (service %s)\n",
-          SprinklerIndex, SprinklerIndexOrigin, service);
-
    houselog_event (now, "INDEX", tokens[name].value.string, "APPLY",
                    "%d%% FROM %s (PRIORITY %d)",
                    SprinklerIndex, SprinklerIndexOrigin, ipriority);
