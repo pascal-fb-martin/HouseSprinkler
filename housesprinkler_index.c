@@ -181,9 +181,11 @@ static void housesprinkler_index_response
 
    time_t timestamp = (time_t) tokens[received].value.integer;
    int    ipriority = (int)(tokens[priority].value.integer);
+   int    rawindex  = (int)(tokens[index].value.integer);
+   char  *urlsource = tokens[source].value.string;
 
    DEBUG ("Received index %d at priority %d from %s (service %s)\n",
-          SprinklerIndex, ipriority, SprinklerIndexOrigin, service);
+          rawindex, ipriority, urlsource, service);
 
    // Ignore any new index if it is of lower priority, or too old.
    //
@@ -198,28 +200,25 @@ static void housesprinkler_index_response
    // This index seems to be a better one than we currently have:
    // store the data.
    //
-   SprinklerIndex = (int)(tokens[index].value.integer);
-
-   SprinklerIndexTimestamp = timestamp;
+   SprinklerIndex = rawindex;
    SprinklerIndexPriority = ipriority;
+   SprinklerIndexTimestamp = timestamp;
 
    if (SprinklerIndexOrigin) free (SprinklerIndexOrigin);
-   SprinklerIndexOrigin = strdup (tokens[source].value.string);
+   SprinklerIndexOrigin = strdup (tokens[name].value.string);
 
    // Now that we do got a brand new index, it is time to let everyone
    // know about it.
    //
-   const char *indexname = tokens[name].value.string;
-
-   houselog_event (now, "INDEX", indexname, "APPLY",
+   houselog_event (now, "INDEX", SprinklerIndexOrigin, "APPLY",
                    "%d%% FROM %s (PRIORITY %d)",
-                   SprinklerIndex, SprinklerIndexOrigin, ipriority);
+                   SprinklerIndex, urlsource, ipriority);
 
    int i;
    for (i = 0; i < INDEX_MAX_LISTENER; ++i) {
        if (SprinklerIndexListener[i])
            SprinklerIndexListener[i]
-               (indexname, SprinklerIndex, SprinklerIndexTimestamp);
+               (SprinklerIndexOrigin, SprinklerIndex, SprinklerIndexTimestamp);
    }
 }
 
