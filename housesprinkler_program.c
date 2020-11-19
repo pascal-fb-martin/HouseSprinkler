@@ -390,7 +390,7 @@ static void housesprinkler_program_activate
             } else {
                 indexname = Seasons[program->season].name;
             }
-            DEBUG ("Activate %s using index %d from %s%s\n",
+            DEBUG ("Activate %s using index %d from season %s%s\n",
                    program->name, index, Seasons[program->season].name, manual?" (manual)":"");
 
         } else {

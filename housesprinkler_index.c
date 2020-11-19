@@ -209,7 +209,9 @@ static void housesprinkler_index_response
    // Now that we do got a brand new index, it is time to let everyone
    // know about it.
    //
-   houselog_event (now, "INDEX", tokens[name].value.string, "APPLY",
+   const char *indexname = tokens[name].value.string;
+
+   houselog_event (now, "INDEX", indexname, "APPLY",
                    "%d%% FROM %s (PRIORITY %d)",
                    SprinklerIndex, SprinklerIndexOrigin, ipriority);
 
@@ -217,7 +219,7 @@ static void housesprinkler_index_response
    for (i = 0; i < INDEX_MAX_LISTENER; ++i) {
        if (SprinklerIndexListener[i])
            SprinklerIndexListener[i]
-               (SprinklerIndexOrigin, SprinklerIndex, SprinklerIndexTimestamp);
+               (indexname, SprinklerIndex, SprinklerIndexTimestamp);
    }
 }
 
