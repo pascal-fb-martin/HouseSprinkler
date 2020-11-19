@@ -510,7 +510,9 @@ void housesprinkler_program_periodic (time_t now) {
 }
 
 void housesprinkler_program_switch (void) {
+    time_t now = time(0);
     SprinklerState = !SprinklerState;
+    houselog_event (now, "PROGRAM", "SWITCH", SprinklerState?"ON":"OFF", "");
 }
 
 int housesprinkler_program_status (char *buffer, int size) {
