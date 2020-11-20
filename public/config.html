@@ -28,10 +28,10 @@ function saveConfig () {
       newconfig.zones[i] = new Object();
       newconfig.zones[i].name = form.zones[prefix+'name'].value;
       if (form.zones[prefix+'pulse'].value) {
-         newconfig.zones[i].pulse = form.zones[prefix+'pulse'].value;
+         newconfig.zones[i].pulse = parseInt(form.zones[prefix+'pulse'].value);
       }
       if (form.zones[prefix+'pause'].value) {
-         newconfig.zones[i].pause = form.zones[prefix+'pause'].value;
+         newconfig.zones[i].pause = parseInt(form.zones[prefix+'pause'].value);
       }
       if (form.zones[prefix+'manual'].checked) {
          newconfig.zones[i].manual = true;
@@ -62,7 +62,7 @@ function saveConfig () {
             break;
          case 'daily':
             newconfig.programs[i].interval =
-               form.program[prefix+'interval'].value;
+               parseInt(form.program[prefix+'interval'].value);
             break;
          }
          newconfig.programs[i].zones = new Array();
@@ -95,7 +95,8 @@ function saveConfig () {
          newconfig.seasons[i].monthly = new Array();
          for (var j = 0; j < 12; j++) {
             if (form.seasonmonthly[prefix+j].value)
-                newconfig.seasons[i].monthly[j] = form.seasonmonthly[prefix+j].value;
+                newconfig.seasons[i].monthly[j] =
+                    parseInt(form.seasonmonthly[prefix+j].value);
             else
                 newconfig.seasons[i].monthly[j] = 0;
          }
