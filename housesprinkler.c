@@ -240,8 +240,7 @@ int main (int argc, const char **argv) {
     open ("/dev/null", O_RDONLY);
     dup(open ("/dev/null", O_WRONLY));
 
-    static const char *defaultoptions[] = {"-http-service=dynamic"};
-    echttp_defaults (1, defaultoptions);
+    echttp_default ("-http-service=dynamic");
 
     argc = echttp_open (argc, argv);
     if (echttp_dynamic_port()) {
