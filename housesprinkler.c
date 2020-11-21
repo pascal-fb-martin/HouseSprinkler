@@ -30,6 +30,7 @@
 
 #include "housesprinkler.h"
 
+#include "echttp_cors.h"
 #include "echttp_static.h"
 #include "houseportalclient.h"
 #include "houselog.h"
@@ -232,20 +233,7 @@ static void hs_background (int fd, int mode) {
 }
 
 static void sprinkler_protect (const char *method, const char *uri) {
-
-    const char *origin = echttp_attribute_get ("Origin");
-    if (!origin) return; // Not a cross-domain request.
-
-    if (!strcmp (method, "GET")) {
-        echttp_attribute_set ("Access-Control-Allow-Origin", "*");
-        return;
-    }
-    if (!strcmp (method, "OPTIONS")) {
-        echttp_attribute_set ("Access-Control-Allow-Origin", "*");
-        echttp_error (204, "No Content"); // Not an error, but don't process.
-        return;
-    }
-    echttp_error (403, "Forbidden Cross-Domain");
+    echttp_cors_protect(method, uri);
 }
 
 int main (int argc, const char **argv) {
@@ -274,6 +262,7 @@ int main (int argc, const char **argv) {
     housesprinkler_index_refresh ();
     housesprinkler_program_refresh ();
 
+    echttp_cors_allow_method("GET");
     echttp_protect (0, sprinkler_protect);
 
     echttp_route_uri ("/sprinkler/config", sprinkler_config);
