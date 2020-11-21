@@ -161,7 +161,7 @@ function sprinklerApplyUpdate (text) {
        var zone = response.sprinkler.control.zones[i];
        var label = document.getElementById ('zone_'+i+'_label');
        if (zone[2]) {
-           label.innerHTML = zone[0]+'@'+zone[2];
+           label.innerHTML = zone[0]+' @'+zone[2];
        } else {
            label.innerHTML = zone[0];
        }

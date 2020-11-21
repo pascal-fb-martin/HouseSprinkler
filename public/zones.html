@@ -29,7 +29,7 @@ window.onload = function() {
          button.className = 'panelbutton';
          button.onclick = zoneClick;
          var id = 'zone_'+i+'_label';
-         button.innerHTML = '<table class="zonetable"><tr><td class=="zoneindex">'+i+'</td><td class="zonename" id="'+id+'">'+config.zones[i].name+'</td></tr></table>';
+         button.innerHTML = '<table class="zonetable"><tr><td class=="zoneindex">'+(i+1)+'</td><td class="zonename" id="'+id+'">'+config.zones[i].name+'</td></tr></table>';
          inner.appendChild(button);
          outer.appendChild(inner);
          buttons.appendChild(outer);

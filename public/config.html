@@ -234,54 +234,6 @@ function addZone () {
    forceVisible(elements);
 }
 
-function showOneRefreshSchedule (weather, i, elements, name) {
-
-   for (var k = 0; k < elements.length; k++) {
-      var outer = document.createElement("tr");
-
-      var timecolumn = document.createElement("td");
-      var timeinput = document.createElement("input");
-      timeinput.type = 'text';
-      timeinput.size = 6;
-      timeinput.name = name+'refresh_'+i;
-      timeinput.value = weather.refresh[i];
-      timeinput.placeholder = 'hh:mm';
-      timecolumn.appendChild(timeinput);
-      outer.appendChild(timecolumn);
-
-      elements[k].appendChild(outer);
-   }
-}
-
-function addRefreshSchedule (data, name) {
-
-   if (! data.refresh) {
-      data.refresh = new Array();
-   }
-   var i = data.refresh.length;
-   data.refresh[i] = '';
-
-   var elements = document.getElementsByName(name+'refreshtable');
-   showOneRefreshSchedule (data, i, elements, name);
-   forceVisible(elements);
-}
-
-function addWeatherRefresh () {
-
-   if (! editing.weather) {
-      editing.weather = new Object();
-   }
-   addRefreshSchedule (editing.weather, 'weather');
-}
-
-function addWaterIndexRefresh () {
-
-   if (! editing.wateringindex) {
-      editing.wateringindex = new Object();
-   }
-   addRefreshSchedule (editing.wateringindex, 'waterindex');
-}
-
 var toWeekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function showOneProgramString (programs, i, label, name, format, size, value) {
@@ -441,7 +393,7 @@ function showOneProgram (programs, i, elements) {
       parameterstable.appendChild
          (showOneProgramString (programs, i, 'Season', 'season', '', 16, program.season));
       parameterstable.appendChild
-         (showOneProgramString (programs, i, 'Start time', 'start', 'hh:mm', 10, program.start));
+         (showOneProgramString (programs, i, 'Start time', 'start', 'hh:mm (24)', 10, program.start));
       parameterstable.appendChild
          (showOneProgramString (programs, i, 'Start date', 'date', 'yyyymmdd', 10, program.date));
 
