@@ -19,8 +19,6 @@ function zoneClick () {
 
 window.onload = function() {
 
-   sprinklerInfo ();
-
    sprinklerConfig (function (config) {
       var buttons = document.getElementsByClassName ('sprkrbuttons')[0];
       for (var i = 0; i < config.zones.length; i++) {
@@ -30,12 +28,15 @@ window.onload = function() {
          button.zonename = config.zones[i].name;
          button.className = 'panelbutton';
          button.onclick = zoneClick;
-         button.innerHTML = '<table class="zonetable"><tr><td class=="zoneindex">'+i+'</td><td class="zonename">'+config.zones[i].name+'</td></tr></table>';
+         var id = 'zone_'+i+'_label';
+         button.innerHTML = '<table class="zonetable"><tr><td class=="zoneindex">'+i+'</td><td class="zonename" id="'+id+'">'+config.zones[i].name+'</td></tr></table>';
          inner.appendChild(button);
          outer.appendChild(inner);
          buttons.appendChild(outer);
       }
    });
+
+   sprinklerInfo ();
 };
 </script>
 <head>

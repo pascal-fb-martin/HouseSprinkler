@@ -156,6 +156,12 @@ function sprinklerApplyUpdate (text) {
 
    var title = response.sprinkler.host + ' - Sprinkler Controler';
    document.getElementsByTagName ('title')[0].innerHTML = title;
+
+   for (var i = 0; i < response.sprinkler.control.zones.length; ++i) {
+       var zone = response.sprinkler.control.zones[i];
+       var label = document.getElementById ('zone_'+i+'_label');
+       label.innerHTML = zone[0]+'@'+zone[2];
+   }
 }
 
 function sprinklerRequest (uri) {
