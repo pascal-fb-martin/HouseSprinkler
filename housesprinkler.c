@@ -72,6 +72,9 @@ static const char *sprinkler_config (const char *method, const char *uri,
 
     if (strcmp(method, "POST") == 0) {
        housesprinkler_config_save (data);
+       housesprinkler_zone_refresh ();
+       housesprinkler_index_refresh ();
+       housesprinkler_program_refresh ();
     } else if (strcmp(method, "GET") == 0) {
        int fd = housesprinkler_config_file();
        echttp_transfer (fd, housesprinkler_config_size());
