@@ -142,9 +142,10 @@ static const char *sprinkler_index (const char *method, const char *uri,
     return sprinkler_status (method, uri, data, length);
 }
 
-static const char *sprinkler_refresh (const char *method, const char *uri,
+static const char *sprinkler_rescan (const char *method, const char *uri,
                                       const char *data, int length) {
 
+    housesprinkler_zone_periodic (0);
     return sprinkler_status (method, uri, data, length);;
 }
 
@@ -273,7 +274,7 @@ int main (int argc, const char **argv) {
     echttp_route_uri ("/sprinkler/raindelay", sprinkler_raindelay);
     echttp_route_uri ("/sprinkler/rain", sprinkler_rain);
     echttp_route_uri ("/sprinkler/index", sprinkler_index);
-    echttp_route_uri ("/sprinkler/refresh", sprinkler_refresh);
+    echttp_route_uri ("/sprinkler/refresh", sprinkler_rescan);
 
     echttp_route_uri ("/sprinkler/program/on", sprinkler_program_on);
     echttp_route_uri ("/sprinkler/zone/on",    sprinkler_zone_on);

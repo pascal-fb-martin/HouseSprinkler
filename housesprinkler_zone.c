@@ -513,6 +513,10 @@ static void housesprinkler_zone_discovery (time_t now) {
     static time_t starting = 0;
     static time_t latestdiscovery = 0;
 
+    if (!now) { // This is a manual refresh request.
+        now = starting = time(0);
+        latestdiscovery = 0;
+    }
     if (starting == 0) starting = now;
 
     // Scan every 15s for the first 2 minutes, then slow down to every 30mn.
@@ -543,7 +547,7 @@ void housesprinkler_zone_periodic (time_t now) {
     if (!ZonesCount) return;
 
     housesprinkler_zone_discovery (now);
-    housesprinkler_zone_schedule  (now);
+    if (now) housesprinkler_zone_schedule  (now);
 }
 
 int housesprinkler_zone_idle (void) {
