@@ -231,6 +231,23 @@ static void hs_background (int fd, int mode) {
     housediscover (now);
 }
 
+static void sprinkler_protect (const char *method, const char *uri) {
+
+    const char *origin = echttp_attribute_get ("Origin");
+    if (!origin) return; // Not a cross-domain request.
+
+    if (!strcmp (method, "GET")) {
+        echttp_attribute_set ("Access-Control-Allow-Origin", "*");
+        return;
+    }
+    if (!strcmp (method, "OPTIONS")) {
+        echttp_attribute_set ("Access-Control-Allow-Origin", "*");
+        echttp_error (204, "No Content"); // Not an error, but don't process.
+        return;
+    }
+    echttp_error (403, "Forbidden Cross-Domain");
+}
+
 int main (int argc, const char **argv) {
 
     // These strange statements are to make sure that fds 0 to 2 are
@@ -256,6 +273,8 @@ int main (int argc, const char **argv) {
     housesprinkler_zone_refresh ();
     housesprinkler_index_refresh ();
     housesprinkler_program_refresh ();
+
+    echttp_protect (0, sprinkler_protect);
 
     echttp_route_uri ("/sprinkler/config", sprinkler_config);
     echttp_route_uri ("/sprinkler/status", sprinkler_status);
