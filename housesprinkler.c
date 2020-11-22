@@ -146,6 +146,7 @@ static const char *sprinkler_rescan (const char *method, const char *uri,
                                       const char *data, int length) {
 
     housesprinkler_zone_periodic (0);
+    housesprinkler_index_periodic (0);
     return sprinkler_status (method, uri, data, length);;
 }
 

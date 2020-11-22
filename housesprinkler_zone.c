@@ -513,9 +513,10 @@ static void housesprinkler_zone_discovery (time_t now) {
     static time_t starting = 0;
     static time_t latestdiscovery = 0;
 
-    if (!now) { // This is a manual refresh request.
-        now = starting = time(0);
+    if (!now) { // This is a manual reset (force a discovery refresh)
+        starting = 0;
         latestdiscovery = 0;
+        return;
     }
     if (starting == 0) starting = now;
 

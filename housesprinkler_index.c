@@ -246,10 +246,10 @@ void housesprinkler_index_periodic (time_t now) {
     int i, h;
     struct tm local = *localtime(&now);
 
-    if (!now) { // This is a manual refresh request.
+    if (!now) { // This is a manual reset (force refresh request).
         SprinklerIndexTimestamp = 0;
         LastInquiry = 0;
-        now = time(0);
+        return;
     }
     if (!SprinklerIndexTimestamp) {
         // We do not know any index yet: try to get an index fast.
