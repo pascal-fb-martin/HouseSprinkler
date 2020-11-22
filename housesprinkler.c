@@ -66,6 +66,12 @@ static void hs_help (const char *argv0) {
     exit (0);
 }
 
+static void sprinkler_reset (void) {
+    housesprinkler_zone_periodic (0);
+    housesprinkler_index_periodic (0);
+    housediscover (0);
+}
+
 static const char *sprinkler_config (const char *method, const char *uri,
                                      const char *data, int length) {
     static char buffer[65537];
@@ -75,6 +81,7 @@ static const char *sprinkler_config (const char *method, const char *uri,
        housesprinkler_zone_refresh ();
        housesprinkler_index_refresh ();
        housesprinkler_program_refresh ();
+       sprinkler_reset();
     } else if (strcmp(method, "GET") == 0) {
        int fd = housesprinkler_config_file();
        echttp_transfer (fd, housesprinkler_config_size());
@@ -145,8 +152,7 @@ static const char *sprinkler_index (const char *method, const char *uri,
 static const char *sprinkler_rescan (const char *method, const char *uri,
                                       const char *data, int length) {
 
-    housesprinkler_zone_periodic (0);
-    housesprinkler_index_periodic (0);
+    sprinkler_reset ();
     return sprinkler_status (method, uri, data, length);;
 }
 
