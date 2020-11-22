@@ -38,7 +38,7 @@ install:
 	cp public/* /usr/local/share/house/public/sprinkler
 	chown root:root /usr/local/share/house/public/sprinkler/*
 	chmod 644 /usr/local/share/house/public/sprinkler/*
-	icotool -c -o /usr/local/share/house/public/sprinkler/favicon.ico $(ICONS)
+	icotool -c -o /usr/local/share/house/public/favicon.ico $(ICONS)
 	systemctl daemon-reload
 	systemctl enable housesprinkler
 	systemctl start housesprinkler
