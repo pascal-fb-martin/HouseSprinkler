@@ -97,8 +97,8 @@ static const char *sprinkler_status (const char *method, const char *uri,
     int cursor = 0;
 
     snprintf (buffer, sizeof(buffer),
-              "{\"sprinkler\":{\"timestamp\":%ld,\"host\":\"%s\",\"control\":{",
-              time(0), hostname);
+              "{\"host\":\"%s\",\"proxy\":\"%s\",\"timestamp\":%ld,\"sprinkler\":{\"control\":{",
+              hostname, houseportal_server(), time(0));
     cursor = strlen(buffer);
     cursor += housesprinkler_zone_status (buffer+cursor, sizeof(buffer)-cursor);
     snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
@@ -171,13 +171,6 @@ static const char *sprinkler_program_on (const char *method, const char *uri,
         housesprinkler_program_manual (program);
     }
     return sprinkler_status (method, uri, data, length);
-}
-
-static const char *sprinkler_zone (const char *method, const char *uri,
-                                   const char *data, int length) {
-
-    echttp_content_type_json ();
-    return "";
 }
 
 static const char *sprinkler_zone_on (const char *method, const char *uri,

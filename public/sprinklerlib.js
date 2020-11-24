@@ -111,7 +111,8 @@ function sprinklerApplyUpdate (text) {
    var content;
    var program;
 
-   sprinklerSetContent ('hostname', response.sprinkler.host);
+   sprinklerSetContent ('hostname', response.host);
+   document.getElementById('portal').href = response.proxy;
 
    if (response.sprinkler.program.active) {
       program = response.sprinkler.program.active[0];
@@ -154,7 +155,7 @@ function sprinklerApplyUpdate (text) {
       sprinklerSetContent ('adjustment','DISABLED');
    }
 
-   var title = response.sprinkler.host + ' - Sprinkler Controler';
+   var title = response.host + ' - Sprinkler Controler';
    document.getElementsByTagName ('title')[0].innerHTML = title;
 
    for (var i = 0; i < response.sprinkler.control.zones.length; ++i) {
