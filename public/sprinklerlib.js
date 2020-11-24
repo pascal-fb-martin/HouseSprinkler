@@ -112,7 +112,7 @@ function sprinklerApplyUpdate (text) {
    var program;
 
    sprinklerSetContent ('hostname', response.host);
-   document.getElementById('portal').href = response.proxy;
+   document.getElementById('portal').href = 'http://'+response.proxy+'/index.html';
 
    if (response.sprinkler.program.active) {
       program = response.sprinkler.program.active[0];
