@@ -228,22 +228,8 @@ static void housesprinkler_zone_cancelled
 
     SprinklerZone *zone = (SprinklerZone *)origin;
 
-   if (status == 302 || status == 307) {
-       static char url[256];
-       const char *redirect = echttp_attribute_get ("Location");
-       if (!redirect) {
-           houselog_trace (HOUSE_FAILURE, zone->name, "invalid redirect");
-           zone->status  = 'e';
-           return;
-       }
-       strncpy (url, redirect, sizeof(url));
-       const char *error = echttp_client ("GET", url);
-       if (error) {
-           houselog_trace (HOUSE_FAILURE, zone->name, "%s: %s", url, error);
-           zone->status  = 'e';
-           return;
-       }
-       DEBUG ("Redirected to %s\n", url);
+   status = echttp_redirected("GET");
+   if (!status){
        echttp_submit (0, 0, housesprinkler_zone_cancelled, origin);
        return;
    }
@@ -293,20 +279,8 @@ static void housesprinkler_zone_controlled
 
     SprinklerZone *zone = (SprinklerZone *)origin;
 
-   if (status == 302 || status == 307) {
-       static char url[256];
-       const char *redirect = echttp_attribute_get ("Location");
-       if (!redirect) {
-           houselog_trace (HOUSE_FAILURE, zone->name, "invalid redirect");
-           return;
-       }
-       strncpy (url, redirect, sizeof(url));
-       const char *error = echttp_client ("GET", url);
-       if (error) {
-           houselog_trace (HOUSE_FAILURE, zone->name, "%s: %s", url, error);
-           return;
-       }
-       DEBUG ("Redirected to %s\n", url);
+   status = echttp_redirected("GET");
+   if (!status) {
        echttp_submit (0, 0, housesprinkler_zone_controlled, origin);
        return;
    }
@@ -422,21 +396,9 @@ static void housesprinkler_zone_discovered
    int  count = 100;
    int  i;
 
-   if (status == 302 || status == 307) {
-       static char url[256];
-       const char *redirect = echttp_attribute_get ("Location");
-       if (!redirect) {
-           houselog_trace (HOUSE_FAILURE, provider, "invalid redirect");
-           return;
-       }
-       strncpy (url, redirect, sizeof(url));
-       const char *error = echttp_client ("GET", url);
-       if (error) {
-           houselog_trace (HOUSE_FAILURE, url, "cannot connect to %s", error);
-           return;
-       }
+   status = echttp_redirected("GET");
+   if (!status) {
        echttp_submit (0, 0, housesprinkler_zone_discovered, origin);
-       DEBUG ("Redirected to %s\n", url);
        return;
    }
 
