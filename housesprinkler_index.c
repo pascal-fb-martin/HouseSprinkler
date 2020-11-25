@@ -130,21 +130,9 @@ static void housesprinkler_index_response
    int  count = 100;
    time_t now = time(0);
 
-   if (status == 302 || status == 307) {
-       static char url[256];
-       const char *redirect = echttp_attribute_get ("Location");
-       if (!redirect) {
-           houselog_trace (HOUSE_FAILURE, service, "%s: invalid redirect", url);
-           return;
-       }
-       strncpy (url, redirect, sizeof(url));
-       const char *error = echttp_client ("GET", url);
-       if (error) {
-           houselog_trace (HOUSE_FAILURE, service, "%s: %s", url, error);
-           return;
-       }
-       echttp_submit (0, 0, housesprinkler_index_response, (void *)service);
-       DEBUG ("Redirected to %s\n", url);
+   status = echttp_redirected("GET");
+   if (!status) {
+       echttp_submit (0, 0, housesprinkler_index_response, origin);
        return;
    }
 
