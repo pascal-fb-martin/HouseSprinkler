@@ -215,7 +215,7 @@ static const char *sprinkler_weatheroff (const char *method, const char *uri,
 
 static void hs_background (int fd, int mode) {
 
-    static int FirstTime = 1;
+    static time_t DelayConfigDiscovery = 0;
     static time_t LastRenewal = 0;
     time_t now = time(0);
 
@@ -230,14 +230,14 @@ static void hs_background (int fd, int mode) {
             LastRenewal = now;
         }
     }
-    // Do not try to discover other service immediately: wait for after
-    // the first request to the portal.
-    if (!FirstTime) {
+    // Do not try to discover other service immediately: wait for two seconds
+    // after the first request to the portal.
+    if (!DelayConfigDiscovery) DelayConfigDiscovery = now + 2;
+    if (now >= DelayConfigDiscovery) {
         housesprinkler_zone_periodic(now);
         housesprinkler_index_periodic (now);
         housesprinkler_program_periodic(now);
     }
-    FirstTime = 0;
     houselog_background (now);
     housediscover (now);
 }
