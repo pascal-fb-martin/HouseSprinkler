@@ -232,7 +232,7 @@ static void hs_background (int fd, int mode) {
     }
     // Do not try to discover other service immediately: wait for after
     // the first request to the portal.
-    if (!FirstTime) {
+    if (FirstTime) {
         housesprinkler_zone_periodic(now);
         housesprinkler_index_periodic (now);
         housesprinkler_program_periodic(now);
