@@ -326,14 +326,15 @@ static void housesprinkler_zone_schedule (time_t now) {
     time_t nexttime = now + 1;
 
     // Prune the queue once there is no time left and the zone has completed
-    // its pulse.
+    // its pulse (including the pause period).
     //
     while (QueueNext > 0 &&
            Queue[QueueNext-1].runtime == 0 &&
            Queue[QueueNext-1].nexton < now) {
+
+        Queue[QueueNext].nexton = 0;
         QueueNext -= 1;
         DEBUG ("%ld: Prune queue entry %d\n", now, QueueNext);
-        Queue[QueueNext].nexton = 0;
     }
 
     if (now <= ZonesBusy) return;

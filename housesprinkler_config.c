@@ -95,9 +95,19 @@ static const char FactoryDefaultsConfigFile[] =
                       "/usr/local/share/house/public/sprinkler/defaults.json";
 static int UseFactoryDefaults = 0;
 
-static const char *housesprinkler_config_refresh (void) {
 
+const char *housesprinkler_config_load (int argc, const char **argv) {
+
+    struct stat filestat;
+    int fd;
+    const char *configname;
     char *newconfig;
+
+    int i;
+    for (i = 1; i < argc; ++i) {
+        if (echttp_option_match ("-config=", argv[i], &configname))
+            ConfigFile = strdup(configname);
+    }
 
     DEBUG ("Loading config from %s\n", ConfigFile);
 
@@ -108,6 +118,12 @@ static const char *housesprinkler_config_refresh (void) {
         UseFactoryDefaults = 1;
         newconfig = echttp_parser_load (FactoryDefaultsConfigFile);
         if (!newconfig) return "not accessible";
+        houselog_event (time(0), "SYSTEM", "CONFIG", "LOAD",
+                        "FILE %s", FactoryDefaultsConfigFile);
+
+    } else {
+        houselog_event (time(0), "SYSTEM", "CONFIG", "LOAD",
+                        "FILE %s", ConfigFile);
     }
 
     if (ConfigText) echttp_parser_free (ConfigText);
@@ -118,28 +134,29 @@ static const char *housesprinkler_config_refresh (void) {
     return echttp_json_parse (ConfigText, ConfigParsed, &ConfigTokenCount);
 }
 
-const char *housesprinkler_config_load (int argc, const char **argv) {
-
-    struct stat filestat;
-    int fd;
-    const char *config;
-
-    int i;
-    for (i = 1; i < argc; ++i) {
-        if (echttp_option_match ("-config=", argv[i], &config))
-            ConfigFile = strdup(config);
-    }
-    houselog_event (time(0), "SYSTEM", "CONFIG", "LOAD", "FILE %s", ConfigFile);
-    return housesprinkler_config_refresh ();
-}
-
 const char *housesprinkler_config_save (const char *text) {
 
     int fd;
+    int length = strlen(text);
+    char *newconfig;
+    const char *error;
 
-    // If the configuration did not change, don't save and reload.
+    // Protect against bugs leading to the wrong string being used.
     //
-    if (ConfigText && strcmp (ConfigText, text) == 0) return 0;
+    if (length < 10 || text[0] != '{') return "invalid string";
+
+    newconfig = echttp_parser_string(text);
+
+    ConfigTokenCount = CONFIGMAXSIZE;
+    error = echttp_json_parse (newconfig, ConfigParsed, &ConfigTokenCount);
+    if (error) {
+        free (newconfig);
+        return error;
+    }
+
+    if (ConfigText) echttp_parser_free (ConfigText);
+    ConfigText = newconfig;
+    ConfigTextLength = length;
 
     DEBUG("Saving to %s: %s\n", ConfigFile, text);
     fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
@@ -150,10 +167,13 @@ const char *housesprinkler_config_save (const char *text) {
         free (desc);
         return "cannot save to file";
     }
-    write (fd, text, strlen(text));
+    write (fd, text, length);
     close (fd);
-    houselog_event (time(0), "SYSTEM", "CONFIG", "UPDATED", "FILE %s", ConfigFile);
-    return housesprinkler_config_refresh ();
+
+    UseFactoryDefaults = 0;
+    houselog_event (time(0), "SYSTEM", "CONFIG", "UPDATED",
+                    "FILE %s", ConfigFile);
+    return 0;
 }
 
 int housesprinkler_config_file (void) {

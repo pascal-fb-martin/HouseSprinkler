@@ -74,10 +74,13 @@ static void sprinkler_reset (void) {
 
 static const char *sprinkler_config (const char *method, const char *uri,
                                      const char *data, int length) {
-    static char buffer[65537];
 
     if (strcmp(method, "POST") == 0) {
-       housesprinkler_config_save (data);
+       const char *error = housesprinkler_config_save (data);
+       if (error) {
+           echttp_error (500, error);
+           return "";
+       }
        housesprinkler_zone_refresh ();
        housesprinkler_index_refresh ();
        housesprinkler_program_refresh ();

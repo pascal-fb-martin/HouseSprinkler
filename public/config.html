@@ -14,6 +14,32 @@ var countWeatherRefreshShown = 0;
 
 var gui = new Object();
 
+function toSeconds (text) {
+
+    if (!text) return 0;
+    var items = text.split(':');
+    if (items.length == 2) {
+        return (parseInt(items[0], 10) * 60) + parseInt(items[1], 10);
+    }
+    if (items.length == 1) {
+        return parseInt(items[0], 10);
+    }
+    return 0;
+}
+
+function showSeconds (seconds) {
+
+    if (seconds >= 60) {
+        var remainder = seconds % 60;
+        var image = ''+remainder;
+        if (remainder < 10) {
+            image = '0'+remainder;
+        }
+        return ''+Math.floor(seconds/60)+':'+image;
+    }
+    return ''+seconds
+}
+
 function saveConfig () {
 
    var form = document.forms;
@@ -28,10 +54,10 @@ function saveConfig () {
       newconfig.zones[i] = new Object();
       newconfig.zones[i].name = form.zones[prefix+'name'].value;
       if (form.zones[prefix+'pulse'].value) {
-         newconfig.zones[i].pulse = parseInt(form.zones[prefix+'pulse'].value);
+         newconfig.zones[i].pulse = toSeconds(form.zones[prefix+'pulse'].value);
       }
       if (form.zones[prefix+'pause'].value) {
-         newconfig.zones[i].pause = parseInt(form.zones[prefix+'pause'].value);
+         newconfig.zones[i].pause = toSeconds(form.zones[prefix+'pause'].value);
       }
       if (form.zones[prefix+'manual'].checked) {
          newconfig.zones[i].manual = true;
@@ -69,7 +95,7 @@ function saveConfig () {
          for (var z = 0; z < editing.zones.length; z++) {
             if (form.program[prefix+'zone_'+z+'_seconds'] != undefined) {
                if (form.program[prefix+'zone_'+z+'_seconds'].value.length) {
-                  var value = parseInt(form.program[prefix+'zone_'+z+'_seconds'].value, 10);
+                  var value = toSeconds(form.program[prefix+'zone_'+z+'_seconds'].value);
                   if (value != 0) {
                       var zi = newconfig.programs[i].zones.length;
                       newconfig.programs[i].zones[zi] = new Object();
@@ -190,7 +216,7 @@ function showOneZone (zones, i, elements) {
       pulseinput.type = 'text';
       pulseinput.name = prefix+'pulse';
       if (zones[i].pulse)
-         pulseinput.value = zones[i].pulse;
+         pulseinput.value = showSeconds(zones[i].pulse);
       pulseinput.placeholder = 'Seconds';
       pulsecolumn.appendChild(pulseinput);
       outer.appendChild(pulsecolumn);
@@ -200,7 +226,7 @@ function showOneZone (zones, i, elements) {
       pauseinput.type = 'text';
       pauseinput.name = prefix+'pause';
       if (zones[i].pause)
-         pauseinput.value = zones[i].pause;
+         pauseinput.value = showSeconds(zones[i].pause);
       pauseinput.placeholder = 'Seconds';
       pausecolumn.appendChild(pauseinput);
       outer.appendChild(pausecolumn);
@@ -456,7 +482,7 @@ function showOneProgram (programs, i, elements) {
       for (var d = 0; d < program.zones.length; d++) {
          var zoneline = document.createElement('tr');
          zonetable.appendChild
-            (showOneProgramString (program.zones, i, program.zones[d].name, 'zone_'+d+'_seconds', 'Seconds', 6, program.zones[d].time));
+            (showOneProgramString (program.zones, i, program.zones[d].name, 'zone_'+d+'_seconds', 'MM:SS', 6, showSeconds(program.zones[d].time)));
       }
 
       zonecolumn.appendChild(zonetable);
