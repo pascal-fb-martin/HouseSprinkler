@@ -9,6 +9,8 @@ ICONS= favicon_1_16x16x4.png
 
 LIBOJS=
 
+SHARE=/usr/local/share/house
+
 all: housesprinkler
 
 clean:
@@ -34,11 +36,12 @@ install:
 	touch /etc/default/housesprinkler
 	mkdir -p /etc/house
 	touch /etc/house/sprinkler.json
-	mkdir -p /usr/local/share/house/public/sprinkler
-	cp public/* /usr/local/share/house/public/sprinkler
-	chown root:root /usr/local/share/house/public/sprinkler/*
-	chmod 644 /usr/local/share/house/public/sprinkler/*
-	icotool -c -o /usr/local/share/house/public/favicon.ico $(ICONS)
+	mkdir -p $(SHARE)/public/sprinkler
+	chmod 755 $(SHARE) $(SHARE)/public $(SHARE)/public/sprinkler
+	cp public/* $(SHARE)/public/sprinkler
+	chown root:root $(SHARE)/public/sprinkler/*
+	icotool -c -o $(SHARE)/public/favicon.ico $(ICONS)
+	chmod 644 $(SHARE)/public/sprinkler/* $(SHARE)/public/favicon.ico
 	systemctl daemon-reload
 	systemctl enable housesprinkler
 	systemctl start housesprinkler
