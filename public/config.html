@@ -217,7 +217,7 @@ function showOneZone (zones, i, elements) {
       pulseinput.name = prefix+'pulse';
       if (zones[i].pulse)
          pulseinput.value = showSeconds(zones[i].pulse);
-      pulseinput.placeholder = 'Seconds';
+      pulseinput.placeholder = 'mm:ss';
       pulsecolumn.appendChild(pulseinput);
       outer.appendChild(pulsecolumn);
 
@@ -227,7 +227,7 @@ function showOneZone (zones, i, elements) {
       pauseinput.name = prefix+'pause';
       if (zones[i].pause)
          pauseinput.value = showSeconds(zones[i].pause);
-      pauseinput.placeholder = 'Seconds';
+      pauseinput.placeholder = 'mm:ss';
       pausecolumn.appendChild(pauseinput);
       outer.appendChild(pausecolumn);
 
@@ -482,7 +482,7 @@ function showOneProgram (programs, i, elements) {
       for (var d = 0; d < program.zones.length; d++) {
          var zoneline = document.createElement('tr');
          zonetable.appendChild
-            (showOneProgramString (program.zones, i, program.zones[d].name, 'zone_'+d+'_seconds', 'MM:SS', 6, showSeconds(program.zones[d].time)));
+            (showOneProgramString (program.zones, i, program.zones[d].name, 'zone_'+d+'_seconds', 'mm:ss', 6, showSeconds(program.zones[d].time)));
       }
 
       zonecolumn.appendChild(zonetable);
