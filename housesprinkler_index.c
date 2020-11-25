@@ -130,7 +130,7 @@ static void housesprinkler_index_response
    int  count = 100;
    time_t now = time(0);
 
-   if (status == 302) {
+   if (status == 302 || status == 307) {
        static char url[256];
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {

@@ -161,10 +161,12 @@ function sprinklerApplyUpdate (text) {
    for (var i = 0; i < response.sprinkler.control.zones.length; ++i) {
        var zone = response.sprinkler.control.zones[i];
        var label = document.getElementById ('zone_'+i+'_label');
-       if (zone[2]) {
-           label.innerHTML = zone[0]+' @'+zone[2];
-       } else {
-           label.innerHTML = zone[0];
+       if (label) {
+           if (zone[2]) {
+               label.innerHTML = zone[0]+' @'+zone[2];
+           } else {
+               label.innerHTML = zone[0];
+           }
        }
    }
 }

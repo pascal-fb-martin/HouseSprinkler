@@ -228,7 +228,7 @@ static void housesprinkler_zone_cancelled
 
     SprinklerZone *zone = (SprinklerZone *)origin;
 
-   if (status == 302) {
+   if (status == 302 || status == 307) {
        static char url[256];
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {
@@ -293,7 +293,7 @@ static void housesprinkler_zone_controlled
 
     SprinklerZone *zone = (SprinklerZone *)origin;
 
-   if (status == 302) {
+   if (status == 302 || status == 307) {
        static char url[256];
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {
@@ -422,7 +422,7 @@ static void housesprinkler_zone_discovered
    int  count = 100;
    int  i;
 
-   if (status == 302) {
+   if (status == 302 || status == 307) {
        static char url[256];
        const char *redirect = echttp_attribute_get ("Location");
        if (!redirect) {
