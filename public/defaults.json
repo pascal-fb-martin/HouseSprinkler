@@ -1,20 +1,6 @@
 {
     "on" : true,
     "raindelay" : true,
-    "wateringindex" : [
-        {
-            "enable" : true,
-            "provider" : "waterwise",
-            "url": "http://www.bewaterwise.com/RSS/rsswi.xml",
-            "format": "XML",
-            "path": ".rss.content.channel.content.item[1].content.description.content",
-            "adjust" : {
-                "min" : 10,
-                "max" : 150
-            },
-            "refresh" : [ 7, 20 ]
-        }
-    ],
     "zones" : [],
     "programs" : [],
     "seasons" : [
