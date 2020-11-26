@@ -301,7 +301,7 @@ int main (int argc, const char **argv) {
     housediscover_initialize (argc, argv);
 
     gethostname (hostname, sizeof(hostname));
-    houselog_event (time(0), "SYSTEM", hostname, "START", "");
+    houselog_event ("SYSTEM", hostname, "START", "");
     echttp_loop();
 }
 

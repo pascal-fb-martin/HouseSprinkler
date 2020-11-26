@@ -402,11 +402,11 @@ static void housesprinkler_program_activate
     // Now that we know which index to apply, let's launch this program.
     //
     if (indexname) {
-        houselog_event (now, "PROGRAM", program->name, "START",
+        houselog_event ("PROGRAM", program->name, "START",
                         "%s, INDEX %d%% FROM %s",
                         manual ? "manual" : "scheduled", index, indexname);
     } else {
-        houselog_event (now, "PROGRAM", program->name, "START",
+        houselog_event ("PROGRAM", program->name, "START",
                         "%s, NO INDEX", manual ? "manual" : "scheduled");
     }
 
@@ -441,7 +441,7 @@ void housesprinkler_program_periodic (time_t now) {
     if (housesprinkler_zone_idle()) {
         for (i = 0; i < ProgramsCount; ++i) {
             if (Programs[i].running) {
-                houselog_event (now, "PROGRAM", Programs[i].name, "STOP", "");
+                houselog_event ("PROGRAM", Programs[i].name, "STOP", "");
                 Programs[i].running = 0;
             }
         }
@@ -512,7 +512,7 @@ void housesprinkler_program_periodic (time_t now) {
 void housesprinkler_program_switch (void) {
     time_t now = time(0);
     SprinklerState = !SprinklerState;
-    houselog_event (now, "PROGRAM", "SWITCH", SprinklerState?"ON":"OFF", "");
+    houselog_event ("PROGRAM", "SWITCH", SprinklerState?"ON":"OFF", "");
 }
 
 int housesprinkler_program_status (char *buffer, int size) {

@@ -198,7 +198,7 @@ static void housesprinkler_index_response
    // Now that we do got a brand new index, it is time to let everyone
    // know about it.
    //
-   houselog_event (now, "INDEX", SprinklerIndexOrigin, "APPLY",
+   houselog_event ("INDEX", SprinklerIndexOrigin, "APPLY",
                    "%d%% FROM %s (PRIORITY %d)",
                    SprinklerIndex, urlsource, ipriority);
 

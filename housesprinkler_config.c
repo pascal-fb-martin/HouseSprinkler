@@ -118,12 +118,11 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
         UseFactoryDefaults = 1;
         newconfig = echttp_parser_load (FactoryDefaultsConfigFile);
         if (!newconfig) return "not accessible";
-        houselog_event (time(0), "SYSTEM", "CONFIG", "LOAD",
+        houselog_event ("SYSTEM", "CONFIG", "LOAD",
                         "FILE %s", FactoryDefaultsConfigFile);
 
     } else {
-        houselog_event (time(0), "SYSTEM", "CONFIG", "LOAD",
-                        "FILE %s", ConfigFile);
+        houselog_event ("SYSTEM", "CONFIG", "LOAD", "FILE %s", ConfigFile);
     }
 
     if (ConfigText) echttp_parser_free (ConfigText);
@@ -171,8 +170,7 @@ const char *housesprinkler_config_save (const char *text) {
     close (fd);
 
     UseFactoryDefaults = 0;
-    houselog_event (time(0), "SYSTEM", "CONFIG", "UPDATED",
-                    "FILE %s", ConfigFile);
+    houselog_event ("SYSTEM", "CONFIG", "UPDATED", "FILE %s", ConfigFile);
     return 0;
 }
 

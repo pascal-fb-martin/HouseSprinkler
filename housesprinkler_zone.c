@@ -245,7 +245,7 @@ static void housesprinkler_zone_cancelled
 void housesprinkler_zone_cancel (SprinklerZone *zone) {
 
     if (zone->url[0]) {
-        houselog_event (time(0), "ZONE", zone->name, "CANCEL", "manual");
+        houselog_event ("ZONE", zone->name, "CANCEL", "manual");
         static char url[256];
         snprintf (url, sizeof(url),
                   "%s/set?point=%s&state=off", zone->url, zone->name);
@@ -266,7 +266,7 @@ void housesprinkler_zone_stop (void) {
     time_t now = time(0);
 
     DEBUG ("%ld: Stop all zones\n", now);
-    houselog_event (now, "ZONE", "ALL", "STOP", "manual");
+    houselog_event ("ZONE", "ALL", "STOP", "manual");
     for (i = 0; i < QueueNext; ++i) {
         Queue[i].runtime = 0;
     }
@@ -301,7 +301,7 @@ static int housesprinkler_zone_start (int zone,
            now, Zones[zone].name, pulse);
     if (Zones[zone].url[0]) {
         if (!context || context[0] == 0) context = "manual";
-        houselog_event (now, "ZONE", Zones[zone].name, "START",
+        houselog_event ("ZONE", Zones[zone].name, "START",
                         "for %d seconds using %s (%s)",
                         pulse, Zones[zone].url, context);
         static char url[256];
@@ -447,7 +447,7 @@ static void housesprinkler_zone_discovered
            Zones[zone].status = 'i';
            DEBUG ("Zone %s discovered on %s\n",
                   Zones[zone].name, Zones[zone].url);
-           houselog_event (time(0), "ZONE", Zones[zone].name, "ROUTE",
+           houselog_event ("ZONE", Zones[zone].name, "ROUTE",
                            "TO %s", Zones[zone].url);
        }
    }
