@@ -113,8 +113,8 @@ static SprinklerZone *Zones = 0;
 static int            ZonesCount = 0;
 
 static time_t ZonesBusy = 0; // Do not schedule while a zone is running.
+static time_t PulseEnd = 0;
 static SprinklerZone *ZoneActive = 0; // One zone active at a time.
-
 
 typedef struct {
     int zone;
@@ -141,6 +141,8 @@ void housesprinkler_zone_refresh (void) {
     if (Zones) free (Zones);
     Zones = 0;
     ZoneActive = 0;
+    ZonesBusy = 0;
+    PulseEnd = 0;
     ZonesCount = 0;
     content = housesprinkler_config_array (0, ".zones");
     if (content > 0) {
@@ -189,24 +191,24 @@ static int housesprinkler_zone_search (const char *name) {
 void housesprinkler_zone_activate (const char *name,
                                    int pulse, const char *context) {
 
-    if (QueueNext < ZonesCount) {
-        int zone = housesprinkler_zone_search (name);
-        if (zone >= 0) {
-            int i;
-            time_t now = time(0);
-            if (Zones[zone].manual && context) return;
-            houselog_trace (HOUSE_INFO, name,
-                            "queued (%s) for a %d seconds pulse",
-                            context?"scheduled":"manually", pulse);
-            for (i = 0; i < QueueNext; ++i) {
-                if (Queue[i].zone == zone) {
-                    // This zone was already queued. Add this pulse
-                    // to the total remaining runtime.
-                    Queue[i].runtime += pulse;
-                    if (Queue[i].nexton == 0) Queue[i].nexton = time(0);
-                    return;
-                }
+    int zone = housesprinkler_zone_search (name);
+    if (zone >= 0) {
+        int i;
+        time_t now = time(0);
+        if (Zones[zone].manual && context) return;
+        houselog_trace (HOUSE_INFO, name,
+                        "queued (%s) for a %d seconds pulse",
+                        context?"scheduled":"manually", pulse);
+        for (i = 0; i < QueueNext; ++i) {
+            if (Queue[i].zone == zone) {
+                // This zone was already queued. Add this pulse
+                // to the total remaining runtime.
+                Queue[i].runtime += pulse;
+                if (Queue[i].nexton == 0) Queue[i].nexton = time(0);
+                return;
             }
+        }
+        if (QueueNext < ZonesCount) {
             // This zone was not queued yet: create a new entry.
             Queue[QueueNext].zone = zone;
             Queue[QueueNext].runtime = pulse;
@@ -272,6 +274,7 @@ void housesprinkler_zone_stop (void) {
     }
     QueueNext = 0;
     ZonesBusy = 0;
+    PulseEnd = 0;
 }
 
 static void housesprinkler_zone_controlled
@@ -346,6 +349,7 @@ static void housesprinkler_zone_schedule (time_t now) {
         }
         if (ZoneActive->status == 'a') ZoneActive->status = 'i';
         ZoneActive = 0;
+        PulseEnd = 0;
     }
 
     // Search for the first zone to be started next.
@@ -383,6 +387,7 @@ static void housesprinkler_zone_schedule (time_t now) {
             // valve pause have been exhausted.
             ZonesBusy = now + pulse + ZoneIndexValvePause;
             ZoneActive = Zones + zone;
+            PulseEnd = now + pulse;
         }
     }
 }
@@ -515,7 +520,24 @@ void housesprinkler_zone_periodic (time_t now) {
 }
 
 int housesprinkler_zone_idle (void) {
-    return QueueNext == 0;
+
+    if (!QueueNext) return 1; // Nothing in the queue: most common case.
+
+    // There is something in the queue, but this might be a leftover
+    // pause. The system is active only if one zone is active, or if
+    // there are other zones to be activated later. If it is only
+    // waiting for the pause periods to complete, it is already idle.
+    // This avoids declaring a program as "complete" only 30 minutes
+    // or so after the last watering.
+    //
+    int i;
+    time_t now = time(0);
+
+    if (PulseEnd >= now) return 0; // One zone is active.
+    for (i = 0; i < QueueNext; ++i) {
+        if (Queue[i].runtime > 0) return 0; // One zone will be active.
+    }
+    return 1;
 }
 
 int housesprinkler_zone_status (char *buffer, int size) {
