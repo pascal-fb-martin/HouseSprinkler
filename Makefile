@@ -22,7 +22,7 @@ rebuild: clean all
 	gcc -c -g -O -o $@ $<
 
 housesprinkler: $(OBJS)
-	gcc -g -O -o housesprinkler $(OBJS) -lhouseportal -lechttp -lcrypto -lrt
+	gcc -g -O -o housesprinkler $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lrt
 
 install:
 	if [ -e /etc/init.d/housesprinkler ] ; then systemctl stop housesprinkler ; fi
