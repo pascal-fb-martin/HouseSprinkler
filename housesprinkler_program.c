@@ -299,6 +299,9 @@ void housesprinkler_program_refresh (void) {
                    Programs[i].name, Programs[i].start.hour, Programs[i].start.minute, count);
         }
     }
+
+    SprinklerState = housesprinkler_config_backup_get (".on");
+    ProgramRainDelay = (time_t)housesprinkler_config_backup_get (".raindelay");
 }
 
 void housesprinkler_program_index (int state) {
@@ -315,7 +318,10 @@ void housesprinkler_program_set_index
 
 void housesprinkler_program_rain (int enabled) {
     ProgramRainEnabled = enabled;
-    if (!enabled) ProgramRainDelay;
+    if (!enabled) {
+        ProgramRainDelay = 0;
+        housesprinkler_config_backup_set (".raindelay", 0);
+    }
 }
 
 void housesprinkler_program_set_rain (int delay) {
@@ -337,6 +343,7 @@ void housesprinkler_program_set_rain (int delay) {
         // This is an extension to the ongoing rain delay period.
         ProgramRainDelay += delay;
     }
+    housesprinkler_config_backup_set (".raindelay", (long)ProgramRainDelay);
 }
 
 static void housesprinkler_program_activate
@@ -513,6 +520,7 @@ void housesprinkler_program_switch (void) {
     time_t now = time(0);
     SprinklerState = !SprinklerState;
     houselog_event ("PROGRAM", "SWITCH", SprinklerState?"ON":"OFF", "");
+    housesprinkler_config_backup_set (".on", SprinklerState);
 }
 
 int housesprinkler_program_status (char *buffer, int size) {

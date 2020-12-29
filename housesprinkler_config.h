@@ -38,3 +38,6 @@ int housesprinkler_config_object       (int parent, const char *path);
 
 const char *housesprinkler_config_name (void);
 
+long housesprinkler_config_backup_get (const char *path);
+void housesprinkler_config_backup_set (const char *path, long value);
+
