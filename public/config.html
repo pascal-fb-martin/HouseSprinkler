@@ -635,7 +635,7 @@ function sprinklerServicesReceived (response) {
         button.className = 'configactionbutton';
         button.onclick = sprinklerRequestRefresh;
         button.onclickUrl = 'http://'+response.host+'/sprinkler/config';
-        button.innerHTML = 'Reload from '+response.host;
+        button.innerHTML = 'Import from '+response.host;
         bottom.appendChild(button);
     }
 }
