@@ -635,7 +635,10 @@ function sprinklerServicesReceived (response) {
         button.className = 'configactionbutton';
         button.onclick = sprinklerRequestRefresh;
         button.onclickUrl = 'http://'+response.host+'/sprinkler/config';
-        button.innerHTML = 'Import from '+response.host;
+        if (response.host.toUpperCase() == location.hostname.toUpperCase())
+            button.innerHTML = 'Reload from '+response.host;
+        else
+            button.innerHTML = 'Import from '+response.host;
         bottom.appendChild(button);
     }
 }
