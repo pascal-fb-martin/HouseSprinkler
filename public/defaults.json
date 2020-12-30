@@ -1,6 +1,4 @@
 {
-    "on" : true,
-    "raindelay" : true,
     "zones" : [],
     "programs" : [],
     "seasons" : [
