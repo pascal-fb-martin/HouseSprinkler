@@ -246,7 +246,10 @@ static void hs_background (int fd, int mode) {
 }
 
 static void sprinkler_protect (const char *method, const char *uri) {
-    echttp_cors_protect(method, uri);
+    if (echttp_cors_protect(method, uri)) {
+        houselog_event (method, uri, "BLOCKED", "%s: %s",
+                        echttp_attribute_get("Origin"), echttp_reason());
+    }
 }
 
 int main (int argc, const char **argv) {
