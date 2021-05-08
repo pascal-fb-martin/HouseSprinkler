@@ -354,8 +354,9 @@ static void housesprinkler_program_activate
 
     int index = 100;
     const char *indexname = 0;
+    char context[256];
 
-    DEBUG ("Activate %s\n", program->name);
+    DEBUG ("Activate program %s\n", program->name);
 
     // Use an online index only if it has been updated recently.
     // Otherwise use the season static schedule, if any.
@@ -402,7 +403,7 @@ static void housesprinkler_program_activate
 
         } else {
 
-            DEBUG ("Activate %s%s\n", program->name, manual?" (manual)":"");
+            DEBUG ("Activate program %s%s\n", program->name, manual?" (manual)":"");
         }
     }
 
@@ -417,11 +418,13 @@ static void housesprinkler_program_activate
                         "%s, NO INDEX", manual ? "manual" : "scheduled");
     }
 
+    snprintf (context, sizeof(context), "PROGRAM %s", program->name);
+
     int i;
     for (i = 0; i < program->count; ++i) {
         int runtime = (program->zones[i].runtime * index) / 100;
         housesprinkler_zone_activate
-            (program->zones[i].name, runtime, program->name);
+            (program->zones[i].name, runtime, context);
     }
 }
 
