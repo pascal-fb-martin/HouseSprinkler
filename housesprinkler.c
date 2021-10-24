@@ -261,6 +261,8 @@ int main (int argc, const char **argv) {
     open ("/dev/null", O_RDONLY);
     dup(open ("/dev/null", O_WRONLY));
 
+    gethostname (hostname, sizeof(hostname));
+
     echttp_default ("-http-service=dynamic");
 
     argc = echttp_open (argc, argv);
@@ -305,7 +307,6 @@ int main (int argc, const char **argv) {
     housesprinkler_index_register (housesprinkler_program_set_index);
     housediscover_initialize (argc, argv);
 
-    gethostname (hostname, sizeof(hostname));
     echttp_loop();
 }
 
