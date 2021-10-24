@@ -274,6 +274,7 @@ int main (int argc, const char **argv) {
         houselog_trace
             (HOUSE_FAILURE, housesprinkler_config_name(), "%s", error);
     }
+    houselog_event ("SYSTEM", hostname, "START", "");
     housesprinkler_zone_refresh ();
     housesprinkler_index_refresh ();
     housesprinkler_program_refresh ();
@@ -304,7 +305,6 @@ int main (int argc, const char **argv) {
     housediscover_initialize (argc, argv);
 
     gethostname (hostname, sizeof(hostname));
-    houselog_event ("SYSTEM", hostname, "START", "");
     echttp_loop();
 }
 
