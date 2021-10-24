@@ -269,12 +269,13 @@ int main (int argc, const char **argv) {
         use_houseportal = 1;
     }
     houselog_initialize ("sprinkler", argc, argv);
+    houselog_event ("SYSTEM", hostname, "START", "");
+
     const char *error = housesprinkler_config_load (argc, argv);
     if (error) {
         houselog_trace
             (HOUSE_FAILURE, housesprinkler_config_name(), "%s", error);
     }
-    houselog_event ("SYSTEM", hostname, "START", "");
     housesprinkler_zone_refresh ();
     housesprinkler_index_refresh ();
     housesprinkler_program_refresh ();
