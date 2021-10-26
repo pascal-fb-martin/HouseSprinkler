@@ -478,27 +478,28 @@ static void housesprinkler_zone_scan_server
 
 static void housesprinkler_zone_discovery (time_t now) {
 
-    static time_t starting = 0;
     static time_t latestdiscovery = 0;
 
     if (!now) { // This is a manual reset (force a discovery refresh)
-        starting = 0;
         latestdiscovery = 0;
         return;
     }
-    if (starting == 0) starting = now;
 
-    // Scan every 15s for the first 2 minutes, then slow down to every 30mn.
-    // The fast start is to make the whole network recover fast from
-    // an outage, when we do not know in which order the systems start.
-    // Later on, there is no need to create more traffic.
+    // If any new service was detected, force a scan now.
     //
-    if (now <= latestdiscovery + 15) return;
-    if (now <= latestdiscovery + 1800 && now >= starting + 120) return;
+    if ((latestdiscovery > 0) &&
+        housediscover_changed ("control", latestdiscovery)) {
+        latestdiscovery = 0;
+    }
+
+    // Even if nothing new was detected, still scan every 10mn, in case
+    // the configuration of a service was changed.
+    //
+    if (now <= latestdiscovery + 600) return;
     latestdiscovery = now;
 
     // Rebuild the list of control servers, and then launch a discovery
-    // refresh. This way we never walk the cache while doing discovery.
+    // refresh. This way we don't walk a stale cache while doing discovery.
     //
     DEBUG ("Reset providers cache\n");
     int i;
