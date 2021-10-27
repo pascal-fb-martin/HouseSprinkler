@@ -88,6 +88,7 @@ static int         SprinklerIndex = DEFAULTINDEX;
 static int         SprinklerIndexPriority = 0;
 static time_t      SprinklerIndexTimestamp = 0;
 static char       *SprinklerIndexOrigin = 0;
+static int         SprinklerIndexOriginSize = 0;
 
 #define INDEX_MAX_LISTENER  16
 static housesprinkler_index_listener *SprinklerIndexListener[INDEX_MAX_LISTENER];
@@ -152,6 +153,11 @@ static void housesprinkler_index_response
        return;
    }
 
+   int server = echttp_json_search (tokens, ".host");
+   if (server < 0) {
+       houselog_trace (HOUSE_FAILURE, service, "No host name");
+       return;
+   }
    int received = echttp_json_search (tokens, ".waterindex.status.received");
    int priority = echttp_json_search (tokens, ".waterindex.status.priority");
    if (received <= 0 || priority <= 0) {
@@ -192,8 +198,16 @@ static void housesprinkler_index_response
    SprinklerIndexPriority = ipriority;
    SprinklerIndexTimestamp = timestamp;
 
-   if (SprinklerIndexOrigin) free (SprinklerIndexOrigin);
-   SprinklerIndexOrigin = strdup (tokens[name].value.string);
+   int size = strlen(tokens[name].value.string) +
+              strlen(tokens[server].value.string) + 2; // Size needed.
+   if (size > SprinklerIndexOriginSize) {
+       if (SprinklerIndexOrigin) free (SprinklerIndexOrigin);
+       size += 32; // Avoid repeating the free/malloc sequence too often.
+       SprinklerIndexOrigin = (char *) malloc (size);
+       SprinklerIndexOriginSize = size;
+   }
+   snprintf (SprinklerIndexOrigin, SprinklerIndexOriginSize, "%s@%s",
+             tokens[name].value.string, tokens[server].value.string);
 
    // Now that we do got a brand new index, it is time to let everyone
    // know about it.
@@ -252,8 +266,7 @@ void housesprinkler_index_periodic (time_t now) {
     //
     if (now > SprinklerIndexTimestamp + ONEDAY) {
         SprinklerIndexTimestamp = 0;
-        if (SprinklerIndexOrigin) free (SprinklerIndexOrigin);
-        SprinklerIndexOrigin = 0;
+        snprintf (SprinklerIndexOrigin, SprinklerIndexOriginSize, "default");
     }
 
     housediscovered ("waterindex", 0, housesprinkler_index_query);
