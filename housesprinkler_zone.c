@@ -120,7 +120,7 @@ typedef struct {
     int zone;
     int runtime;
     time_t nexton;
-    char context[16];
+    char context[32];
 } SprinklerQueue;
 
 static SprinklerQueue *Queue = 0;
