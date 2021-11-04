@@ -335,7 +335,7 @@ static void housesprinkler_zone_schedule (time_t now) {
            Queue[QueueNext-1].runtime == 0 &&
            Queue[QueueNext-1].nexton < now) {
 
-        Queue[QueueNext].nexton = 0;
+        Queue[QueueNext-1].nexton = 0;
         QueueNext -= 1;
         DEBUG ("%ld: Prune queue entry %d\n", now, QueueNext);
     }
