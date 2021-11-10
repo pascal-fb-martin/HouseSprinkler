@@ -184,13 +184,20 @@ const char *housesprinkler_config_save (const char *text) {
 
     // Protect against bugs leading to the wrong string being used.
     //
-    if (length < 10 || text[0] != '{') return "invalid string";
+    if (length < 10 || text[0] != '{') {
+        houselog_trace (HOUSE_FAILURE, "CONFIG",
+                        "Invalid config string: %-0.60s (length %d)",
+                        text, length);
+        return "invalid string";
+    }
 
     newconfig = echttp_parser_string(text);
 
     ConfigTokenCount = CONFIGMAXSIZE;
     error = echttp_json_parse (newconfig, ConfigParsed, &ConfigTokenCount);
     if (error) {
+        houselog_trace (HOUSE_FAILURE, "CONFIG",
+                        "JSON error %s on %-0.60s", error, text);
         free (newconfig);
         return error;
     }
@@ -203,8 +210,8 @@ const char *housesprinkler_config_save (const char *text) {
     fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
     if (fd < 0) {
         char *desc = strdup(strerror(errno));
-        DEBUG("Cannot save to %s: %s\n", ConfigFile, desc);
-        houselog_trace (HOUSE_FAILURE, ConfigFile, desc);
+        houselog_trace (HOUSE_FAILURE, "CONFIG",
+                        "Cannot save to %s: %s", ConfigFile, desc);
         free (desc);
         return "cannot save to file";
     }
