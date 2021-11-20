@@ -70,6 +70,7 @@ docker: all
 	icotool -c -o build$(SHARE)/public/favicon.ico $(ICONS)
 	chmod 644 build$(SHARE)/public/sprinkler/*
 	chmod 644 build$(SHARE)/public/house.css build$(SHARE)/public/favicon.ico
+	cp Dockerfile build
 	cd build ; docker build -t housesprinkler .
 	rm -rf build
 
