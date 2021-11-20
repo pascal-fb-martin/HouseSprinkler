@@ -55,3 +55,21 @@ uninstall:
 purge: uninstall
 	rm -rf /etc/house/sprinkler.json /etc/default/housesprinkler
 
+docker: all
+	rm -rf build
+	mkdir -p build/usr/local/bin
+	mkdir -p build/var/lib/house
+	cp housesprinkler build/usr/local/bin
+	chmod 755 build/usr/local/bin/housesprinkler
+	mkdir -p build/etc/house
+	touch build/etc/house/sprinkler.json
+	mkdir -p build$(SHARE)/public/sprinkler
+	chmod 755 build$(SHARE) build$(SHARE)/public build$(SHARE)/public/sprinkler
+	cp public/* build$(SHARE)/public/sprinkler
+    cp $(SHARE)/public/house.css build$(SHARE)/public
+	icotool -c -o $(SHARE)/public/favicon.ico $(ICONS)
+	chmod 644 $build(SHARE)/public/sprinkler/*
+	chmod 644 $build(SHARE)/public/house.css build$(SHARE)/public/favicon.ico
+	cd build ; docker build -t housesprinkler
+	rm -rf build
+
