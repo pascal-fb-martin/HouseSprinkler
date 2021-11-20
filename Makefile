@@ -67,7 +67,7 @@ docker: all
 	chmod 755 build$(SHARE) build$(SHARE)/public build$(SHARE)/public/sprinkler
 	cp public/* build$(SHARE)/public/sprinkler
 	cp $(SHARE)/public/house.css build$(SHARE)/public
-	icotool -c -o $(SHARE)/public/favicon.ico $(ICONS)
+	icotool -c -o build$(SHARE)/public/favicon.ico $(ICONS)
 	chmod 644 $build(SHARE)/public/sprinkler/*
 	chmod 644 $build(SHARE)/public/house.css build$(SHARE)/public/favicon.ico
 	cd build ; docker build -t housesprinkler
