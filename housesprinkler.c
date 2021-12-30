@@ -271,7 +271,6 @@ int main (int argc, const char **argv) {
         use_houseportal = 1;
     }
     houselog_initialize ("sprinkler", argc, argv);
-    houselog_event ("SYSTEM", hostname, "START", "");
 
     const char *error = housesprinkler_config_load (argc, argv);
     if (error) {
@@ -307,6 +306,7 @@ int main (int argc, const char **argv) {
     housesprinkler_index_register (housesprinkler_program_set_index);
     housediscover_initialize (argc, argv);
 
+    houselog_event ("SERVICE", "sprinkler", "STARTED", "ON %s", houselog_host());
     echttp_loop();
 }
 
