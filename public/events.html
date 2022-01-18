@@ -1,79 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel=stylesheet type="text/css"
-      href="/sprinkler/sprinkler.css" title="Sprinkler">
-<script src="/sprinkler/sprinklerlib.js"></script>
+<link rel=stylesheet type="text/css" href="/house.css" title="House">
+<script src="/events.js"></script>
 <script>
 window.onload = function() {
-
-   function newColumn (text, index) {
-      var column = document.createElement("td");
-      column.innerHTML = text;
-      if (index & 1) column.setAttribute('bgcolor', '#E0E0E0');
-      return column;
-   }
-
-   var lastEventId = null;
-
-   function updateEvents() {
-
-      sprinklerEvents (function (response) {
-
-         lastEventId = response.sprinkler.latest;
-
-         var table = document.getElementsByClassName ('sprkrevent')[0];
-         for (var i = table.childNodes.length - 1; i > 1; i--) {
-            table.removeChild(table.childNodes[i]);
-         }
-         for (var i = response.sprinkler.events.length-1; i >= 0; --i) {
-            var event = response.sprinkler.events[i];
-            var timestamp = new Date(event[0]);
-            var row = document.createElement("tr");
-            row.appendChild(newColumn(timestamp.toLocaleString(), i));
-            row.appendChild(newColumn(event[1], i));
-            row.appendChild(newColumn(event[2], i));
-            row.appendChild(newColumn(event[3], i));
-            row.appendChild(newColumn(event[4], i));
-            table.appendChild(row);
-         }
-      });
-   }
-
-   function checkEvents () {
-      sprinklerLatestEvent (function (latest) {
-         if ((lastEventId == null) || (lastEventId != latest)) {
-            updateEvents ();
-         }
-      });
-   }
-
-   sprinklerUpdate();
-   updateEvents();
-   setInterval (function() {checkEvents()}, 1000);
+   eventStart('/sprinkler');
 }
 </script>
 <head>
    <title></title>
 </head>
 <body>
-   <table class="sprkrtopcontainer">
+   <table class="housetopcontainer">
    <tr><td>
-   <table class="sprkrtop">
+   <table class="housetop">
    <tr>
-   <td><a class="sprkrtopitem" id="portal" href="/index.html">Portal</a></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/index.html">Sprinkler</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
-   <td><span class="sprkrtopcurrent">Events</span></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/valves.html">Valves</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/config.html">Config</A></td>
+   <td><a id="portal" href="/index.html">Portal</a></td>
+   <td><A HREF="/sprinkler/index.html">Sprinkler</A></td>
+   <td><A HREF="/sprinkler/zones.html">Zones</A></td>
+   <td><A HREF="/sprinkler/programs.html">Programs</A></td>
+   <td><span>Events</span></td>
+   <td><A HREF="/sprinkler/valves.html">Valves</A></td>
+   <td><A HREF="/sprinkler/config.html">Config</A></td>
    </tr>
    </table> 
    </td></tr>
    </table> 
    <h1><span class="hostname"></span></h1>
-   <table class="sprkrevent" border="0">
+   <table class="housewidetable eventlist" border="0">
       <tr>
          <th width="15%">Time</th>
          <th width="10%">Category</th>
