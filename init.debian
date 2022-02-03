@@ -6,7 +6,8 @@
 # Required-Stop:   $network $remote_fs $syslog $houseportal
 # Default-Start:   2 3 4 5
 # Default-Stop: 
-# Short-Description: Start HouseSprinkler daemon
+# Short-Description: Irrigation scheduling and control
+# Description: A web service that schedules watering by controling sprinklers
 ### END INIT INFO
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin

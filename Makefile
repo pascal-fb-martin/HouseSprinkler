@@ -66,10 +66,11 @@ docker: all
 	mkdir -p build$(SHARE)/public/sprinkler
 	chmod 755 build$(SHARE) build$(SHARE)/public build$(SHARE)/public/sprinkler
 	cp public/* build$(SHARE)/public/sprinkler
-	cp $(SHARE)/public/house.css build$(SHARE)/public
+	cp $(SHARE)/public/house.css $(SHARE)/public/event.js build$(SHARE)/public
 	icotool -c -o build$(SHARE)/public/favicon.ico $(ICONS)
 	chmod 644 build$(SHARE)/public/sprinkler/*
-	chmod 644 build$(SHARE)/public/house.css build$(SHARE)/public/favicon.ico
+	chmod 644 build$(SHARE)/public/house.css build$(SHARE)/public/event.js
+	chmod 644 build$(SHARE)/public/favicon.ico
 	cp Dockerfile build
 	cd build ; docker build -t housesprinkler .
 	rm -rf build
