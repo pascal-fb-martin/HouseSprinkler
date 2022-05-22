@@ -93,8 +93,6 @@
 
 #define DEBUG if (echttp_isdebug()) printf
 
-#define DEFAULTSERVER "http://localhost/relay"
-
 #define MAX_PROVIDER 64
 
 static char *Providers[MAX_PROVIDER];
@@ -304,7 +302,7 @@ static int housesprinkler_zone_start (int zone,
            now, Zones[zone].name, pulse);
     if (Zones[zone].url[0]) {
         if (!context || context[0] == 0) context = "manual";
-        houselog_event ("ZONE", Zones[zone].name, "START",
+        houselog_event ("ZONE", Zones[zone].name, "ACTIVATED",
                         "for %d seconds using %s (%s)",
                         pulse, Zones[zone].url, context);
         static char url[256];
