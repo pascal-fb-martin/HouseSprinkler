@@ -25,17 +25,19 @@ housesprinkler: $(OBJS)
 	gcc -g -O -o housesprinkler $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lrt
 
 install:
-	if [ -e /etc/init.d/housesprinkler ] ; then systemctl stop housesprinkler ; fi
+	if [ -e /etc/init.d/housesprinkler ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; rm -f /etc/init.d/housesprinkler ; fi
+	if [ -e /lib/systemd/system/housesprinkler.service ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; rm -f /lib/systemd/system/housesprinkler.service ; fi
 	mkdir -p /usr/local/bin
-	mkdir -p /var/lib/house
-	rm -f /usr/local/bin/housesprinkler /etc/init.d/housesprinkler
+	rm -f /usr/local/bin/housesprinkler
 	cp housesprinkler /usr/local/bin
-	cp init.debian /etc/init.d/housesprinkler
-	chown root:root /usr/local/bin/housesprinkler /etc/init.d/housesprinkler
-	chmod 755 /usr/local/bin/housesprinkler /etc/init.d/housesprinkler
+	chown root:root /usr/local/bin/housesprinkler
+	chmod 755 /usr/local/bin/housesprinkler
+	cp systemd.service /lib/systemd/system/housesprinkler.service
+	chown root:root /lib/systemd/system/housesprinkler.service
 	touch /etc/default/housesprinkler
 	mkdir -p /etc/house
 	touch /etc/house/sprinkler.json
+	mkdir -p /var/lib/house
 	mkdir -p $(SHARE)/public/sprinkler
 	chmod 755 $(SHARE) $(SHARE)/public $(SHARE)/public/sprinkler
 	cp public/* $(SHARE)/public/sprinkler
@@ -49,7 +51,8 @@ install:
 uninstall:
 	systemctl stop housesprinkler
 	systemctl disable housesprinkler
-	rm -f /usr/local/bin/housesprinkler /etc/init.d/housesprinkler
+	rm -f /usr/local/bin/housesprinkler
+	rm -f /lib/systemd/system/housesprinkler.service /etc/init.d/housesprinkler
 	systemctl daemon-reload
 
 purge: uninstall
