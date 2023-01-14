@@ -51,6 +51,7 @@ install:
 uninstall:
 	systemctl stop housesprinkler
 	systemctl disable housesprinkler
+	rm -rf $(SHARE)/public/sprinkler
 	rm -f /usr/local/bin/housesprinkler
 	rm -f /lib/systemd/system/housesprinkler.service /etc/init.d/housesprinkler
 	systemctl daemon-reload
