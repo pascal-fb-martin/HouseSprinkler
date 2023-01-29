@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel=stylesheet type="text/css" href="/house.css" title="House">
+<script>
+
+var ZoneCount = 0;
+
+function zonesUpdateStatus (response) {
+
+    document.getElementsByTagName('title')[0].innerHTML =
+        response.host+' - Sprinkler Panel';
+
+    var devices = response.sprinkler.control.zones;
+    for (var i = 0; i < devices.length; i++) {
+        var device = devices[i];
+        var tag = device[0].replace (/ /g,'-')
+        var button = document.getElementById ('button-'+tag);
+        if (!button) continue;
+        if (device[1] == 'a') {
+            button.className = 'controlOn';
+            button.controlState = 'off';
+            button.disabled = false;
+        } else if (device[1] == 'i') {
+            button.className = 'controlOff';
+            button.controlState = 'on';
+            button.disabled = false;
+        } else {
+            button.className = 'controlDisabled';
+            button.disabled = true;
+        }
+    }
+}
+
+function controlClick () {
+    var device = encodeURIComponent(this.controlName);
+    var state = this.controlState;
+    var command = new XMLHttpRequest();
+    if (state == 'on') {
+        command.open("GET", "/sprinkler/zone/on?name="+device+"&pulse=60");
+    } else {
+        command.open("GET", "/sprinkler/zone/off");
+    }
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            zonesUpdateStatus (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+function zonesShowStatus (response) {
+   var iolist = document.getElementById ('iolist');
+   var remove = document.getElementsByClassName ('removeThisLine');
+   while (remove.length > 0) {
+       iolist.removeChild(remove[0]);
+   }
+   var devices = response.sprinkler.control.zones;
+   var columns;
+   if (window.innerWidth > window.innerHeight) {
+       columns = 5;
+   } else {
+       columns = 2;
+   }
+   var width = Math.floor (100 / columns);
+   var cursor = 0;
+   var firstline = true;
+   var outer = document.createElement("tr");
+   for (var i = 0; i < devices.length; i++) {
+        var device = devices[i];
+        if (device[1] == 'e') continue;
+        var tag = device[0].replace (/ /g,'-')
+
+        if (cursor >= columns) {
+           outer.className = "removeThisLine";
+           iolist.appendChild(outer);
+           outer = document.createElement("tr");
+           cursor = 0;
+           firstline = false;
+        }
+        cursor += 1;
+
+        inner = document.createElement("td");
+        if (firstline) inner.style.width = width + '%';
+        var button = document.createElement("button");
+        button.innerHTML = device[0];
+        button.disabled = true;
+        button.id = 'button-'+tag;
+        button.onclick = controlClick;
+        button.controlName = device[0];
+        button.controlstate = 'on';
+        inner.appendChild(button);
+        outer.appendChild(inner);
+    }
+    outer.className = "removeThisLine";
+    iolist.appendChild(outer);
+}
+
+function zonesStatus () {
+    var command = new XMLHttpRequest();
+    command.open("GET", "/sprinkler/status");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            var response = JSON.parse(command.responseText);
+            if (response.sprinkler.control.zones.length != ZoneCount) {
+               zonesShowStatus (response);
+               ZoneCount = response.sprinkler.control.zones.length;
+            }
+            zonesUpdateStatus (response);
+        }
+    }
+    command.send(null);
+}
+
+function resizeButtons () {
+   if (ZoneCount) {
+      ZoneCount = 0;
+      zonesStatus();
+   }
+}
+
+window.onload = function() {
+   zonesStatus();
+   setInterval (zonesStatus, 1000);
+};
+window.onresize = resizeButtons;
+</script>
+<head>
+   <title>Sprinkler Panel</title>
+</head>
+<body>
+   <table id="iolist" width="100%" border="0">
+   </table>
+</body>
+</html>
+
