@@ -43,7 +43,7 @@ Future plans are:
 ## Installation
 
 The simplest case is that the sprinkler valves are all controlled from one single computer and the complete set of software needed to make the system work is installed there:
-* Install git, icoutils, openssl (libssl-dev), gpiod (libgpiod-dev).
+* Install git, openssl (libssl-dev), gpiod (libgpiod-dev).
 * Install [echttp](https://github.com/pascal-fb-martin/echttp)
 * Install [houseportal](https://github.com/pascal-fb-martin/houseportal)
 * Install [waterwise](https://github.com/pascal-fb-martin/waterwise)
