@@ -19,10 +19,10 @@ clean:
 rebuild: clean all
 
 %.o: %.c
-	gcc -c -g -O -o $@ $<
+	gcc -c -Os -o $@ $<
 
 housesprinkler: $(OBJS)
-	gcc -g -O -o housesprinkler $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lrt
+	gcc -Os -o housesprinkler $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lrt
 
 install:
 	if [ -e /etc/init.d/housesprinkler ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; rm -f /etc/init.d/housesprinkler ; fi
