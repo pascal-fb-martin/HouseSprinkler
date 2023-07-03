@@ -11,6 +11,8 @@ LIBOJS=
 
 SHARE=/usr/local/share/house
 
+# Local build ---------------------------------------------------
+
 all: housesprinkler
 
 clean:
@@ -24,16 +26,16 @@ rebuild: clean all
 housesprinkler: $(OBJS)
 	gcc -Os -o housesprinkler $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lrt
 
-install:
-	if [ -e /etc/init.d/housesprinkler ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; rm -f /etc/init.d/housesprinkler ; fi
-	if [ -e /lib/systemd/system/housesprinkler.service ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; rm -f /lib/systemd/system/housesprinkler.service ; fi
+# Distribution agnostic file installation -----------------------
+
+dev:
+
+install-files:
 	mkdir -p /usr/local/bin
 	rm -f /usr/local/bin/housesprinkler
 	cp housesprinkler /usr/local/bin
 	chown root:root /usr/local/bin/housesprinkler
 	chmod 755 /usr/local/bin/housesprinkler
-	cp systemd.service /lib/systemd/system/housesprinkler.service
-	chown root:root /lib/systemd/system/housesprinkler.service
 	touch /etc/default/housesprinkler
 	mkdir -p /etc/house
 	touch /etc/house/sprinkler.json
@@ -43,20 +45,54 @@ install:
 	cp public/* $(SHARE)/public/sprinkler
 	chown root:root $(SHARE)/public/sprinkler/*
 	chmod 644 $(SHARE)/public/sprinkler/*
+
+uninstall-files:
+	rm -rf $(SHARE)/public/sprinkler
+	rm -f /usr/local/bin/housesprinkler
+
+purge-config:
+	rm -rf /etc/house/sprinkler.json /etc/default/housesprinkler
+
+# Distribution agnostic systemd support -------------------------
+
+install-systemd:
+	cp systemd.service /lib/systemd/system/housesprinkler.service
+	chown root:root /lib/systemd/system/housesprinkler.service
 	systemctl daemon-reload
 	systemctl enable housesprinkler
 	systemctl start housesprinkler
 
-uninstall:
-	systemctl stop housesprinkler
-	systemctl disable housesprinkler
-	rm -rf $(SHARE)/public/sprinkler
-	rm -f /usr/local/bin/housesprinkler
-	rm -f /lib/systemd/system/housesprinkler.service /etc/init.d/housesprinkler
-	systemctl daemon-reload
+uninstall-systemd:
+	if [ -e /etc/init.d/housesprinkler ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; rm -f /etc/init.d/housesprinkler ; fi
+	if [ -e /lib/systemd/system/housesprinkler.service ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; systemctl daemon-reload ; rm -f /lib/systemd/system/housesprinkler.service ; fi
 
-purge: uninstall
-	rm -rf /etc/house/sprinkler.json /etc/default/housesprinkler
+stop-systemd: uninstall-systemd
+
+# Debian GNU/Linux install --------------------------------------
+
+install-debian: stop-systemd install-files install-systemd
+
+uninstall-debian: uninstall-systemd uninstall-files
+
+purge-debian: uninstall-debian purge-config
+
+# Void Linux install --------------------------------------------
+
+install-void: install-files
+
+uninstall-void: uninstall-files
+
+purge-void: uninstall-void purge-config
+
+# Default install (Debian GNU/Linux) ----------------------------
+
+install: install-debian
+
+uninstall: uninstall-debian
+
+purge: purge-debian
+
+# Docker install ------------------------------------------------
 
 docker: all
 	rm -rf build
