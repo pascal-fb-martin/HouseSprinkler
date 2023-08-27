@@ -1,3 +1,27 @@
+# housesprinkler - A simple home web server for sprinkler control
+#
+# Copyright 2023, Pascal Martin
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
+
+HAPP=housesprinkler
+HROOT=/usr/local
+SHARE=$(HROOT)/share/house
+
+# Local build ---------------------------------------------------
 
 OBJS= housesprinkler.o \
       housesprinkler_index.o \
@@ -8,10 +32,6 @@ OBJS= housesprinkler.o \
 ICONS= favicon_1_16x16x4.png
 
 LIBOJS=
-
-SHARE=/usr/local/share/house
-
-# Local build ---------------------------------------------------
 
 all: housesprinkler
 
@@ -30,12 +50,12 @@ housesprinkler: $(OBJS)
 
 dev:
 
-install-files:
-	mkdir -p /usr/local/bin
-	rm -f /usr/local/bin/housesprinkler
-	cp housesprinkler /usr/local/bin
-	chown root:root /usr/local/bin/housesprinkler
-	chmod 755 /usr/local/bin/housesprinkler
+install-app:
+	mkdir -p $(HROOT)/bin
+	rm -f $(HROOT)/bin/housesprinkler
+	cp housesprinkler $(HROOT)/bin
+	chown root:root $(HROOT)/bin/housesprinkler
+	chmod 755 $(HROOT)/bin/housesprinkler
 	touch /etc/default/housesprinkler
 	mkdir -p /etc/house
 	touch /etc/house/sprinkler.json
@@ -46,60 +66,27 @@ install-files:
 	chown root:root $(SHARE)/public/sprinkler/*
 	chmod 644 $(SHARE)/public/sprinkler/*
 
-uninstall-files:
+uninstall-app:
 	rm -rf $(SHARE)/public/sprinkler
-	rm -f /usr/local/bin/housesprinkler
+	rm -f $(HROOT)/bin/housesprinkler
+
+purge-app:
 
 purge-config:
 	rm -rf /etc/house/sprinkler.json /etc/default/housesprinkler
 
-# Distribution agnostic systemd support -------------------------
+# System installation. ------------------------------------------
 
-install-systemd:
-	cp systemd.service /lib/systemd/system/housesprinkler.service
-	chown root:root /lib/systemd/system/housesprinkler.service
-	systemctl daemon-reload
-	systemctl enable housesprinkler
-	systemctl start housesprinkler
-
-uninstall-systemd:
-	if [ -e /etc/init.d/housesprinkler ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; rm -f /etc/init.d/housesprinkler ; fi
-	if [ -e /lib/systemd/system/housesprinkler.service ] ; then systemctl stop housesprinkler ; systemctl disable housesprinkler ; systemctl daemon-reload ; rm -f /lib/systemd/system/housesprinkler.service ; fi
-
-stop-systemd: uninstall-systemd
-
-# Debian GNU/Linux install --------------------------------------
-
-install-debian: stop-systemd install-files install-systemd
-
-uninstall-debian: uninstall-systemd uninstall-files
-
-purge-debian: uninstall-debian purge-config
-
-# Void Linux install --------------------------------------------
-
-install-void: install-files
-
-uninstall-void: uninstall-files
-
-purge-void: uninstall-void purge-config
-
-# Default install (Debian GNU/Linux) ----------------------------
-
-install: install-debian
-
-uninstall: uninstall-debian
-
-purge: purge-debian
+include $(SHARE)/install.mak
 
 # Docker install ------------------------------------------------
 
 docker: all
 	rm -rf build
-	mkdir -p build/usr/local/bin
+	mkdir -p build$(HROOT)/bin
 	mkdir -p build/var/lib/house
-	cp housesprinkler build/usr/local/bin
-	chmod 755 build/usr/local/bin/housesprinkler
+	cp housesprinkler build$(HROOT)/bin
+	chmod 755 build$(HROOT)/bin/housesprinkler
 	mkdir -p build/etc/house
 	touch build/etc/house/sprinkler.json
 	mkdir -p build$(SHARE)/public/sprinkler
