@@ -10,7 +10,6 @@ var editing = null;
 
 var countZoneShown = 0;
 var countSeasonMonthlyShown = 0;
-var countWeatherRefreshShown = 0;
 
 var gui = new Object();
 
@@ -606,6 +605,8 @@ function defaultConfig () {
 
 function sprinklerRefresh (config) {
 
+    countZoneShown = 0;
+    countSeasonMonthlyShown = 0;
     editing = config;
     showExistingZones (config.zones);
     showExistingPrograms (config.programs);
