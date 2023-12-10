@@ -193,7 +193,10 @@ void housesprinkler_zone_activate (const char *name,
     if (zone >= 0) {
         int i;
         time_t now = time(0);
-        if (Zones[zone].manual && context) return;
+        if (Zones[zone].manual && context) {
+            houselog_event ("ZONE", Zones[zone].name, "IGNORE", "MANUAL MODE ONLY");
+            return;
+        }
         houselog_trace (HOUSE_INFO, name,
                         "queued (%s) for a %d seconds pulse",
                         context?"scheduled":"manually", pulse);
