@@ -412,7 +412,7 @@ static void housesprinkler_program_activate
     if (indexname) {
         houselog_event ("PROGRAM", program->name, "START",
                         "%s, INDEX %d%% FROM %s",
-                        manual ? "manual" : "scheduled", index, indexname);
+                        manual ? "USER ACTIVATED" : "SCHEDULED", index, indexname);
     } else {
         houselog_event ("PROGRAM", program->name, "START",
                         "%s, NO INDEX", manual ? "manual" : "scheduled");
