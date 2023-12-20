@@ -11,26 +11,16 @@ This project is one piece of a complete system that also includes the following:
 * [houserelays](https://github.com/pascal-fb-martin/houserelays).
 
 The primary intend is to create a sprinkler controller that:
-* Adjusts watering automatically, based on an online index (Southern California for now) or on a season-based index table (monthly or weekly).
-* Splits the watering periods into short pulse separated by pauses, to avoid poodles and run-off.
-* Records a log of activity.
 * Is accessible from a computer or phone using a web interface, including manual controls for sprinkler test and maintenance.
-* Controls the sprinkler valves through the network, to offer access to a distributed network of control computers.
+* Controls the sprinkler valves through the network, to offer access to a distributed network of control computers. Valve can be controlled from multiple points on the network: the valve wiring does not have to be all run to a single point.
+* Adjusts watering automatically, based on an online index (Southern California for now) or on a season-based index table (monthly or weekly).
+* Splits the watering periods into short pulse separated by pauses, to avoid water poodles and run-off.
+* Records a log of activity, so that one may monitor what happened the previous days.
 * Can be integrated as part of a suite of applications managed from a central point.
 
-These goals are very similar those of the [Sprinkler](https://github.com/pascal-fb-martin/sprinkler) project. This complete redesign was triggered by some issues with the original [Sprinkler](https://github.com/pascal-fb-martin/sprinkler) setup:
-* Bringing all the sprinkler wires to a single place is not always easy. Following a home remodeling, and some bad planning, I ended with no wire between the front and back of the house, and thus with two separate control locations. A workaround was to set two independent controllers and two separate programs that alternate the pulse and pause periods in a carefully balanced way. I needed a distributed system.
-* Maintaining node.js on Debian, and a Javascript application in the constantly changing world of Node.js and ECMA standards is more hassle than I want to entertain.
-* Each power or Internet outage would end with the Raspberry Pi's system time not been synchronized, possibly by a few hours. This is because the Raspberry Pi does not have a real-time clock chip, the Internet took too long to come back and the standard network time software gives up setting the initial time too early.
+This project replaces and obsoletes the [Sprinkler](https://github.com/pascal-fb-martin/sprinkler) project. This project is a complete rewrite in the spirit of micro-services: it relies on other web services to implement some interfaces. This makes it a more decentralized and flexible setup.
 
-The original Sprinkler application also includes complex features that did not pan out well and were a pain to support:
-* Google calendar based watering programs: this creates more complexity than it is worth, both in coding and configuration.
-* Weather based index calculation: this was never completed because it is difficult to find all the data required (especially sun radiation).
-* Weather web sites all have their annoyances: NOAA is bulky and bureaucratic, and its data is surprisingly not that rich, while the WeatherUnderground stations keep changing, with uneven data quality.
-
-This project is a complete rewrite of Sprinkler in the spirit of micro-services: it does less, and relies more on other web services to implement the missing features. This makes it a more decentralized and flexible setup.
-
-Instead of installing drivers for different types of relay/triac interfaces, the design relies on a generic web API, and the specific interface itself is implemented as a web service. The [houserelays](https://github.com/pascal-fb-martin/houserelays) web service is the first implementation that follows this new design. A benefit is that a new interface can be developped outside of the HouseSprinkler code base, which is the essence of the web service philosophy. This also makes it possible to support multiple interfaces simultaneously, both geographically distributed and possibly using different hardware interfaces.
+Instead of installing drivers for different types of relay/triac interfaces, the design relies on a generic web API, and the specific interface itself is implemented as a web service. The [houserelays](https://github.com/pascal-fb-martin/houserelays) web service is the first implementation that follows this new design. A benefit is that a new interface can be developped and maintained independently of the HouseSprinkler code base, which is the essence of the web service philosophy. This also makes it possible to support multiple interfaces simultaneously, both geographically distributed and possibly using different hardware interfaces.
 
 Instead of implementing multiple weather and watering index interfaces, it relies on a generic web API, and the specific weather/index interface itself is implemented as a web service. The [waterwise](https://github.com/pascal-fb-martin/waterwise) web service is a minimal implementation that relies on the bewaterwise.com web site maintained by the Metropolitan Water District of Southern California (and is therefore of interest only for those living in the Los Angeles and San Diego areas).
 
@@ -77,7 +67,7 @@ All these computers must be on the same subnet (UDP broadcast is involved for di
 The HouseSprinkler configuration is defined in a JSON file, by default /etc/house/sprinkler.json. However the proper way to configure is to access the Config page on the sprinkler's web UI. Do not forget to configure [houserelays](https://github.com/pascal-fb-martin/houserelays) first.
 
 The HouseSprinkler configuration is mainly organized in layers:
-* Seasons provides a fixed way of managing watering indexes, independent of waether or external sites.
+* Seasons provides a fixed way of managing watering indexes, independent of weather information or availability of watering index provider sites.
 * Zones define how long are the pulses and pauses for each zone.
 * Programs defines a list of zones to activate, and for how long. It also indicate an (optional) season index table to conform to.
 * Schedules define when programs should be activated.
