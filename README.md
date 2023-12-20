@@ -76,6 +76,14 @@ All these computers must be on the same subnet (UDP broadcast is involved for di
 
 The HouseSprinkler configuration is defined in a JSON file, by default /etc/house/sprinkler.json. However the proper way to configure is to access the Config page on the sprinkler's web UI. Do not forget to configure [houserelays](https://github.com/pascal-fb-martin/houserelays) first.
 
+The HouseSprinkler configuration is mainly organized in layers:
+* Seasons provides a fixed way of managing watering indexes, independent of waether or external sites.
+* Zones define how long are the pulses and pauses for each zone.
+* Programs defines a list of zones to activate, and for how long. It also indicate an (optional) season index table to conform to.
+* Schedules define when programs should be activated.
+
+Note that zones can be activated manually from the web UI, bypassing any program configuration, and programs can be activated manually from the web UI, bypassing any schedule rules.
+
 ## Panel
 
 The web interface includes a Panel page (/sprinkler/panel.html) that has no menu and only shows the current sprinkler zones, each as one big button to turn the device on and off. This page is meant for a phone screen, typically a shortcut on the phone's home screen. (Because HousePortal redirects the URL, it is recommended to turn the phone in airplane mode when creating the shortcut from the web browser.)

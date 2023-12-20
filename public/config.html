@@ -69,26 +69,8 @@ function saveConfig () {
          var prefix = 'program_'+i+'_';
          newconfig.programs[i] = new Object();
          newconfig.programs[i].name = form.program[prefix+'name'].value;
-         newconfig.programs[i].start = form.program[prefix+'start'].value;
-         if (form.program[prefix+'date'].value)
-            newconfig.programs[i].date = form.program[prefix+'date'].value;
          if (form.program[prefix+'season'].value)
             newconfig.programs[i].season = form.program[prefix+'season'].value;
-         newconfig.programs[i].disabled = form.program[prefix+'disabled'].checked;
-         newconfig.programs[i].repeat = form.program[prefix+'repeat'].value;
-         switch (newconfig.programs[i].repeat) {
-         case 'weekly':
-            newconfig.programs[i].days = new Array();
-            for (var j = 0; j < 7; j++) {
-               newconfig.programs[i].days[j] =
-                  form.program[prefix+'days_'+j].checked;
-            }
-            break;
-         case 'daily':
-            newconfig.programs[i].interval =
-               parseInt(form.program[prefix+'interval'].value);
-            break;
-         }
          newconfig.programs[i].zones = new Array();
          for (var z = 0; z < editing.zones.length; z++) {
             if (form.program[prefix+'zone_'+z+'_seconds'] != undefined) {
@@ -99,6 +81,48 @@ function saveConfig () {
                       newconfig.programs[i].zones[zi] = new Object();
                       newconfig.programs[i].zones[zi].name = newconfig.zones[z].name;
                       newconfig.programs[i].zones[zi].time = value;
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   if (editing.schedules) {
+      newconfig.schedules = new Array();
+
+      for (var i = 0; i < editing.schedules.length; i++) {
+         var prefix = 'schedule_'+i+'_';
+         newconfig.schedules[i] = new Object();
+         newconfig.schedules[i].program = form.schedule[prefix+'program'].value;
+         newconfig.schedules[i].start = form.schedule[prefix+'start'].value;
+         if (form.schedule[prefix+'date'].value)
+            newconfig.schedules[i].date = form.schedule[prefix+'date'].value;
+         newconfig.schedules[i].disabled = form.schedule[prefix+'disabled'].checked;
+         newconfig.schedules[i].repeat = form.schedule[prefix+'repeat'].value;
+         switch (newconfig.schedules[i].repeat) {
+         case 'weekly':
+            newconfig.schedules[i].days = new Array();
+            for (var j = 0; j < 7; j++) {
+               newconfig.schedules[i].days[j] =
+                  form.schedule[prefix+'days_'+j].checked;
+            }
+            break;
+         case 'daily':
+            newconfig.schedules[i].interval =
+               parseInt(form.schedule[prefix+'interval'].value);
+            break;
+         }
+         newconfig.schedules[i].zones = new Array();
+         for (var z = 0; z < editing.zones.length; z++) {
+            if (form.schedule[prefix+'zone_'+z+'_seconds'] != undefined) {
+               if (form.schedule[prefix+'zone_'+z+'_seconds'].value.length) {
+                  var value = toSeconds(form.schedule[prefix+'zone_'+z+'_seconds'].value);
+                  if (value != 0) {
+                      var zi = newconfig.schedules[i].zones.length;
+                      newconfig.schedules[i].zones[zi] = new Object();
+                      newconfig.schedules[i].zones[zi].name = newconfig.zones[z].name;
+                      newconfig.schedules[i].zones[zi].time = value;
                   }
                }
             }
@@ -260,9 +284,7 @@ function addZone () {
 
 var toWeekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-function showOneProgramString (programs, i, label, name, format, size, value) {
-
-   var program = programs[i];
+function showOneString (prefix, i, label, name, format, size, value) {
 
    var line = document.createElement("tr");
 
@@ -275,7 +297,7 @@ function showOneProgramString (programs, i, label, name, format, size, value) {
    var valuecolumn = document.createElement("td");
    var valueentry = document.createElement("input");
    valueentry.type = 'text';
-   valueentry.name = 'program_'+i+'_'+name;
+   valueentry.name = prefix+i+'_'+name;
    valueentry.size = size;
    if (value) {
       valueentry.value = value;
@@ -287,9 +309,7 @@ function showOneProgramString (programs, i, label, name, format, size, value) {
    return line;
 }
 
-function showOneProgramFlag (programs, i, label, name, value) {
-
-   var program = programs[i];
+function showOneFlag (prefix, i, label, name, value) {
 
    var parameterline = document.createElement("tr");
 
@@ -299,7 +319,7 @@ function showOneProgramFlag (programs, i, label, name, value) {
    column = document.createElement("td");
    var checkbox = document.createElement("input");
    checkbox.type = 'checkbox';
-   checkbox.name = 'program_'+i+'_'+name;
+   checkbox.name = prefix+i+'_'+name;
    checkbox.value = value;
    checkbox.checked = value;
    column.appendChild(checkbox);
@@ -311,67 +331,20 @@ function showOneProgramFlag (programs, i, label, name, value) {
    return parameterline;
 }
 
-function showOneDayFlag (programs, i, label, name, value) {
-
-   var program = programs[i];
+function showOneDayFlag (prefix, i, label, name, value) {
 
    var parameterline = document.createElement("tr");
 
    column = document.createElement("td");
    var checkbox = document.createElement("input");
    checkbox.type = 'checkbox';
-   checkbox.name = 'program_'+i+'_'+name;
+   checkbox.name = prefix+i+'_'+name;
    checkbox.value = value;
    checkbox.checked = value;
    column.appendChild(checkbox);
    var labelitem = document.createElement("span");
    labelitem.innerHTML = label;
    column.appendChild(labelitem);
-   parameterline.appendChild(column);
-
-   return parameterline;
-}
-
-function showOneProgramRadio (programs, i, label, name, value) {
-
-   var program = programs[i];
-
-   var parameterline = document.createElement("tr");
-
-   var column = document.createElement("td");
-   parameterline.appendChild(column);
-
-   column = document.createElement("td");
-
-   var checkbox = document.createElement("input");
-   checkbox.type = 'radio';
-   checkbox.name = 'program_'+i+'_'+name;
-   checkbox.onchange = function () {
-      switch (document.forms.program['program_'+i+'_repeat'].value) {
-      case 'daily':
-         gui.programs[i].weekly.style.display = 'none';
-         gui.programs[i].daily.childNodes[0].style.display = 'table-cell';
-         gui.programs[i].daily.childNodes[1].style.display = 'table-cell';
-         break;
-      case 'weekly':
-         gui.programs[i].weekly.style.display = 'table-cell';
-         gui.programs[i].daily.childNodes[0].style.display = 'none';
-         gui.programs[i].daily.childNodes[1].style.display = 'none';
-         break;
-      default:
-         gui.programs[i].weekly.style.display = 'none';
-         gui.programs[i].daily.childNodes[0].style.display = 'none';
-         gui.programs[i].daily.childNodes[1].style.display = 'none';
-      }
-   }
-   checkbox.checked = (program[name] == value);
-   checkbox.value = value;
-   column.appendChild(checkbox);
-
-   var labelitem = document.createElement("span");
-   labelitem.innerHTML = label;
-   column.appendChild(labelitem);
-
    parameterline.appendChild(column);
 
    return parameterline;
@@ -411,63 +384,9 @@ function showOneProgram (programs, i, elements) {
       parameterstable.width = '100%';
 
       parameterstable.appendChild
-         (showOneProgramString (programs, i, 'Name', 'name', '', 16, program.name));
+         (showOneString ('program_', i, 'Name', 'name', '', 16, program.name));
       parameterstable.appendChild
-         (showOneProgramFlag (programs, i, 'Disabled', 'disabled', program.disabled));
-      parameterstable.appendChild
-         (showOneProgramString (programs, i, 'Start time', 'start', 'hh:mm (24)', 10, program.start));
-      parameterstable.appendChild
-         (showOneProgramString (programs, i, 'Start date', 'date', 'yyyymmdd', 10, program.date));
-      parameterstable.appendChild
-         (showOneProgramString (programs, i, 'Season', 'season', '', 16, program.season));
-
-      parameterstable.appendChild
-         (showOneProgramRadio (programs, i, 'Weekly', 'repeat', 'weekly'));
-
-      if (! gui.programs) {
-         gui.programs = new Array();
-      }
-      gui.programs[i] = new Object();
-
-      var weeklyline = document.createElement("tr");
-      weeklyline.appendChild (document.createElement("td"));
-      var weeklycell = document.createElement("td");
-      var weekly = document.createElement("table");
-      weekly.name = 'program_'+i+'_weekly';
-      weekly.style.display = 'none';
-      gui.programs[i].weekly = weeklycell;
-      weekly.width = '100%';
-      if (program.days) {
-         for (var d = 0; d < 7; d++) {
-            weekly.appendChild (showOneDayFlag (programs, i, toWeekDays[d], 'days_'+d, program.days[d]));
-         }
-      } else {
-         for (var d = 0; d < 7; d++) {
-            weekly.appendChild (showOneDayFlag (programs, i, toWeekDays[d], 'days_'+d, true));
-         }
-      }
-      weeklycell.appendChild(weekly);
-      weeklyline.appendChild (weeklycell);
-      parameterstable.appendChild(weeklyline);
-
-      parameterstable.appendChild
-         (showOneProgramRadio (programs, i, 'Daily', 'repeat', 'daily'));
-
-      daily = showOneProgramString (programs, i, 'Interval', 'interval', 'Number', 3, program.name);
-      daily.childNodes[0].style.display = 'none';
-      daily.childNodes[1].style.display = 'none';
-      gui.programs[i].daily = daily;
-      parameterstable.appendChild (daily);
-
-      switch (program.repeat) {
-      case 'daily':
-         daily.childNodes[0].style.display = 'table-cell';
-         daily.childNodes[1].style.display = 'table-cell';
-         break;
-      case 'weekly':
-         weekly.style.display = 'table-cell';
-         break;
-      }
+         (showOneString ('program_', i, 'Season', 'season', '', 16, program.season));
 
       parameterscolumn.appendChild(parameterstable);
 
@@ -480,7 +399,7 @@ function showOneProgram (programs, i, elements) {
       for (var d = 0; d < program.zones.length; d++) {
          var zoneline = document.createElement('tr');
          zonetable.appendChild
-            (showOneProgramString (program.zones, i, program.zones[d].name, 'zone_'+d+'_seconds', 'mm:ss', 6, showSeconds(program.zones[d].time)));
+            (showOneString ('program_', i, program.zones[d].name, 'zone_'+d+'_seconds', 'mm:ss', 6, showSeconds(program.zones[d].time)));
       }
 
       zonecolumn.appendChild(zonetable);
@@ -500,21 +419,173 @@ function addProgram () {
    }
    var i = editing.programs.length;
    editing.programs[i] = new Object();
-   editing.programs[i].disabled = false;
-   editing.programs[i].repeat = 'weekly';
    editing.programs[i].name = '#'+i;
-   editing.programs[i].start = '';
-   editing.programs[i].days = new Array(true, true, true, true, true, true, true);
-   editing.programs[i].interval = 1;
    editing.programs[i].zones = new Array();
    for (var z = 0; z < editing.zones.length; z++) {
       editing.programs[i].zones[z] = new Object();
       editing.programs[i].zones[z].name = editing.zones[z].name;
       editing.programs[i].zones[z].time = '';
    }
+   editing.programs[i].season = '';
 
    var elements = document.getElementsByName('programtable');
    showOneProgram (editing.programs, i, elements);
+   forceVisible(elements);
+}
+
+function showOneScheduleRadio (schedules, i, label, name, value) {
+
+   var schedule = schedules[i];
+
+   var parameterline = document.createElement("tr");
+
+   var column = document.createElement("td");
+   parameterline.appendChild(column);
+
+   column = document.createElement("td");
+
+   var checkbox = document.createElement("input");
+   checkbox.type = 'radio';
+   checkbox.name = 'schedule_'+i+'_'+name;
+   checkbox.onchange = function () {
+      switch (document.forms.schedule['schedule_'+i+'_repeat'].value) {
+      case 'daily':
+         gui.schedules[i].weekly.style.display = 'none';
+         gui.schedules[i].daily.childNodes[0].style.display = 'table-cell';
+         gui.schedules[i].daily.childNodes[1].style.display = 'table-cell';
+         break;
+      case 'weekly':
+         gui.schedules[i].weekly.style.display = 'table-cell';
+         gui.schedules[i].daily.childNodes[0].style.display = 'none';
+         gui.schedules[i].daily.childNodes[1].style.display = 'none';
+         break;
+      default:
+         gui.schedules[i].weekly.style.display = 'none';
+         gui.schedules[i].daily.childNodes[0].style.display = 'none';
+         gui.schedules[i].daily.childNodes[1].style.display = 'none';
+      }
+   }
+   checkbox.checked = (schedule[name] == value);
+   checkbox.value = value;
+   column.appendChild(checkbox);
+
+   var labelitem = document.createElement("span");
+   labelitem.innerHTML = label;
+   column.appendChild(labelitem);
+
+   parameterline.appendChild(column);
+
+   return parameterline;
+}
+
+function showOneSchedule (schedules, i, elements) {
+
+   var schedule = schedules[i];
+   var prefix = 'schedule_'+i+'_';
+
+   // Make sure that the days array has the correct size.
+   if (schedule.days) {
+     for (var j = schedule.days.length; j < 7; j++) {
+        schedule.days[j] = false;
+     }
+   }
+   for (var k = 0; k < elements.length; k++) {
+      var scheduleshell = document.createElement("tr");
+      var scheduleshell2 = document.createElement("td");
+      var scheduletable = document.createElement("table");
+      scheduletable.className = 'programdata';
+
+      var scheduleline = document.createElement("tr");
+
+      var parameterscolumn = document.createElement("td");
+      parameterscolumn.style.verticalAlign = 'top';
+      var parameterstable = document.createElement("table");
+      parameterstable.width = '100%';
+
+      parameterstable.appendChild
+         (showOneString ('schedule_', i, 'Program', 'program', '', 16, schedule.program));
+      parameterstable.appendChild
+         (showOneFlag ('schedule_', i, 'Disabled', 'disabled', schedule.disabled));
+      parameterstable.appendChild
+         (showOneString ('schedule_', i, 'Start time', 'start', 'hh:mm (24)', 10, schedule.start));
+      parameterstable.appendChild
+         (showOneString ('schedule_', i, 'Start date', 'date', 'yyyymmdd', 10, schedule.date));
+
+      parameterstable.appendChild
+         (showOneScheduleRadio (schedules, i, 'Weekly', 'repeat', 'weekly'));
+
+      if (! gui.schedules) {
+         gui.schedules = new Array();
+      }
+      gui.schedules[i] = new Object();
+
+      var weeklyline = document.createElement("tr");
+      weeklyline.appendChild (document.createElement("td"));
+      var weeklycell = document.createElement("td");
+      var weekly = document.createElement("table");
+      weekly.name = 'schedule_'+i+'_weekly';
+      weekly.style.display = 'none';
+      gui.schedules[i].weekly = weeklycell;
+      weekly.width = '100%';
+      if (schedule.days) {
+         for (var d = 0; d < 7; d++) {
+            weekly.appendChild (showOneDayFlag ('schedule_', i, toWeekDays[d], 'days_'+d, schedule.days[d]));
+         }
+      } else {
+         for (var d = 0; d < 7; d++) {
+            weekly.appendChild (showOneDayFlag ('schedule_', i, toWeekDays[d], 'days_'+d, true));
+         }
+      }
+      weeklycell.appendChild(weekly);
+      weeklyline.appendChild (weeklycell);
+      parameterstable.appendChild(weeklyline);
+
+      parameterstable.appendChild
+         (showOneScheduleRadio (schedules, i, 'Daily', 'repeat', 'daily'));
+
+      daily = showOneString ('schedule_', i, 'Interval', 'interval', 'Number', 3, schedule.name);
+      daily.childNodes[0].style.display = 'none';
+      daily.childNodes[1].style.display = 'none';
+      gui.schedules[i].daily = daily;
+      parameterstable.appendChild (daily);
+
+      switch (schedule.repeat) {
+      case 'daily':
+         daily.childNodes[0].style.display = 'table-cell';
+         daily.childNodes[1].style.display = 'table-cell';
+         break;
+      case 'weekly':
+         weekly.style.display = 'table-cell';
+         break;
+      }
+
+      parameterscolumn.appendChild(parameterstable);
+
+      scheduleline.appendChild(parameterscolumn);
+
+      scheduletable.appendChild(scheduleline);
+      scheduleshell2.appendChild(scheduletable);
+      scheduleshell.appendChild(scheduleshell2);
+
+      elements[k].appendChild(scheduleshell);
+   }
+}
+
+function addSchedule () {
+   if (! editing.schedules) {
+      editing.schedules = new Array();
+   }
+   var i = editing.schedules.length;
+   editing.schedules[i] = new Object();
+   editing.schedules[i].disabled = false;
+   editing.schedules[i].repeat = 'weekly';
+   editing.schedules[i].program = '#'+i;
+   editing.schedules[i].start = '';
+   editing.schedules[i].days = new Array(true, true, true, true, true, true, true);
+   editing.schedules[i].interval = 1;
+
+   var elements = document.getElementsByName('scheduletable');
+   showOneSchedule (editing.schedules, i, elements);
    forceVisible(elements);
 }
 
@@ -584,6 +655,7 @@ function resetConfig () {
     editing = new Object();
     editing.zones = new Array();
     editing.programs = new Array();
+    editing.schedules = new Array();
     editing.seasons = new Array();
 
     resetSection (document.getElementsByName('zonetable'));
@@ -603,13 +675,39 @@ function defaultConfig () {
     command.send(null);
 }
 
+function sprinklerConvert (config) {
+
+    config.schedules = new Array();
+    for (var i = 0; i < config.programs.length; i++) {
+        var program = config.programs[i];
+        if (program.start) {
+           var i = config.schedules.length;
+           var schedule = new Object();
+           schedule.disabled = program.disabled;
+           schedule.program = program.name;
+           schedule.start = program.start;
+           schedule.begin = program.begin;
+           schedule.until = program.until;
+           schedule.repeat = program.repeat;
+           schedule.days  = program.days;
+           schedule.interval = program.interval;
+           config.schedules[i] = schedule;
+        }
+    }
+    return config;
+}
+
 function sprinklerRefresh (config) {
 
     countZoneShown = 0;
     countSeasonMonthlyShown = 0;
+    if (!config.schedules) {
+        config = sprinklerConvert (config);
+    }
     editing = config;
     showExistingZones (config.zones);
     showExistingPrograms (config.programs);
+    showExistingSchedules (config.schedules);
     showExistingSeasons (config.seasons);
     hideAll();
 }
@@ -709,6 +807,17 @@ function showExistingPrograms (programs) {
    }
 }
 
+function showExistingSchedules (schedules) {
+
+   var elements = document.getElementsByName('scheduletable');
+
+   resetSection (elements);
+
+   for (var i = 0; i < schedules.length; i++) {
+      showOneSchedule (schedules, i, elements);
+   }
+}
+
 function showExistingSeasons (seasons) {
 
    var elements = document.getElementsByName('seasonmonthlytable');
@@ -765,6 +874,16 @@ window.onload = function() {
    <form name="program">
    <div name="configprogram" class="hidable" display="none">
      <table class="programtable" name="programtable">
+     </table>
+   </div>
+   </form>
+   <table width="100%"><tr>
+   <td width="10%"><button class="addbutton" onclick="addSchedule()">Add</button></td>
+   <td width="90%"><button class="configbuttonwithadd" onclick="visible('configschedule')">Schedules</button></td>
+   </tr></table>
+   <form name="schedule">
+   <div name="configschedule" class="hidable" display="none">
+     <table class="scheduletable" name="scheduletable">
      </table>
    </div>
    </form>

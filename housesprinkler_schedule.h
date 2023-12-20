@@ -17,20 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301, USA.
  *
+ *
+ * housesprinkler_schedule.h - Manage the watering schedules.
  */
 
-void housesprinkler_program_refresh (void);
-
-void housesprinkler_program_index (int state);
-void housesprinkler_program_set_index
-         (const char *origin, int value, time_t timestamp);
-
-void housesprinkler_program_start_manual    (const char *name);
-void housesprinkler_program_start_scheduled (const char *name);
-int  housesprinkler_program_running         (const char *name);
-
-void housesprinkler_program_periodic (time_t now);
-int  housesprinkler_program_status (char *buffer, int size);
-
-void housesprinkler_program_switch (void);
+void housesprinkler_schedule_refresh (void);
+void housesprinkler_schedule_switch (void);
+void housesprinkler_schedule_rain (int enabled);
+void housesprinkler_schedule_set_rain (int delay);
+void housesprinkler_schedule_periodic (time_t now);
+int  housesprinkler_schedule_status (char *buffer, int size);
 

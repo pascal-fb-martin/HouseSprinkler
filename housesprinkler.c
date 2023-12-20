@@ -39,7 +39,9 @@
 #include "housesprinkler_config.h"
 #include "housesprinkler_index.h"
 #include "housesprinkler_zone.h"
+#include "housesprinkler_season.h"
 #include "housesprinkler_program.h"
+#include "housesprinkler_schedule.h"
 
 // Rain delay in 1 day increment:
 #define RAINDELAYINTERVAL 86400
@@ -83,7 +85,9 @@ static const char *sprinkler_config (const char *method, const char *uri,
        }
        housesprinkler_zone_refresh ();
        housesprinkler_index_refresh ();
+       housesprinkler_season_refresh ();
        housesprinkler_program_refresh ();
+       housesprinkler_schedule_refresh ();
        sprinkler_reset();
     } else if (strcmp(method, "GET") == 0) {
        int fd = housesprinkler_config_file();
@@ -107,6 +111,9 @@ static const char *sprinkler_status (const char *method, const char *uri,
     snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
     cursor += strlen(buffer+cursor);
     cursor += housesprinkler_program_status (buffer+cursor, sizeof(buffer)-cursor);
+    snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"schedule\":{");
+    cursor += strlen(buffer+cursor);
+    cursor += housesprinkler_schedule_status (buffer+cursor, sizeof(buffer)-cursor);
     snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"index\":{");
     cursor += strlen(buffer+cursor);
     cursor += housesprinkler_index_status (buffer+cursor, sizeof(buffer)-cursor);
@@ -126,7 +133,7 @@ static const char *sprinkler_raindelay (const char *method, const char *uri,
     if (amount) duration = atoi(amount);
     else        duration = RAINDELAYINTERVAL;
 
-    housesprinkler_program_set_rain (duration);
+    housesprinkler_schedule_set_rain (duration);
     return sprinkler_status (method, uri, data, length);
 }
 
@@ -137,7 +144,7 @@ static const char *sprinkler_rain (const char *method, const char *uri,
     const char *active = echttp_parameter_get ("active");
     if (!active) active = "true";
 
-    housesprinkler_program_rain (strcmp ("true", active) == 0);
+    housesprinkler_schedule_rain (strcmp ("true", active) == 0);
     return sprinkler_status (method, uri, data, length);
 }
 
@@ -162,7 +169,7 @@ static const char *sprinkler_rescan (const char *method, const char *uri,
 static const char *sprinkler_onoff (const char *method, const char *uri,
                                     const char *data, int length) {
 
-    housesprinkler_program_switch ();
+    housesprinkler_schedule_switch ();
     return sprinkler_status (method, uri, data, length);
 }
 
@@ -171,7 +178,7 @@ static const char *sprinkler_program_on (const char *method, const char *uri,
 
     const char *program = echttp_parameter_get ("name");
     if (program) {
-        housesprinkler_program_manual (program);
+        housesprinkler_program_start_manual (program);
     }
     return sprinkler_status (method, uri, data, length);
 }
@@ -240,6 +247,7 @@ static void hs_background (int fd, int mode) {
         housesprinkler_zone_periodic(now);
         housesprinkler_index_periodic (now);
         housesprinkler_program_periodic(now);
+        housesprinkler_schedule_periodic(now);
     }
     houselog_background (now);
     housediscover (now);
@@ -280,6 +288,7 @@ int main (int argc, const char **argv) {
     housesprinkler_zone_refresh ();
     housesprinkler_index_refresh ();
     housesprinkler_program_refresh ();
+    housesprinkler_schedule_refresh ();
 
     echttp_cors_allow_method("GET");
     echttp_protect (0, sprinkler_protect);

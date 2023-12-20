@@ -127,16 +127,16 @@ function sprinklerApplyUpdate (text) {
       if (! program) program = 'IDLE';
    }
 
-   if (response.sprinkler.program.enabled == false) {
+   if (response.sprinkler.schedule.enabled == false) {
       program = 'OFF';
    }
    sprinklerSetContent ('activeprogram', program);
    sprinklerSetContent ('activezone', content);
 
-   if (response.sprinkler.program.raindelay == null) {
+   if (response.sprinkler.schedule.raindelay == null) {
       content = 'DISABLED';
-   } else if (response.sprinkler.program.raindelay > 0) {
-      var deadline = response.sprinkler.program.raindelay * 1000;
+   } else if (response.sprinkler.schedule.raindelay > 0) {
+      var deadline = response.sprinkler.schedule.raindelay * 1000;
       var delta = Math.floor((deadline - new Date().getTime()) / 1000);
       if (delta <= 0) {
          content = 'NONE';

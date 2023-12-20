@@ -25,7 +25,9 @@ SHARE=$(HROOT)/share/house
 
 OBJS= housesprinkler.o \
       housesprinkler_index.o \
+      housesprinkler_season.o \
       housesprinkler_program.o \
+      housesprinkler_schedule.o \
       housesprinkler_zone.o \
       housesprinkler_config.o
 
