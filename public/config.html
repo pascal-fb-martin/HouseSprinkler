@@ -677,11 +677,10 @@ function defaultConfig () {
 
 function sprinklerConvert (config) {
 
-    config.schedules = new Array();
+    var schedules = new Array();
     for (var i = 0; i < config.programs.length; i++) {
         var program = config.programs[i];
         if (program.start) {
-           var i = config.schedules.length;
            var schedule = new Object();
            schedule.disabled = program.disabled;
            schedule.program = program.name;
@@ -691,10 +690,10 @@ function sprinklerConvert (config) {
            schedule.repeat = program.repeat;
            schedule.days  = program.days;
            schedule.interval = program.interval;
-           config.schedules[i] = schedule;
+           schedules.push (schedule);
         }
     }
-    return config;
+    return schedules;
 }
 
 function sprinklerRefresh (config) {
@@ -702,7 +701,7 @@ function sprinklerRefresh (config) {
     countZoneShown = 0;
     countSeasonMonthlyShown = 0;
     if (!config.schedules) {
-        config = sprinklerConvert (config);
+        config.schedules = sprinklerConvert (config);
     }
     editing = config;
     showExistingZones (config.zones);

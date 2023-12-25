@@ -18,14 +18,14 @@
     "zones" : [
         {
             "name" : "relay1",
-            "pulse" : 10,
-            "pause" : 15,
+            "pulse" : 6,
+            "pause" : 5,
             "manual" : false
         },
         {
             "name" : "relay2",
-            "pulse" : 10,
-            "pause" : 15,
+            "pulse" : 6,
+            "pause" : 5,
             "manual" : false
         },
         {
@@ -67,12 +67,12 @@
     ],
     "programs" : [
         {
-            "name" : "testrelays",
+            "name" : "testall",
             "season" : "Dry",
             "repeat" : "weekly",
             "days" : [true, true, true, true, true, true, true],
             "interval" : 3,
-            "start" : "11:09",
+            "start" : "10:09",
             "begin" : "07/01/2020",
             "until" : "07/01/2021",
             "zones" : [
@@ -90,6 +90,63 @@
                 },
                 {
                     "name" : "relay4",
+                    "time" : 15
+                },
+                {
+                    "name" : "relay5",
+                    "time" : 15
+                },
+                {
+                    "name" : "relay6",
+                    "time" : 15
+                },
+                {
+                    "name" : "relay7",
+                    "time" : 15
+                },
+                {
+                    "name" : "relay8",
+                    "time" : 15
+                }
+            ]
+        },
+        {
+            "name" : "test1-2",
+            "season" : "Dry",
+            "repeat" : "weekly",
+            "days" : [true, true, true, true, true, true, true],
+            "interval" : 3,
+            "disabled" : true,
+            "start" : "11:09",
+            "begin" : "07/01/2020",
+            "until" : "07/01/2021",
+            "zones" : [
+                {
+                    "name" : "relay1",
+                    "time" : 15
+                },
+                {
+                    "name" : "relay2",
+                    "time" : 15
+                }
+            ]
+        },
+        {
+            "name" : "test7-8",
+            "season" : "Dry",
+            "repeat" : "weekly",
+            "days" : [true, true, true, true, true, true, true],
+            "interval" : 3,
+            "start" : "12:09",
+            "begin" : "07/01/2020",
+            "until" : "07/01/2021",
+            "zones" : [
+                {
+                    "name" : "relay7",
+                    "time" : 15
+                },
+                {
+                    "name" : "relay8",
                     "time" : 15
                 }
             ]
