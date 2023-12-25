@@ -31,7 +31,7 @@ That page is typically used to test programs.
 
 The Event page shows a record of the major changes detected by the HouseSprinkler service. Its main purpose is to monitor the execution of the watering schedules as well as help troubleshoot issues with device configuration and control.
 
-![HouseSprinkler Event Page](https://raw.githubusercontent.com/pascal-fb-martin/housesprinkler/master/gallery/event-page.png)
+![HouseSprinkler Event Page](https://raw.githubusercontent.com/pascal-fb-martin/housesprinkler/master/gallery/events-page.png)
 
 The configuration page is used to list the zones, programs, schedules and seasons:
 
