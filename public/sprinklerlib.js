@@ -220,8 +220,12 @@ function sprinklerSaveConfig (config) {
    command.open("POST", "/sprinkler/config");
    command.setRequestHeader('Content-Type', 'application/json');
    command.onreadystatechange = function () {
-      if (command.readyState === 4 && command.status !== 200) {
-         window.alert ('Operation failed (error '+command.status+')!');
+      if (command.readyState === 4) {
+          if (command.status === 200) {
+             window.alert ('Configuration Saved.');
+          } else {
+             window.alert ('Operation failed (error '+command.status+')!');
+          }
       }
    }
    command.send(JSON.stringify(config));
