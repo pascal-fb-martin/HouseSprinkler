@@ -4,6 +4,8 @@ A sprinkler controller in C with a web interface
 ## Overview
 This project is a small sprinkler controller with a web interface.
 
+See the [gallery](https://github.com/pascal-fb-martin/housesprinkler/blob/master/gallery/README.md) for a view of the HouseSpinkler web UI.
+
 This project is one piece of a complete system that also includes the following:
 * [echttp](https://github.com/pascal-fb-martin/echttp),
 * [houseportal](https://github.com/pascal-fb-martin/houseportal),
