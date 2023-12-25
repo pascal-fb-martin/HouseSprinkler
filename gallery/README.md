@@ -25,7 +25,7 @@ That page is typically used to test sprinklers or valves.
 
 The Program page allow manual control of individual programs, bypassing schedules:
 
-![HouseSprinkler Event Page](https://raw.githubusercontent.com/pascal-fb-martin/housesprinkler/master/gallery/zones-page.png)
+![HouseSprinkler Event Page](https://raw.githubusercontent.com/pascal-fb-martin/housesprinkler/master/gallery/programs-page.png)
 
 That page is typically used to test programs.
 
