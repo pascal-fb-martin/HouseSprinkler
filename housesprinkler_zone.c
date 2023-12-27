@@ -215,7 +215,7 @@ void housesprinkler_zone_activate (const char *name,
             Queue[QueueNext].runtime = pulse;
             if (context)
                 snprintf (Queue[QueueNext].context, sizeof(Queue[0].context),
-                          context);
+                          "%s", context);
             else
                 Queue[QueueNext].context[0] = 0;
             Queue[QueueNext].nexton = time(0);
@@ -301,16 +301,25 @@ static void housesprinkler_zone_controlled
 static int housesprinkler_zone_start (int zone,
                                       int pulse, const char *context) {
     time_t now = time(0);
+
     DEBUG ("%ld: Start zone %s for %d seconds\n",
            now, Zones[zone].name, pulse);
     if (Zones[zone].url[0]) {
         if (!context || context[0] == 0) context = "manual";
         houselog_event ("ZONE", Zones[zone].name, "ACTIVATED",
-                        "for %d seconds using %s (%s)",
+                        "FOR %d SECONDS USING %s (%s)",
                         pulse, Zones[zone].url, context);
         static char url[256];
-        snprintf (url, sizeof(url), "%s/set?point=%s&state=on&pulse=%d",
-                  Zones[zone].url, Zones[zone].name, pulse);
+        static char cause[256];
+        if (context) {
+            int l = snprintf (cause, sizeof(cause), "%s", "&cause=SPRINKLER%20");
+            echttp_escape (context, cause+l, sizeof(cause)-l);
+        } else {
+            cause[0] = 0;
+        }
+        snprintf (url, sizeof(url),
+                  "%s/set?point=%s&state=on&pulse=%d%s",
+                  Zones[zone].url, Zones[zone].name, pulse, cause);
         const char *error = echttp_client ("GET", url);
         if (error) {
             houselog_trace (HOUSE_FAILURE, Zones[zone].name, "cannot create socket for %s, %s", url, error);
