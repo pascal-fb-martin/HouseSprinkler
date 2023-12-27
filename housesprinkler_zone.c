@@ -305,20 +305,16 @@ static int housesprinkler_zone_start (int zone,
     DEBUG ("%ld: Start zone %s for %d seconds\n",
            now, Zones[zone].name, pulse);
     if (Zones[zone].url[0]) {
-        if (!context || context[0] == 0) context = "manual";
+        if (!context || context[0] == 0) context = "MANUAL";
         houselog_event ("ZONE", Zones[zone].name, "ACTIVATED",
                         "FOR %d SECONDS USING %s (%s)",
                         pulse, Zones[zone].url, context);
         static char url[256];
         static char cause[256];
-        if (context) {
-            int l = snprintf (cause, sizeof(cause), "%s", "&cause=SPRINKLER%20");
-            echttp_escape (context, cause+l, sizeof(cause)-l);
-        } else {
-            cause[0] = 0;
-        }
+        int l = snprintf (cause, sizeof(cause), "%s", "SPRINKLER%20");
+        echttp_escape (context, cause+l, sizeof(cause)-l);
         snprintf (url, sizeof(url),
-                  "%s/set?point=%s&state=on&pulse=%d%s",
+                  "%s/set?point=%s&state=on&pulse=%d&cause=%s",
                   Zones[zone].url, Zones[zone].name, pulse, cause);
         const char *error = echttp_client ("GET", url);
         if (error) {
