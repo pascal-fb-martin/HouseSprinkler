@@ -283,7 +283,7 @@ function addProgram () {
    forceVisible(elements);
 }
 
-var WeekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var WeekDays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 function showOneSchedule (schedules, i, elements) {
 
@@ -512,7 +512,7 @@ function showExistingZones (zones) {
 
    resetSection (elements);
 
-   showTitle (elements, ["Name", "Pulse", "Pause", "Manual"]);
+   showTitle (elements, ["NAME", "PULSE", "PAUSE", "MANUAL"]);
    for (var i = 0; i < zones.length; i++) {
       showOneZone (zones, i, elements);
    }
@@ -524,7 +524,7 @@ function showExistingPrograms (programs) {
 
    resetSection (elements);
 
-   showTitle (elements, ["Name", "Season"].concat(getZones()));
+   showTitle (elements, ["NAME", "SEASON"].concat(getZones()));
 
    for (var i = 0; i < programs.length; i++) {
       // Normalize the existing program to match the current list,
@@ -555,7 +555,7 @@ function showExistingSchedules (schedules) {
 
    resetSection (elements);
 
-   showTitle (elements, ["Enabled", "Program", "Time", "First Day"].concat(WeekDays));
+   showTitle (elements, ["ENABLED", "PROGRAM", "TIME", "FIRST DAY"].concat(WeekDays));
    for (var i = 0; i < schedules.length; i++) {
       showOneSchedule (schedules, i, elements);
    }
@@ -567,7 +567,7 @@ function showExistingSeasons (seasons) {
 
    resetSection (elements);
 
-   showTitle (elements, ["Name", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]);
+   showTitle (elements, ["NAME", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]);
    for (var i = 0; i < seasons.length; i++) {
       if (seasons[i].monthly)
          showOneSeasonMonthly (seasons, i, elements);
