@@ -255,7 +255,7 @@ function showOneProgram (programs, i, elements) {
                   break;
               }
           }
-          showTextInputColumn (outer, prefix+'zone_'+zones[d]+'_seconds', v, 'mm:ss', 6);
+          showTextInputColumn (outer, prefix+'zone_'+zones[d]+'_seconds', showSeconds(v), 'mm:ss', 6);
       }
       elements[k].appendChild(outer);
    }
@@ -302,7 +302,7 @@ function showOneSchedule (schedules, i, elements) {
       showCheckboxColumn (outer, prefix+'enabled', (schedule.disabled == false));
       showTextInputColumn (outer, prefix+'program', schedule.program, 'Program name');
       showTextInputColumn (outer, prefix+'start', schedule.start, 'hh:mm (24)', 10);
-      showTextInputColumn (outer, prefix+'date', showSeconds(schedule.date), 'yyyymmdd', 8);
+      showTextInputColumn (outer, prefix+'date', schedule.date, 'yyyymmdd', 8);
       for (var d = 0; d < WeekDays.length; d++) {
           showCheckboxColumn (outer, prefix+'days_'+d, schedule.days[d]);
       }
