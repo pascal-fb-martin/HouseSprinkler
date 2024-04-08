@@ -21,5 +21,6 @@
  * housesprinkler_time.h - Time operations for the sprinkler controller.
  */
 
+const char *housesprinkler_time_period_printable (int period);
 const char *housesprinkler_time_delta_printable (time_t start, time_t end);
 

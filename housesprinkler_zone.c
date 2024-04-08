@@ -88,6 +88,7 @@
 #include "housediscover.h"
 
 #include "housesprinkler.h"
+#include "housesprinkler_time.h"
 #include "housesprinkler_zone.h"
 #include "housesprinkler_config.h"
 
@@ -307,8 +308,9 @@ static int housesprinkler_zone_start (int zone,
     if (Zones[zone].url[0]) {
         if (!context || context[0] == 0) context = "MANUAL";
         houselog_event ("ZONE", Zones[zone].name, "ACTIVATED",
-                        "FOR %d SECONDS USING %s (%s)",
-                        pulse, Zones[zone].url, context);
+                        "FOR %s USING %s (%s)",
+                        housesprinkler_time_period_printable(pulse),
+                        Zones[zone].url, context);
         static char url[256];
         static char cause[256];
         int l = snprintf (cause, sizeof(cause), "%s", "SPRINKLER%20");

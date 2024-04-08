@@ -22,14 +22,19 @@
  *
  * SYNOPSYS:
  *
+ * const char *housesprinkler_time_period_printable (int period);
+ *
+ *    This function generates a string showing the time period in a user
+ *    friendly way (days and hours, or hours and minutes, or minutes and
+ *    seconds).
+ *
+ *    The returned string is a static location: every call erases the previous
+ *    result.
+ *
  * const char *housesprinkler_time_delta_printable (time_t start, time_t end);
  *
- *    This function generates a string showing the time delta from start to
- *    end in a user friendly way (days and hours, or hours and minutes, or
- *    minutes and seconds).
- *
- *    The returned string is a static location: every call erase the previous
- *    result.
+ *    This function calls housesprinkler_time_period_printable() after
+ *    calculating the time period for you.
  */
 
 #include <string.h>
@@ -60,18 +65,19 @@ static const char *housesprinkler_time_print (int h, const char *hlabel,
     return Printable;
 }
 
-const char *housesprinkler_time_delta_printable (time_t start, time_t end) {
-    static char Printable[128];
-    int delta = (int)(end - start);
-
-    if (delta <= 0) return "NOW";
-    if (delta > 86400) {
-        return housesprinkler_time_print (delta / 86400, "DAY", (delta % 86400) / 3600, "HOUR");
-    } else if (delta > 3600) {
-        return housesprinkler_time_print (delta / 3600, "HOUR", (delta % 3600) / 60, "MINUTE");
-    } else if (delta > 60) {
-        return housesprinkler_time_print (delta / 60, "MINUTE", delta % 60, "SECOND");
+const char *housesprinkler_time_period_printable (int period) {
+    if (period <= 0) return "NOW";
+    if (period > 86400) {
+        return housesprinkler_time_print (period / 86400, "DAY", (period % 86400) / 3600, "HOUR");
+    } else if (period > 3600) {
+        return housesprinkler_time_print (period / 3600, "HOUR", (period % 3600) / 60, "MINUTE");
+    } else if (period > 60) {
+        return housesprinkler_time_print (period / 60, "MINUTE", period % 60, "SECOND");
     }
-    return housesprinkler_time_print (delta, "SECOND", 0, "");
+    return housesprinkler_time_print (period, "SECOND", 0, "");
+}
+
+const char *housesprinkler_time_delta_printable (time_t start, time_t end) {
+    return housesprinkler_time_period_printable ((int)(end - start));
 }
 
