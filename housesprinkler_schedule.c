@@ -64,6 +64,7 @@
 #include "houselog.h"
 
 #include "housesprinkler.h"
+#include "housesprinkler_time.h"
 #include "housesprinkler_config.h"
 #include "housesprinkler_program.h"
 #include "housesprinkler_schedule.h"
@@ -238,15 +239,20 @@ void housesprinkler_schedule_set_rain (int delay) {
     if (delay == 0) {
 
         RainDelay = 0; // Cancel.
+        houselog_event ("SYSTEM", "RAIN DELAY", "OFF", "");
 
     } else if (RainDelay < now) {
 
         // This is a new rain delay period.
         RainDelay = now + delay;
+        houselog_event ("SYSTEM", "RAIN DELAY", "ON",
+                        housesprinkler_time_delta_printable (now, RainDelay));
 
     } else {
         // This is an extension to the ongoing rain delay period.
         RainDelay += delay;
+        houselog_event ("SYSTEM", "RAIN DELAY", "EXTENDED",
+                        housesprinkler_time_delta_printable (now, RainDelay));
     }
     housesprinkler_config_backup_set (".raindelay", (long)RainDelay);
 }
