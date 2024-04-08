@@ -223,11 +223,13 @@ void housesprinkler_schedule_switch (void) {
 }
 
 void housesprinkler_schedule_rain (int enabled) {
+    if (RainDelayEnabled == enabled) return; // No change.
     RainDelayEnabled = enabled;
     if (!enabled) {
         RainDelay = 0;
         housesprinkler_config_backup_set (".raindelay", 0);
     }
+    houselog_event ("SYSTEM", "RAIN DELAY", enabled?"ENABLED":"DISABLED", "");
 }
 
 void housesprinkler_schedule_set_rain (int delay) {
@@ -269,8 +271,13 @@ void housesprinkler_schedule_periodic (time_t now) {
     lasthour = local.tm_hour;
     lastminute = local.tm_min;
 
+    if ((RainDelay > 0) && (RainDelay < now)) {
+        RainDelay = 0;
+        housesprinkler_config_backup_set (".raindelay", 0);
+        houselog_event ("SYSTEM", "RAIN DELAY", "EXPIRED", "");
+    }
 
-    if (SprinklerOn && (!RainDelayEnabled || RainDelay < now)) {
+    if (SprinklerOn && (RainDelay <= 0)) {
 
         DEBUG ("== Checking schedule at %02d:%02d\n", local.tm_hour, local.tm_min);
 
