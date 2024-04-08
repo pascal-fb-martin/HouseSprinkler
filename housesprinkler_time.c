@@ -46,41 +46,32 @@
 #define DEBUG if (echttp_isdebug()) printf
 
 
+static const char *housesprinkler_time_print (int h, const char *hlabel,
+                                              int l, const char *llabel) {
+    static char Printable[128];
+    if (l > 0) {
+        snprintf (Printable, sizeof(Printable),
+                  "%d %s%s, %d %s%s", h, hlabel, (h>1)?"S":"",
+                                      l, llabel, (l>1)?"S":"");
+    } else {
+        snprintf (Printable, sizeof(Printable),
+                  "%d %s%s", h, hlabel, (h>1)?"S":"");
+    }
+    return Printable;
+}
+
 const char *housesprinkler_time_delta_printable (time_t start, time_t end) {
     static char Printable[128];
     int delta = (int)(end - start);
 
     if (delta <= 0) return "NOW";
     if (delta > 86400) {
-        int days = delta / 86400;
-        int hours = (delta % 86400) / 3600;
-        if (hours > 0) {
-            snprintf (Printable, sizeof(Printable),
-                      "%d DAYS, %d HOURS", days, hours);
-        } else {
-            snprintf (Printable, sizeof(Printable), "%d DAYS", days);
-        }
+        return housesprinkler_time_print (delta / 86400, "DAY", (delta % 86400) / 3600, "HOUR");
     } else if (delta > 3600) {
-        int hours = delta / 3600;
-        int minutes = (delta % 3600) / 60;
-        if (minutes > 0) {
-            snprintf (Printable, sizeof(Printable),
-                      "%d HOURS, %d MINUTES", hours, minutes);
-        } else {
-            snprintf (Printable, sizeof(Printable), "%d HOURS", hours);
-        }
+        return housesprinkler_time_print (delta / 3600, "HOUR", (delta % 3600) / 60, "MINUTE");
     } else if (delta > 60) {
-        int minutes = delta / 60;
-        int seconds = delta % 60;
-        if (seconds > 0) {
-            snprintf (Printable, sizeof(Printable),
-                      "%d MINUTES, %d SECONDS", minutes, seconds);
-        } else {
-            snprintf (Printable, sizeof(Printable), "%d MINUTES", minutes);
-        }
-    } else {
-        snprintf (Printable, sizeof(Printable), "%d SECONDS", delta);
+        return housesprinkler_time_print (delta / 60, "MINUTE", delta % 60, "SECOND");
     }
-    return Printable;
+    return housesprinkler_time_print (delta, "SECOND", 0, "");
 }
 
