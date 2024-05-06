@@ -17,6 +17,7 @@ The primary intend is to create a sprinkler controller that:
 * Controls the sprinkler valves through the network, to offer access to a distributed network of control computers. Valve can be controlled from multiple points on the network: the valve wiring does not have to be all run to a single point.
 * Adjusts watering automatically, based on an online index (Southern California for now) or on a season-based index table (monthly or weekly).
 * Splits the watering periods into short pulse separated by pauses, to avoid water poodles and run-off.
+* Support control of pumps and power supply (feeds) when a program or zone runs.
 * Records a log of activity, so that one may monitor what happened the previous days.
 * Can be integrated as part of a suite of applications managed from a central point.
 
@@ -24,7 +25,9 @@ This project replaces and obsoletes the [Sprinkler](https://github.com/pascal-fb
 
 Instead of installing drivers for different types of relay/triac interfaces, the design relies on a generic web API, and the specific interface itself is implemented as a web service. The [houserelays](https://github.com/pascal-fb-martin/houserelays) web service is the first implementation that follows this new design. A benefit is that a new interface can be developped and maintained independently of the HouseSprinkler code base, which is the essence of the web service philosophy. This also makes it possible to support multiple interfaces simultaneously, both geographically distributed and possibly using different hardware interfaces.
 
-Instead of implementing multiple weather and watering index interfaces, it relies on a generic web API, and the specific weather/index interface itself is implemented as a web service. The [waterwise](https://github.com/pascal-fb-martin/waterwise) web service is a minimal implementation that relies on the bewaterwise.com web site maintained by the Metropolitan Water District of Southern California (and is therefore of interest only for those living in the Los Angeles and San Diego areas).
+The House family of projects provides other control interfaces, typically intended for other types of devices, like TP-Link Kasa or Philips Wiz. These interfaces can be used to control feeds. For example a Kasa plug can be used to control the solenoid's 24 vold power supply, or to turn on and off a water pump.
+
+Instead of implementing multiple weather and watering index interfaces, this project relies on a generic web API, and the specific weather/index interface itself is implemented as a web service. The [waterwise](https://github.com/pascal-fb-martin/waterwise) web service is a minimal implementation that relies on the bewaterwise.com web site maintained by the Metropolitan Water District of Southern California (and is therefore of interest only for those living in the Los Angeles and San Diego areas).
 
 Future plans are:
 * Create other web services for weather information and index calculation, starting with an interface to the state of California's CIMIS web site and data.

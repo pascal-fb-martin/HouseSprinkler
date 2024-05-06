@@ -28,7 +28,9 @@ OBJS= housesprinkler.o \
       housesprinkler_season.o \
       housesprinkler_program.o \
       housesprinkler_schedule.o \
+      housesprinkler_control.o \
       housesprinkler_zone.o \
+      housesprinkler_feed.o \
       housesprinkler_time.o \
       housesprinkler_config.o
 
@@ -68,6 +70,7 @@ install-app:
 	cp public/* $(SHARE)/public/sprinkler
 	chown root:root $(SHARE)/public/sprinkler/*
 	chmod 644 $(SHARE)/public/sprinkler/*
+	rm -f $(SHARE)/public/sprinkler/valves.html
 
 uninstall-app:
 	rm -rf $(SHARE)/public/sprinkler

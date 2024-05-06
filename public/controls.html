@@ -5,6 +5,7 @@
       href="/sprinkler/sprinkler.css" title="Sprinkler">
 <script src="/sprinkler/sprinklerlib.js"></script>
 <script>
+
 function getInput (name, default_value) {
    var elements = document.getElementsByName (name);
    for (var i = 0; i < elements.length; i++) {
@@ -17,24 +18,48 @@ function zoneClick () {
    sprinklerZoneOn(this.zonename, getInput ("zoneruntime", 15));
 }
 
-window.onload = function() {
+function controlRefresh () {
 
    sprinklerStatus (function (status) {
-      var buttons = document.getElementsByClassName ('sprkrmenu')[0];
-      for (var i = 0; i < status.sprinkler.control.servers.length; i++) {
+      var tabular = document.getElementsByClassName ('sprkrside')[0];
+      for (var i = tabular.childNodes.length - 1; i > 1; i--) {
+         tabular.removeChild(tabular.childNodes[i]);
+      }
+      for (var i = 0; i < status.sprinkler.control.controls.length; i++) {
+         var control = status.sprinkler.control.controls[i];
          var outer = document.createElement("tr");
          var inner = document.createElement("td");
+         inner.innerHTML = control[1];
+         outer.appendChild(inner);
+         inner = document.createElement("td");
+         inner.innerHTML = control[0];
+         outer.appendChild(inner);
+         inner = document.createElement("td");
          var button = document.createElement("a");
-         button.className = 'sprkrmenuitem';
-         button.innerHTML = status.sprinkler.control.servers[i];
-         button.href = status.sprinkler.control.servers[i]+'/index.html';
+         button.innerHTML = control[3];
+         button.href = control[3]+'/index.html';
          inner.appendChild(button);
          outer.appendChild(inner);
-         buttons.appendChild(outer);
+         inner = document.createElement("td");
+         if (control[2] == 'i') {
+             inner.innerHTML = "IDLE";
+         } else if (control[2] == 'a') {
+             inner.innerHTML = "ACTIVE";
+         } else if (control[2] == 'e') {
+             inner.innerHTML = "ERROR";
+         } else {
+             inner.innerHTML = "UNKNOWN";
+         }
+         outer.appendChild(inner);
+         tabular.appendChild(outer);
       }
    });
+}
 
+window.onload = function() {
    sprinklerInfo ();
+   controlRefresh ();
+   setInterval (controlRefresh, 1000);
 };
 </script>
 <head>
@@ -50,7 +75,7 @@ window.onload = function() {
    <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/events.html">Events</A></td>
-   <td><span class="sprkrtopcurrent">Valves</span></td>
+   <td><span class="sprkrtopcurrent">Controls</span></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/config.html">Config</A></td>
    </tr>
    </table> 
@@ -74,7 +99,14 @@ window.onload = function() {
    </table>
    </td></tr>
    </table> 
-   <table class="sprkrmenu"></table>
+   <table class="sprkrside">
+      <tr>
+         <th width="20%">TYPE</th>
+         <th width="20%">NAME</th>
+         <th width="40%">SERVER</th>
+         <th width="20%">STATUS</th>
+      </tr>
+   </table>
 </body>
 </html>
 

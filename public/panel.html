@@ -11,7 +11,7 @@ function zonesUpdateStatus (response) {
     document.getElementsByTagName('title')[0].innerHTML =
         response.host+' - Sprinkler Panel';
 
-    var devices = response.sprinkler.control.zones;
+    var devices = response.sprinkler.zone.zones;
     for (var i = 0; i < devices.length; i++) {
         var device = devices[i];
         var tag = device[0].replace (/ /g,'-')
@@ -55,7 +55,7 @@ function zonesShowStatus (response) {
    while (remove.length > 0) {
        iolist.removeChild(remove[0]);
    }
-   var devices = response.sprinkler.control.zones;
+   var devices = response.sprinkler.zone.zones;
    var columns;
    if (window.innerWidth > window.innerHeight) {
        columns = 5;
@@ -102,9 +102,9 @@ function zonesStatus () {
     command.onreadystatechange = function () {
         if (command.readyState === 4 && command.status === 200) {
             var response = JSON.parse(command.responseText);
-            if (response.sprinkler.control.zones.length != ZoneCount) {
+            if (response.sprinkler.zone.zones.length != ZoneCount) {
                zonesShowStatus (response);
-               ZoneCount = response.sprinkler.control.zones.length;
+               ZoneCount = response.sprinkler.zone.zones.length;
             }
             zonesUpdateStatus (response);
         }

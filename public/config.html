@@ -8,8 +8,6 @@
 
 var editing = null;
 
-var countZoneShown = 0;
-
 var gui = new Object();
 
 function toSeconds (text) {
@@ -54,93 +52,117 @@ function saveConfig () {
 
    var newconfig = new Object();
 
-   newconfig.zones = new Array();
+   if (editing.zones) {
+       newconfig.zones = new Array();
 
-   for (var i = 0; i < countZoneShown; i++) {
-      var prefix = 'zone_'+i+'_';
-      newconfig.zones[i] = new Object();
-      newconfig.zones[i].name = form.zones[prefix+'name'].value;
-      if (form.zones[prefix+'pulse'].value) {
-         newconfig.zones[i].pulse = toSeconds(form.zones[prefix+'pulse'].value);
-      }
-      if (form.zones[prefix+'pause'].value) {
-         newconfig.zones[i].pause = toSeconds(form.zones[prefix+'pause'].value);
-      }
-      if (form.zones[prefix+'manual'].checked) {
-         newconfig.zones[i].manual = true;
-      }
-   }
+       for (var i = 0; i < editing.zones.length; i++) {
+          var prefix = 'zone_'+i+'_';
+          newconfig.zones[i] = new Object();
+          newconfig.zones[i].name = form.zones[prefix+'name'].value;
+          if (form.zones[prefix+'feed'].value) {
+             newconfig.zones[i].feed = form.zones[prefix+'feed'].value;
+          }
+          if (form.zones[prefix+'pulse'].value) {
+             newconfig.zones[i].pulse = toSeconds(form.zones[prefix+'pulse'].value);
+          }
+          if (form.zones[prefix+'pause'].value) {
+             newconfig.zones[i].pause = toSeconds(form.zones[prefix+'pause'].value);
+          }
+          if (form.zones[prefix+'manual'].checked) {
+             newconfig.zones[i].manual = true;
+          }
+       }
+    }
 
-   if (editing.programs) {
-      newconfig.programs = new Array();
+   if (editing.feeds) {
+       newconfig.feeds = new Array();
 
-      for (var i = 0; i < editing.programs.length; i++) {
-         var prefix = 'program_'+i+'_';
-         newconfig.programs[i] = new Object();
-         newconfig.programs[i].name = form.program[prefix+'name'].value;
-         if (form.program[prefix+'season'].value)
-            newconfig.programs[i].season = form.program[prefix+'season'].value;
-         newconfig.programs[i].zones = new Array();
-         var zones = getZones();
-         for (var z = 0; z < zones.length; z++) {
-            var id = prefix+'zone_'+zones[z]+'_seconds';
-            if (form.program[id] != undefined) {
-               if (form.program[id].value.length) {
-                  var value = toSeconds(form.program[id].value);
-                  if (value != 0) {
-                      var zi = newconfig.programs[i].zones.length;
-                      newconfig.programs[i].zones[zi] = new Object();
-                      newconfig.programs[i].zones[zi].name = zones[z];
-                      newconfig.programs[i].zones[zi].time = value;
-                  }
-               }
-            }
-         }
-      }
-   }
+       for (var i = 0; i < editing.feeds.length; i++) {
+          var prefix = 'feed_'+i+'_';
+          newconfig.feeds[i] = new Object();
+          newconfig.feeds[i].name = form.feeds[prefix+'name'].value;
+          if (form.feeds[prefix+'next'].value) {
+              newconfig.feeds[i].next = form.feeds[prefix+'next'].value;
+          }
+          if (form.feeds[prefix+'linger'].value) {
+             newconfig.feeds[i].linger = toSeconds(form.feeds[prefix+'linger'].value);
+          }
+          if (form.feeds[prefix+'manual'].checked) {
+             newconfig.feeds[i].manual = true;
+          }
+       }
+    }
 
-   if (editing.schedules) {
-      newconfig.schedules = new Array();
+    if (editing.programs) {
+       newconfig.programs = new Array();
 
-      for (var i = 0; i < editing.schedules.length; i++) {
-         var prefix = 'schedule_'+i+'_';
-         newconfig.schedules[i] = new Object();
-         newconfig.schedules[i].disabled = (form.schedule[prefix+'enabled'].checked == false);
-         newconfig.schedules[i].program = form.schedule[prefix+'program'].value;
-         newconfig.schedules[i].start = form.schedule[prefix+'start'].value;
-         if (form.schedule[prefix+'date'].value)
-            newconfig.schedules[i].date = form.schedule[prefix+'date'].value;
-         newconfig.schedules[i].repeat = 'weekly';
-         newconfig.schedules[i].days = new Array();
-         for (var j = 0; j < 7; j++) {
-            newconfig.schedules[i].days[j] =
-               form.schedule[prefix+'days_'+j].checked;
-         }
-      }
-   }
+       for (var i = 0; i < editing.programs.length; i++) {
+          var prefix = 'program_'+i+'_';
+          newconfig.programs[i] = new Object();
+          newconfig.programs[i].name = form.program[prefix+'name'].value;
+          if (form.program[prefix+'season'].value)
+             newconfig.programs[i].season = form.program[prefix+'season'].value;
+          newconfig.programs[i].zones = new Array();
+          var zones = getZones();
+          for (var z = 0; z < zones.length; z++) {
+             var id = prefix+'zone_'+zones[z]+'_seconds';
+             if (form.program[id] != undefined) {
+                if (form.program[id].value.length) {
+                   var value = toSeconds(form.program[id].value);
+                   if (value != 0) {
+                       var zi = newconfig.programs[i].zones.length;
+                       newconfig.programs[i].zones[zi] = new Object();
+                       newconfig.programs[i].zones[zi].name = zones[z];
+                       newconfig.programs[i].zones[zi].time = value;
+                   }
+                }
+             }
+          }
+       }
+    }
 
-   if (editing.seasons) {
-      newconfig.seasons = new Array();
+    if (editing.schedules) {
+       newconfig.schedules = new Array();
 
-      for (var i = 0; i < editing.seasons.length; i++) {
-         var prefix = 'seasonmonthly_'+i+'_';
-         if (!form.seasonmonthly[prefix+'name']) continue;
+       for (var i = 0; i < editing.schedules.length; i++) {
+          var prefix = 'schedule_'+i+'_';
+          newconfig.schedules[i] = new Object();
+          newconfig.schedules[i].disabled = (form.schedule[prefix+'enabled'].checked == false);
+          newconfig.schedules[i].program = form.schedule[prefix+'program'].value;
+          newconfig.schedules[i].start = form.schedule[prefix+'start'].value;
+          if (form.schedule[prefix+'date'].value)
+             newconfig.schedules[i].date = form.schedule[prefix+'date'].value;
+          newconfig.schedules[i].repeat = 'weekly';
+          newconfig.schedules[i].days = new Array();
+          for (var j = 0; j < 7; j++) {
+             newconfig.schedules[i].days[j] =
+                form.schedule[prefix+'days_'+j].checked;
+          }
+       }
+    }
 
-         newconfig.seasons[i] = new Object();
-         newconfig.seasons[i].name = form.seasonmonthly[prefix+'name'].value;
-         newconfig.seasons[i].monthly = new Array();
-         for (var j = 0; j < 12; j++) {
-            if (form.seasonmonthly[prefix+j].value)
-                newconfig.seasons[i].monthly[j] =
-                    parseInt(form.seasonmonthly[prefix+j].value);
-            else
-                newconfig.seasons[i].monthly[j] = 0;
-         }
-      }
-   }
+    if (editing.seasons) {
+       newconfig.seasons = new Array();
 
-   // console.log ("config = "+JSON.stringify(newconfig));
-   sprinklerSaveConfig(newconfig);
+       for (var i = 0; i < editing.seasons.length; i++) {
+          var prefix = 'seasonmonthly_'+i+'_';
+          if (!form.seasonmonthly[prefix+'name']) continue;
+
+          newconfig.seasons[i] = new Object();
+          newconfig.seasons[i].name = form.seasonmonthly[prefix+'name'].value;
+          newconfig.seasons[i].monthly = new Array();
+          for (var j = 0; j < 12; j++) {
+             if (form.seasonmonthly[prefix+j].value)
+                 newconfig.seasons[i].monthly[j] =
+                     parseInt(form.seasonmonthly[prefix+j].value);
+             else
+                 newconfig.seasons[i].monthly[j] = 0;
+          }
+       }
+    }
+
+    // console.log ("config = "+JSON.stringify(newconfig));
+    sprinklerSaveConfig(newconfig);
 }
 
 function hideAll () {
@@ -161,7 +183,8 @@ function visible (name) {
    }
 }
 
-function forceVisible (elements) {
+function forceVisible (name) {
+   elements = document.getElementsByName(name);
    for (var k = 0; k < elements.length; k++) {
       elements[k].style.display = 'block';
    }
@@ -182,25 +205,25 @@ function showTitle (elements, columns) {
 }
 
 function showTextInputColumn (parent, id, value, help, size) {
-      var column = document.createElement("td");
-      var input = document.createElement("input");
-      input.type = 'text';
-      input.name = id;
-      if (value) input.value = value;
-      if (size) input.size = size;
-      input.placeholder = help;
-      column.appendChild(input);
-      parent.appendChild(column);
+    var column = document.createElement("td");
+    var input = document.createElement("input");
+    input.type = 'text';
+    input.name = id;
+    if (value) input.value = value;
+    if (size) input.size = size;
+    input.placeholder = help;
+    column.appendChild(input);
+    parent.appendChild(column);
 }
 
 function showCheckboxColumn (parent, id, value) {
-      var column = document.createElement("td");
-      var input = document.createElement("input");
-      input.type = 'checkbox';
-      input.name = id;
-      input.checked = (value == true);
-      column.appendChild(input);
-      parent.appendChild(column);
+    var column = document.createElement("td");
+    var input = document.createElement("input");
+    input.type = 'checkbox';
+    input.name = id;
+    input.checked = (value == true);
+    column.appendChild(input);
+    parent.appendChild(column);
 }
 
 function showOneZone (zones, i, elements) {
@@ -213,12 +236,11 @@ function showOneZone (zones, i, elements) {
       showTextInputColumn (outer, prefix+'name', zones[i].name, 'Zone name');
       showTextInputColumn (outer, prefix+'pulse', showSeconds(zones[i].pulse), 'mm:ss', 5);
       showTextInputColumn (outer, prefix+'pause', showSeconds(zones[i].pause), 'mm:ss', 5);
+      showTextInputColumn (outer, prefix+'feed', zones[i].feed, 'Feed Name');
       showCheckboxColumn (outer, prefix+'manual', zones[i].manual);
 
       elements[k].appendChild(outer);
    }
-   if (i >= countZoneShown)
-      countZoneShown = i+1;
 }
 
 function addZone () {
@@ -233,7 +255,38 @@ function addZone () {
 
    var elements = document.getElementsByName('zonetable');
    showOneZone (editing.zones, i, elements);
-   forceVisible(elements);
+   forceVisible('configzone');
+}
+
+function showOneFeed (feeds, i, elements) {
+
+   for (var k = 0; k < elements.length; k++) {
+      var outer = document.createElement("tr");
+
+      var prefix = 'feed_'+i+'_';
+
+      showTextInputColumn (outer, prefix+'name', feeds[i].name, 'Feed name');
+      showTextInputColumn (outer, prefix+'next', feeds[i].next, 'Next feed');
+      showTextInputColumn (outer, prefix+'linger', showSeconds(feeds[i].linger), 'mm:ss', 5);
+      showCheckboxColumn (outer, prefix+'manual', feeds[i].manual);
+
+      elements[k].appendChild(outer);
+   }
+}
+
+function addFeed () {
+
+   if (! editing.feeds) {
+      editing.feeds = new Array();
+   }
+   var i = editing.feeds.length;
+   editing.feeds[i] = new Object();
+   editing.feeds[i].name = 'feed'+i;
+   // Not manual by default
+
+   var elements = document.getElementsByName('feedtable');
+   showOneFeed (editing.feeds, i, elements);
+   forceVisible('configfeed');
 }
 
 function showOneProgram (programs, i, elements) {
@@ -280,7 +333,7 @@ function addProgram () {
 
    var elements = document.getElementsByName('programtable');
    showOneProgram (editing.programs, i, elements);
-   forceVisible(elements);
+   forceVisible('configprogram');
 }
 
 var WeekDays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -325,7 +378,7 @@ function addSchedule () {
 
    var elements = document.getElementsByName('scheduletable');
    showOneSchedule (editing.schedules, i, elements);
-   forceVisible(elements);
+   forceVisible('configschedule');
 }
 
 function showOneSeasonMonthly (seasons, i, elements) {
@@ -376,7 +429,7 @@ function addSeasonMonthly () {
 
    var elements = document.getElementsByName('seasonmonthlytable');
    showOneSeasonMonthly (editing.seasons, i, elements);
-   forceVisible(elements);
+   forceVisible('configseasonmonthly');
 }
 
 function resetSection (elements) {
@@ -435,12 +488,12 @@ function sprinklerConvert (config) {
 
 function sprinklerRefresh (config) {
 
-    countZoneShown = 0;
     if (!config.schedules) {
         config.schedules = sprinklerConvert (config);
     }
     editing = config;
     showExistingZones (config.zones);
+    showExistingFeeds (config.feeds);
     showExistingPrograms (config.programs);
     showExistingSchedules (config.schedules);
     showExistingSeasons (config.seasons);
@@ -512,9 +565,23 @@ function showExistingZones (zones) {
 
    resetSection (elements);
 
-   showTitle (elements, ["NAME", "PULSE", "PAUSE", "MANUAL"]);
+   showTitle (elements, ["NAME", "PULSE", "PAUSE", "FEED", "MANUAL"]);
+   if (!zones) return;
    for (var i = 0; i < zones.length; i++) {
       showOneZone (zones, i, elements);
+   }
+}
+
+function showExistingFeeds (feeds) {
+
+   var elements = document.getElementsByName('feedtable');
+
+   resetSection (elements);
+
+   showTitle (elements, ["NAME", "NEXT", "LINGER", "MANUAL"]);
+   if (!feeds) return;
+   for (var i = 0; i < feeds.length; i++) {
+      showOneFeed (feeds, i, elements);
    }
 }
 
@@ -525,7 +592,7 @@ function showExistingPrograms (programs) {
    resetSection (elements);
 
    showTitle (elements, ["NAME", "SEASON"].concat(getZones()));
-
+   if (!programs) return;
    for (var i = 0; i < programs.length; i++) {
       // Normalize the existing program to match the current list,
       // and order, of zones.
@@ -556,6 +623,7 @@ function showExistingSchedules (schedules) {
    resetSection (elements);
 
    showTitle (elements, ["ENABLED", "PROGRAM", "TIME", "FIRST DAY"].concat(WeekDays));
+   if (!schedules) return;
    for (var i = 0; i < schedules.length; i++) {
       showOneSchedule (schedules, i, elements);
    }
@@ -568,6 +636,7 @@ function showExistingSeasons (seasons) {
    resetSection (elements);
 
    showTitle (elements, ["NAME", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]);
+   if (!seasons) return;
    for (var i = 0; i < seasons.length; i++) {
       if (seasons[i].monthly)
          showOneSeasonMonthly (seasons, i, elements);
@@ -594,7 +663,7 @@ window.onload = function() {
    <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/events.html">Events</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/valves.html">Valves</A></td>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/controls.html">Controls</A></td>
    <td><span class="sprkrtopcurrent">Config</span></td>
    </tr>
    </table> 
@@ -608,6 +677,16 @@ window.onload = function() {
    <form name="zones">
    <div name="configzone" class="hidable" display="none">
      <table name="zonetable">
+     </table>
+   </div>
+   </form>
+   <table width="100%"><tr>
+   <td width="10%"><button class="addbutton" onclick="addFeed()">Add</button></td>
+   <td width="90%"><button class="configbuttonwithadd" onclick="visible('configfeed')">Feeds</button></td>
+   </tr></table>
+   <form name="feeds">
+   <div name="configfeed" class="hidable" display="none">
+     <table name="feedtable">
      </table>
    </div>
    </form>

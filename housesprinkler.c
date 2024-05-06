@@ -38,7 +38,9 @@
 
 #include "housesprinkler_config.h"
 #include "housesprinkler_index.h"
+#include "housesprinkler_feed.h"
 #include "housesprinkler_zone.h"
+#include "housesprinkler_control.h"
 #include "housesprinkler_season.h"
 #include "housesprinkler_program.h"
 #include "housesprinkler_schedule.h"
@@ -69,9 +71,19 @@ static void hs_help (const char *argv0) {
 }
 
 static void sprinkler_reset (void) {
-    housesprinkler_zone_periodic (0);
+    housesprinkler_control_periodic (0);
     housesprinkler_index_periodic (0);
     housediscover (0);
+}
+
+static void sprinkler_refresh (void) {
+    housesprinkler_control_reset ();
+    housesprinkler_zone_refresh ();
+    housesprinkler_index_refresh ();
+    housesprinkler_feed_refresh ();
+    housesprinkler_season_refresh ();
+    housesprinkler_program_refresh ();
+    housesprinkler_schedule_refresh ();
 }
 
 static const char *sprinkler_config (const char *method, const char *uri,
@@ -83,11 +95,7 @@ static const char *sprinkler_config (const char *method, const char *uri,
            echttp_error (500, error);
            return "";
        }
-       housesprinkler_zone_refresh ();
-       housesprinkler_index_refresh ();
-       housesprinkler_season_refresh ();
-       housesprinkler_program_refresh ();
-       housesprinkler_schedule_refresh ();
+       sprinkler_refresh ();
        sprinkler_reset();
     } else if (strcmp(method, "GET") == 0) {
        int fd = housesprinkler_config_file();
@@ -100,25 +108,21 @@ static const char *sprinkler_config (const char *method, const char *uri,
 static const char *sprinkler_status (const char *method, const char *uri,
                                      const char *data, int length) {
     static char buffer[65537];
+    int cursor;
 
-    int cursor = 0;
-
-    snprintf (buffer, sizeof(buffer),
-              "{\"host\":\"%s\",\"proxy\":\"%s\",\"timestamp\":%ld,\"sprinkler\":{\"control\":{",
+    cursor = snprintf (buffer, sizeof(buffer),
+                       "{\"host\":\"%s\",\"proxy\":\"%s\",\"timestamp\":%ld,\"sprinkler\":{\"zone\":{",
               hostname, houseportal_server(), time(0));
-    cursor = strlen(buffer);
     cursor += housesprinkler_zone_status (buffer+cursor, sizeof(buffer)-cursor);
-    snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
-    cursor += strlen(buffer+cursor);
+    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
     cursor += housesprinkler_program_status (buffer+cursor, sizeof(buffer)-cursor);
-    snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"schedule\":{");
-    cursor += strlen(buffer+cursor);
+    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"schedule\":{");
     cursor += housesprinkler_schedule_status (buffer+cursor, sizeof(buffer)-cursor);
-    snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"index\":{");
-    cursor += strlen(buffer+cursor);
+    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"control\":{");
+    cursor += housesprinkler_control_status (buffer+cursor, sizeof(buffer)-cursor);
+    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"index\":{");
     cursor += housesprinkler_index_status (buffer+cursor, sizeof(buffer)-cursor);
-    snprintf (buffer+cursor,sizeof(buffer)-cursor, "}}}");
-    cursor += strlen(buffer+cursor);
+    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "}}}");
 
     echttp_content_type_json ();
     return buffer;
@@ -198,6 +202,7 @@ static const char *sprinkler_zone_off (const char *method, const char *uri,
                                        const char *data, int length) {
 
     housesprinkler_zone_stop ();
+    housesprinkler_control_cancel (0);
     return sprinkler_status (method, uri, data, length);
 }
 
@@ -241,11 +246,13 @@ static void hs_background (int fd, int mode) {
         }
     }
     // Do not try to discover other service immediately: wait for two seconds
-    // after the first request to the portal.
+    // after the first request to the portal. No need to schedule any watering
+    // until then, either.
     if (!DelayConfigDiscovery) DelayConfigDiscovery = now + 2;
     if (now >= DelayConfigDiscovery) {
-        housesprinkler_zone_periodic(now);
+        housesprinkler_control_periodic(now);
         housesprinkler_index_periodic (now);
+        housesprinkler_zone_periodic(now);
         housesprinkler_program_periodic(now);
         housesprinkler_schedule_periodic(now);
     }
@@ -285,10 +292,7 @@ int main (int argc, const char **argv) {
         houselog_trace
             (HOUSE_FAILURE, housesprinkler_config_name(), "%s", error);
     }
-    housesprinkler_zone_refresh ();
-    housesprinkler_index_refresh ();
-    housesprinkler_program_refresh ();
-    housesprinkler_schedule_refresh ();
+    sprinkler_refresh ();
 
     echttp_cors_allow_method("GET");
     echttp_protect (0, sprinkler_protect);

@@ -90,7 +90,9 @@
 #include "housesprinkler.h"
 #include "housesprinkler_time.h"
 #include "housesprinkler_zone.h"
+#include "housesprinkler_feed.h"
 #include "housesprinkler_config.h"
+#include "housesprinkler_control.h"
 
 #define DEBUG if (echttp_isdebug()) printf
 
@@ -101,11 +103,11 @@ static int   ProvidersCount = 0;
 
 typedef struct {
     const char *name;
+    const char *feed;
     int pulse;
     int pause;
     char manual;
     char status;
-    char url[256];
 } SprinklerZone;
 
 static SprinklerZone *Zones = 0;
@@ -157,15 +159,16 @@ void housesprinkler_zone_refresh (void) {
         int zone = housesprinkler_config_object (content, path);
         if (zone > 0) {
             Zones[i].name = housesprinkler_config_string (zone, ".name");
+            Zones[i].feed = housesprinkler_config_string (zone, ".feed");
             Zones[i].pulse = housesprinkler_config_integer (zone, ".pulse");
             Zones[i].pause = housesprinkler_config_integer (zone, ".pause");
             Zones[i].manual = housesprinkler_config_boolean (zone, ".manual");
-            Zones[i].url[0] = 0;
-            Zones[i].status = 'u';
+            Zones[i].status = 'i';
+            housesprinkler_control_declare (Zones[i].name, "ZONE");
+            DEBUG ("\tZone %s (pulse=%d, pause=%d, manual=%s)\n",
+                   Zones[i].name, Zones[i].pulse, Zones[i].pause,
+                   Zones[i].manual?"true":"false");
         }
-        DEBUG ("\tZone %s (pulse=%d, pause=%d, manual=%s)\n",
-               Zones[i].name, Zones[i].pulse, Zones[i].pause,
-               Zones[i].manual?"true":"false");
     }
 
     // We support at max 1 activation per zone..
@@ -227,107 +230,19 @@ void housesprinkler_zone_activate (const char *name,
     }
 }
 
-static void housesprinkler_zone_cancelled
-               (void *origin, int status, char *data, int length) {
-
-    SprinklerZone *zone = (SprinklerZone *)origin;
-
-   status = echttp_redirected("GET");
-   if (!status){
-       echttp_submit (0, 0, housesprinkler_zone_cancelled, origin);
-       return;
-   }
-
-   // TBD: add an event to record that the command was processed. Too verbose?
-   if (status != 200) {
-       if (zone->status != 'e')
-           houselog_trace (HOUSE_FAILURE, zone->name, "HTTP code %d", status);
-       zone->status  = 'e';
-   }
-}
-
-void housesprinkler_zone_cancel (SprinklerZone *zone) {
-
-    if (zone->url[0]) {
-        houselog_event ("ZONE", zone->name, "CANCEL", "manual");
-        static char url[256];
-        snprintf (url, sizeof(url),
-                  "%s/set?point=%s&state=off", zone->url, zone->name);
-        const char *error = echttp_client ("GET", url);
-        if (error) {
-            houselog_trace (HOUSE_FAILURE, zone->name,
-                            "cannot create socket for %s, %s", url, error);
-            return;
-        }
-        DEBUG ("GET %s\n", url);
-        echttp_submit (0, 0, housesprinkler_zone_cancelled, (void *)zone);
-    }
-}
-
 void housesprinkler_zone_stop (void) {
 
     int i;
     time_t now = time(0);
 
     DEBUG ("%ld: Stop all zones\n", now);
-    houselog_event ("ZONE", "ALL", "STOP", "manual");
+    houselog_event ("ZONE", "ALL", "STOP", "MANUAL");
     for (i = 0; i < QueueNext; ++i) {
         Queue[i].runtime = 0;
     }
     QueueNext = 0;
     ZonesBusy = 0;
     PulseEnd = 0;
-}
-
-static void housesprinkler_zone_controlled
-               (void *origin, int status, char *data, int length) {
-
-    SprinklerZone *zone = (SprinklerZone *)origin;
-
-   status = echttp_redirected("GET");
-   if (!status) {
-       echttp_submit (0, 0, housesprinkler_zone_controlled, origin);
-       return;
-   }
-
-   // TBD: add an event to record that the command was processed. Too verbose?
-   if (status != 200) {
-       if (zone->status != 'e')
-           houselog_trace (HOUSE_FAILURE, zone->name, "HTTP code %d", status);
-       zone->status  = 'e';
-   }
-   zone->status  = 'a';
-}
-
-static int housesprinkler_zone_start (int zone,
-                                      int pulse, const char *context) {
-    time_t now = time(0);
-
-    DEBUG ("%ld: Start zone %s for %d seconds\n",
-           now, Zones[zone].name, pulse);
-    if (Zones[zone].url[0]) {
-        if (!context || context[0] == 0) context = "MANUAL";
-        houselog_event ("ZONE", Zones[zone].name, "ACTIVATED",
-                        "FOR %s USING %s (%s)",
-                        housesprinkler_time_period_printable(pulse),
-                        Zones[zone].url, context);
-        static char url[256];
-        static char cause[256];
-        int l = snprintf (cause, sizeof(cause), "%s", "SPRINKLER%20");
-        echttp_escape (context, cause+l, sizeof(cause)-l);
-        snprintf (url, sizeof(url),
-                  "%s/set?point=%s&state=on&pulse=%d&cause=%s",
-                  Zones[zone].url, Zones[zone].name, pulse, cause);
-        const char *error = echttp_client ("GET", url);
-        if (error) {
-            houselog_trace (HOUSE_FAILURE, Zones[zone].name, "cannot create socket for %s, %s", url, error);
-            return 0;
-        }
-        DEBUG ("GET %s\n", url);
-        echttp_submit (0, 0, housesprinkler_zone_controlled, (void *)(Zones+zone));
-        return 1;
-    }
-    return 0;
 }
 
 static void housesprinkler_zone_schedule (time_t now) {
@@ -353,7 +268,7 @@ static void housesprinkler_zone_schedule (time_t now) {
     if (ZoneActive) {
         if (ZonesBusy == 0) {
             // Clear sign that a stop was requested: cancel the zone.
-            housesprinkler_zone_cancel (ZoneActive);
+            housesprinkler_control_cancel (ZoneActive->name);
         }
         if (ZoneActive->status == 'a') ZoneActive->status = 'i';
         ZoneActive = 0;
@@ -390,141 +305,25 @@ static void housesprinkler_zone_schedule (time_t now) {
             //
             Queue[nextzone].nexton = now + pulse + Zones[zone].pause;
         }
-        if (housesprinkler_zone_start (zone, pulse, Queue[nextzone].context)) {
+        if (Zones[zone].feed) {
+            housesprinkler_feed_activate
+                (Zones[zone].feed, pulse, Queue[nextzone].context);
+        }
+        if (housesprinkler_control_start
+                (Zones[zone].name, pulse, Queue[nextzone].context)) {
             // Schedule the next zone after the pulse and the optional index
             // valve pause have been exhausted.
             ZonesBusy = now + pulse + ZoneIndexValvePause;
             ZoneActive = Zones + zone;
             PulseEnd = now + pulse;
+            ZoneActive->status = 'a';
         }
     }
-}
-
-static void housesprinkler_zone_discovered
-               (void *origin, int status, char *data, int length) {
-
-   const char *provider = (const char *) origin;
-   ParserToken tokens[100];
-   int  innerlist[100];
-   char path[256];
-   int  count = 100;
-   int  i;
-
-   status = echttp_redirected("GET");
-   if (!status) {
-       echttp_submit (0, 0, housesprinkler_zone_discovered, origin);
-       return;
-   }
-
-   if (status != 200) {
-       houselog_trace (HOUSE_FAILURE, provider, "HTTP error %d", status);
-       return;
-   }
-
-   // Analyze the answer and retrieve the control points matching our zones.
-   const char *error = echttp_json_parse (data, tokens, &count);
-   if (error) {
-       houselog_trace
-           (HOUSE_FAILURE, provider, "JSON syntax error, %s", error);
-       return;
-   }
-   if (count <= 0) {
-       houselog_trace (HOUSE_FAILURE, provider, "no data");
-       return;
-   }
-
-   int controls = echttp_json_search (tokens, ".control.status");
-   if (controls <= 0) {
-       houselog_trace (HOUSE_FAILURE, provider, "no zone data");
-       return;
-   }
-
-   int n = tokens[controls].length;
-   if (n <= 0) {
-       houselog_trace (HOUSE_FAILURE, provider, "empty zone data");
-       return;
-   }
-
-   error = echttp_json_enumerate (tokens+controls, innerlist);
-   if (error) {
-       houselog_trace (HOUSE_FAILURE, path, "%s", error);
-       return;
-   }
-
-   for (i = 0; i < n; ++i) {
-       ParserToken *inner = tokens + controls + innerlist[i];
-       int zone = housesprinkler_zone_search (inner->key);
-       if (zone < 0) continue;
-       if (strcmp (Zones[zone].url, provider)) {
-           snprintf (Zones[zone].url, sizeof(Zones[zone].url), provider);
-           Zones[zone].status = 'i';
-           DEBUG ("Zone %s discovered on %s\n",
-                  Zones[zone].name, Zones[zone].url);
-           houselog_event ("ZONE", Zones[zone].name, "ROUTE",
-                           "TO %s", Zones[zone].url);
-       }
-   }
-}
-
-static void housesprinkler_zone_scan_server
-                (const char *service, void *context, const char *provider) {
-
-    char url[256];
-
-    Providers[ProvidersCount++] = strdup(provider); // Keep the string.
-
-    snprintf (url, sizeof(url), "%s/status", provider);
-
-    DEBUG ("Attempting discovery at %s\n", url);
-    const char *error = echttp_client ("GET", url);
-    if (error) {
-        houselog_trace (HOUSE_FAILURE, provider, "%s", error);
-        return;
-    }
-    echttp_submit (0, 0, housesprinkler_zone_discovered, (void *)provider);
-}
-
-static void housesprinkler_zone_discovery (time_t now) {
-
-    static time_t latestdiscovery = 0;
-
-    if (!now) { // This is a manual reset (force a discovery refresh)
-        latestdiscovery = 0;
-        return;
-    }
-
-    // If any new service was detected, force a scan now.
-    //
-    if ((latestdiscovery > 0) &&
-        housediscover_changed ("control", latestdiscovery)) {
-        latestdiscovery = 0;
-    }
-
-    // Even if nothing new was detected, still scan every 10mn, in case
-    // the configuration of a service was changed.
-    //
-    if (now <= latestdiscovery + 600) return;
-    latestdiscovery = now;
-
-    // Rebuild the list of control servers, and then launch a discovery
-    // refresh. This way we don't walk a stale cache while doing discovery.
-    //
-    DEBUG ("Reset providers cache\n");
-    int i;
-    for (i = 0; i < ProvidersCount; ++i) {
-        if (Providers[i]) free(Providers[i]);
-        Providers[i] = 0;
-    }
-    ProvidersCount = 0;
-    DEBUG ("Proceeding with discovery\n");
-    housediscovered ("control", 0, housesprinkler_zone_scan_server);
 }
 
 void housesprinkler_zone_periodic (time_t now) {
 
     if (!ZonesCount) return;
-
-    housesprinkler_zone_discovery (now);
     if (now) housesprinkler_zone_schedule  (now);
 }
 
@@ -552,41 +351,18 @@ int housesprinkler_zone_idle (void) {
 int housesprinkler_zone_status (char *buffer, int size) {
 
     int i;
-    int cursor = 0;
+    int cursor;
     const char *prefix = "";
 
-    cursor = snprintf (buffer, size, "\"servers\":[");
-    if (cursor >= size) goto overflow;
-
-    for (i = 0; i < ProvidersCount; ++i) {
-        cursor += snprintf (buffer+cursor, size-cursor,
-                            "%s\"%s\"", prefix, Providers[i]);
-        if (cursor >= size) goto overflow;
-        prefix = ",";
-    }
-    cursor += snprintf (buffer+cursor, size-cursor, "]");
-    if (cursor >= size) goto overflow;
-
-    if (ZoneActive) {
-        cursor += snprintf (buffer+cursor, size-cursor,
-                            ",\"active\":\"%s\"", ZoneActive->name);
-        if (cursor >= size) goto overflow;
-    }
-
-    cursor += snprintf (buffer+cursor, size-cursor, ",\"zones\":[");
+    cursor = snprintf (buffer+cursor, size-cursor, "\"zones\":[");
     if (cursor >= size) goto overflow;
     prefix = "";
 
     for (i = 0; i < ZonesCount; ++i) {
-        char server[512];
-
-        if (Zones[i].url[0])
-            snprintf (server, sizeof(server), ",\"%s\"", Zones[i].url);
-        else
-            server[0] = 0;
-
-        cursor += snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"%s]",
-                            prefix, Zones[i].name, Zones[i].status, server);
+        int state = housesprinkler_control_state (Zones[i].name);
+        if ((state != 'e') && (state != 'u')) state = Zones[i].status;
+        cursor += snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%c\"]",
+                            prefix, Zones[i].name, state);
         if (cursor >= size) goto overflow;
         prefix = ",";
     }
@@ -606,9 +382,14 @@ int housesprinkler_zone_status (char *buffer, int size) {
             prefix = ",";
         }
     }
-
     cursor += snprintf (buffer+cursor, size-cursor, "]");
     if (cursor >= size) goto overflow;
+
+    if (ZoneActive) {
+        cursor += snprintf (buffer+cursor, size-cursor,
+                            ",\"active\":\"%s\"", ZoneActive->name);
+        if (cursor >= size) goto overflow;
+    }
 
     return cursor;
 

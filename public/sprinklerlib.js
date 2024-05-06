@@ -119,8 +119,8 @@ function sprinklerApplyUpdate (text) {
    } else {
       program = null;
    }
-   if (response.sprinkler.control.active) {
-      content = response.sprinkler.control.active+' ACTIVE';
+   if (response.sprinkler.zone.active) {
+      content = response.sprinkler.zone.active+' ACTIVE';
       if (! program) program = 'MANUAL';
    } else {
       content = 'IDLE';
@@ -158,8 +158,8 @@ function sprinklerApplyUpdate (text) {
    var title = response.host + ' - Sprinkler Controler';
    document.getElementsByTagName ('title')[0].innerHTML = title;
 
-   for (var i = 0; i < response.sprinkler.control.zones.length; ++i) {
-       var zone = response.sprinkler.control.zones[i];
+   for (var i = 0; i < response.sprinkler.zone.zones.length; ++i) {
+       var zone = response.sprinkler.zone.zones[i];
        var label = document.getElementById ('zone_'+i+'_label');
        if (label) {
            if (zone[2]) {
