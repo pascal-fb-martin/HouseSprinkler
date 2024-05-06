@@ -127,6 +127,7 @@ void housesprinkler_control_declare (const char *name, const char *type) {
         Controls[ControlsCount].type = type;
         Controls[ControlsCount].status = 'u';
         Controls[ControlsCount].deadline = 0;
+        Controls[ControlsCount].url[0] = 0; // Need to (re)learn.
         ControlsCount += 1;
     }
 }
