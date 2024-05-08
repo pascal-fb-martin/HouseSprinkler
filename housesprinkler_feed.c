@@ -117,12 +117,35 @@ void housesprinkler_feed_refresh (void) {
         DEBUG ("\tFeed %s (manual=%s)\n",
                Feed[i].name, Feed[i].manual?"true":"false");
     }
+
+    // Detect loops in chains. Having any is bad.
+    for (i = 0; i < FeedCount; ++i) {
+        int loop = 0;
+        const char *name = Feed[i].next;
+        const char *previous = Feed[i].name;
+        while (name && name[0]) {
+            SprinklerFeed *feed = housesprinkler_feed_search (name);
+            if (!feed) {
+                houselog_event
+                    ("FEED", previous, "INVALID", "UNKNOWN NEXT %s", name);
+                break;
+            }
+            previous = name;
+            name = feed->next;
+            if (++loop >= FeedCount) {
+                houselog_event
+                    ("FEED", Feed[i].name, "INVALID", "INFINITE LOOP IN CHAIN");
+                break;
+            }
+        }
+    }
 }
 
 void housesprinkler_feed_activate (const char *name,
                                    int pulse, const char *context) {
 
     const char *previous = 0;
+    int loop = 0;
 
     while (name && name[0]) {
         SprinklerFeed *feed = housesprinkler_feed_search (name);
@@ -138,6 +161,8 @@ void housesprinkler_feed_activate (const char *name,
             housesprinkler_control_start (name, pulse + feed->linger, context);
         previous = name;
         name = feed->next;
+
+        if (++loop >= FeedCount) break; // We went through all feeds.
     }
 }
 
