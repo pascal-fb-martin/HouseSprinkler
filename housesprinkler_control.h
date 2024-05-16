@@ -22,6 +22,7 @@
  */
 void housesprinkler_control_reset (void);
 void housesprinkler_control_declare (const char *name, const char *type);
+void housesprinkler_control_event (const char *name, int enable, int once);
 int  housesprinkler_control_start (const char *name,
                                    int pulse, const char *context);
 void housesprinkler_control_cancel (const char *name);

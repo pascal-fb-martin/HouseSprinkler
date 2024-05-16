@@ -114,6 +114,7 @@ void housesprinkler_feed_refresh (void) {
             Feed[i].manual = housesprinkler_config_boolean (item, ".manual");
         }
         housesprinkler_control_declare (Feed[i].name, "FEED");
+        housesprinkler_control_event (Feed[i].name, 0, 0);
         DEBUG ("\tFeed %s (manual=%s)\n",
                Feed[i].name, Feed[i].manual?"true":"false");
     }
@@ -157,8 +158,15 @@ void housesprinkler_feed_activate (const char *name,
                 houselog_event ("FEED", name, "UNKNOWN", "");
             return;
         }
-        if (!feed->manual)
+        if (!feed->manual) {
+            // No context means manually operated, i.e. a zone test.
+            // In this case we generate an event (once) to help with
+            // testing. Otherwise feed events just add noise.
+            //
+            if ((!context) || (context[0] == 0))
+                housesprinkler_control_event (name, 1, 1);
             housesprinkler_control_start (name, pulse + feed->linger, context);
+        }
         previous = name;
         name = feed->next;
 

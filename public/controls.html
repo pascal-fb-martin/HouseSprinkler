@@ -51,6 +51,13 @@ function controlRefresh () {
              inner.innerHTML = "UNKNOWN";
          }
          outer.appendChild(inner);
+         inner = document.createElement("td");
+         if ((control.length > 4) && (control[2] == 'a')) {
+             inner.innerHTML = control[4];
+         } else {
+             inner.innerHTML = '';
+         }
+         outer.appendChild(inner);
          tabular.appendChild(outer);
       }
    });
@@ -101,10 +108,11 @@ window.onload = function() {
    </table> 
    <table class="sprkrside">
       <tr>
-         <th width="20%">TYPE</th>
-         <th width="20%">NAME</th>
-         <th width="40%">SERVER</th>
-         <th width="20%">STATUS</th>
+         <th width="17%">TYPE</th>
+         <th width="17%">NAME</th>
+         <th width="39%">SERVER</th>
+         <th width="17%">STATUS</th>
+         <th width="10%">TIME</th>
       </tr>
    </table>
 </body>

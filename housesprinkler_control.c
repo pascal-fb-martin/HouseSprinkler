@@ -42,6 +42,18 @@
  *
  *    Declare a new control point to be discovered.
  *
+ * void housesprinkler_control_event (const char *name, int enable, int once);
+ *
+ *    Enable or disable activation events for the specified control:
+ *    - If enable and once are both true, events are automatically disabled
+ *      after one event has been issued.
+ *    - If enable is true and once is false, events are enabled until
+ *      explicitly disabled.
+ *    - If enable is false, once is ignored and events are disabled until
+ *      explicitly enabled.
+ *
+ *    This has no impact on "unusual" events like discovery or stop.
+ *
  * void housesprinkler_control_start (const char *name,
  *                                    int pulse, const char *context);
  *
@@ -89,6 +101,8 @@ typedef struct {
     const char *name;
     const char *type;
     char status;
+    char event;
+    char once;
     time_t deadline;
     char url[256];
 } SprinklerControl;
@@ -126,9 +140,20 @@ void housesprinkler_control_declare (const char *name, const char *type) {
         Controls[ControlsCount].name = name;
         Controls[ControlsCount].type = type;
         Controls[ControlsCount].status = 'u';
+        Controls[ControlsCount].event = 1; // enabled.
+        Controls[ControlsCount].once = 0; // .. until explicitly disabled.
         Controls[ControlsCount].deadline = 0;
         Controls[ControlsCount].url[0] = 0; // Need to (re)learn.
         ControlsCount += 1;
+    }
+}
+
+void housesprinkler_control_event (const char *name, int enable, int once) {
+
+    SprinklerControl *control = housesprinkler_control_search(name);
+    if (control) {
+        control->event = enable;
+        control->once = once;
     }
 }
 
@@ -163,10 +188,16 @@ int housesprinkler_control_start (const char *name,
     DEBUG ("%ld: Start %s %s for %d seconds\n", now, control->type, name, pulse);
     if (control->url[0]) {
         if (!context || context[0] == 0) context = "MANUAL";
-        houselog_event (control->type, name, "ACTIVATED",
-                        "FOR %s USING %s (%s)",
-                        housesprinkler_time_period_printable(pulse),
-                        control->url, context);
+        if (control->event) {
+            houselog_event (control->type, name, "ACTIVATED",
+                            "FOR %s USING %s (%s)",
+                            housesprinkler_time_period_printable(pulse),
+                            control->url, context);
+            if (control->once) {
+                control->event = 0;
+                control->once = 0;
+            }
+        }
         static char url[256];
         static char cause[256];
         int l = snprintf (cause, sizeof(cause), "%s", "SPRINKLER%20");
@@ -397,9 +428,13 @@ int housesprinkler_control_status (char *buffer, int size) {
     if (cursor >= size) goto overflow;
     prefix = "";
 
+    time_t now = time(0);
+
     for (i = 0; i < ControlsCount; ++i) {
-        cursor += snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%s\",\"%c\",\"%s\"]",
-                            prefix, Controls[i].name, Controls[i].type, Controls[i].status, Controls[i].url);
+        int remaining =
+            (Controls[i].status == 'a')?(int)(Controls[i].deadline - now):0;
+        cursor += snprintf (buffer+cursor, size-cursor, "%s[\"%s\",\"%s\",\"%c\",\"%s\",%d]",
+                            prefix, Controls[i].name, Controls[i].type, Controls[i].status, Controls[i].url, remaining);
         if (cursor >= size) goto overflow;
         prefix = ",";
     }
