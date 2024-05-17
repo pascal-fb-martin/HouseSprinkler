@@ -248,8 +248,6 @@ void housesprinkler_zone_stop (void) {
 static void housesprinkler_zone_schedule (time_t now) {
 
     int i;
-    int    nextzone = -1;
-    time_t nexttime = now + 1;
 
     // Prune the queue once there is no time left and the zone has completed
     // its pulse (including the pause period).
@@ -276,6 +274,13 @@ static void housesprinkler_zone_schedule (time_t now) {
     }
 
     // Search for the first zone to be started next.
+    // Because nexttime is initialized to current time, only zones that
+    // have exhausted their pulse and pause period are considered here.
+    // So this loop searches for a zone that meet two conditions: ready
+    // to start, and the "oldest" to be so.
+    //
+    int    nextzone = -1;
+    time_t nexttime = now + 1;
     for (i = 0; i < QueueNext; ++i) {
         if (Queue[i].runtime == 0) continue;
         time_t nexton = Queue[i].nexton;
@@ -293,6 +298,16 @@ static void housesprinkler_zone_schedule (time_t now) {
             Queue[nextzone].runtime = 0;
             Queue[nextzone].nexton = now + pulse;
         } else {
+            // Activate a zone that is part of a program only at the start of
+            // the minute.
+            // The reason for doing so it to make it easier to calculate
+            // water usage: we can sample water flow sensor on a minute basis.
+            // We don't do this synchronization for manual controls.
+            // We accept to be late by one second, as this is the time
+            // precision used by the periodic mechanism anyway.
+            //
+            if (now % 60 > 1) return;
+
             if (pulse == 0 || Queue[nextzone].runtime <= pulse) {
                 pulse = Queue[nextzone].runtime;
                 Queue[nextzone].runtime = 0;
