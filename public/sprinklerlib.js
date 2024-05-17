@@ -115,7 +115,7 @@ function sprinklerApplyUpdate (text) {
    document.getElementById('portal').href = 'http://'+response.proxy+'/index.html';
 
    if (response.sprinkler.program.active) {
-      program = response.sprinkler.program.active[0];
+      program = response.sprinkler.program.active.join(', ');
    } else {
       program = null;
    }
