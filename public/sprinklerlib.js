@@ -69,6 +69,11 @@
 //      These functions control the rain delay function: add a rain delay,
 //      and cancel any pending rain delay.
 //
+//   sprinklerIndexToggle ();
+//
+//      This function toggles the watering index on and off. When the index
+//      is off, all programs run at 100%.
+//
 //   sprinklerRefresh();
 //
 //      This function requests the controler to refresh all information
@@ -82,6 +87,8 @@
 //
 //      This function requests the ID of the latest event.
 //
+
+var SprinklerUseIndex = false;
 
 function sprinklerShowDuration (seconds) {
    var minutes = Math.floor(seconds / 60);
@@ -147,6 +154,8 @@ function sprinklerApplyUpdate (text) {
       content = 'NONE';
    }
    sprinklerSetContent ('raindelay', content);
+
+   SprinklerUseIndex = response.sprinkler.program.useindex;
 
    if (response.sprinkler.program.useindex) {
       sprinklerSetContent ('adjustment',
@@ -260,6 +269,12 @@ function sprinklerZoneOff () {
 
 function sprinklerCancelRainDelay () {
    sprinklerRequest ("/sprinkler/raindelay?amount=0");
+}
+
+function sprinklerIndexToggle () {
+   var makeActive = 'true';
+   if (SprinklerUseIndex) makeActive = 'false';
+   sprinklerRequest ("/sprinkler/index?active="+makeActive);
 }
 
 function sprinklerRainDelay (duration) {
