@@ -149,10 +149,12 @@ void housesprinkler_program_refresh (void) {
             DEBUG ("\tProgram %s (%d zones)\n", Programs[i].name, count);
         }
     }
+    WateringIndexEnabled = housesprinkler_config_backup_get (".useindex");
 }
 
 void housesprinkler_program_index (int state) {
     WateringIndexEnabled = state;
+    housesprinkler_config_backup_set (".useindex", state);
 }
 
 void housesprinkler_program_set_index 
