@@ -273,20 +273,36 @@ static void housesprinkler_zone_schedule (time_t now) {
         PulseEnd = 0;
     }
 
-    // Search for the first zone to be started next.
+    // Search for the next zone to be started.
     // Because nexttime is initialized to current time, only zones that
     // have exhausted their pulse and pause period are considered here.
     // So this loop searches for a zone that meet two conditions: ready
-    // to start, and the "oldest" to be so.
+    // to start, and the "oldest" to be so. This is done to maximize
+    // the soak time, beyond the minimum as configured.
+    // If there are multiple zones of the same "age", then the one with
+    // the longest runtime is selected: this is done to prioritize the
+    // longest running zones, especially when the program starts,
+    // because these long running zones are on the critical path and
+    // define when the program will end.
     //
+    int    remaining = 0;
     int    nextzone = -1;
     time_t nexttime = now + 1;
     for (i = 0; i < QueueNext; ++i) {
         if (Queue[i].runtime == 0) continue;
         time_t nexton = Queue[i].nexton;
-        if (nexton > 0 && nexton < nexttime) {
-            nextzone = i;
-            nexttime = nexton;
+        if (nexton > 0) {
+            if (nexton > nexttime) continue;
+            if (nexton < nexttime) {
+                nextzone = i;
+                nexttime = nexton;
+                remaining = Queue[i].runtime;
+            } else {
+                if (Queue[i].runtime > remaining) {
+                    nextzone = i;
+                    remaining = Queue[i].runtime;
+                }
+            }
         }
     }
 

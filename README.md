@@ -79,6 +79,21 @@ The HouseSprinkler configuration is mainly organized in layers:
 
 Note that zones can be activated manually from the web UI, bypassing any program configuration, and programs can be activated manually from the web UI, bypassing any schedule rules.
 
+## Program Execution
+
+When a program starts, either based on schedule or manually, zones are activated in an order calculated to maximize the soak time and minimize the elapsed program execution time:
+* All zones are activable when the program starts.
+* A zone becomes activable again once its soack period has completed.
+* Zones are activated one at a time.
+* Zone activation is based on which zone was activable the earliest. This typically represents the zone that waited the most after its soak period.
+* If multiple zones were activable at the same time (like happens when the program starts), the zone with the longest remaining runtime is activated.
+
+The rationale here is that the zones with the longest runtime will likely execute the highest number of run/soak cycles. These are on the critical path when it comes to the program complete execution, and starting them first will likely reduce the program's elapsed execution time. This criteria is of a lower priority for subsequent activations because increasing the soak time was deemed more important.
+
+Zones are activated only at the start of a minute. This is meant to synchronize with the sampling period of a flow monitoring system, like the [Flume](https://flumewater.com/) device. This way the amount of water consumed by each zone is clearly separated zone by zone. The goal is to calculate the water consumption zone by zone, but also to detect when a zone pipe, or a valve, is broken: alert when the flow is anormally high, of when the water does not flow.
+
+(The integration with Flume is a work-in-progress. This time synchronization makes it easier to visually reconcile zone activations from the event log with the water consumption as reported by the Flume application.)
+
 ## Panel
 
 The web interface includes a Panel page (/sprinkler/panel.html) that has no menu and only shows the current sprinkler zones, each as one big button to turn the device on and off. This page is meant for a phone screen, typically a shortcut on the phone's home screen. (Because HousePortal redirects the URL, it is recommended to turn the phone in airplane mode when creating the shortcut from the web browser.)
