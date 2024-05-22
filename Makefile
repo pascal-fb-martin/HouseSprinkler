@@ -71,6 +71,7 @@ install-app:
 	chown root:root $(SHARE)/public/sprinkler/*
 	chmod 644 $(SHARE)/public/sprinkler/*
 	rm -f $(SHARE)/public/sprinkler/valves.html
+	if [ -e /etc/house/sprinklerbkp.json ] ; then if grep -q useindex /etc/house/sprinklerbkp.json ; then echo yes > /dev/null ; else rm -f /tmp/sprinklerbkp.json ; sed -e 's/}/, "useindex":1}/' < /etc/house/sprinklerbkp.json > /tmp/sprinklerbkp.json ; mv /tmp/sprinklerbkp.json /etc/house/sprinklerbkp.json ; fi ; fi
 
 uninstall-app:
 	rm -rf $(SHARE)/public/sprinkler
