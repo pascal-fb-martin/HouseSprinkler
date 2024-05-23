@@ -57,6 +57,9 @@ function saveConfig () {
 
        for (var i = 0; i < editing.zones.length; i++) {
           var prefix = 'zone_'+i+'_';
+          if (!form.zones[prefix+'name']) continue;
+          if (form.zones[prefix+'name'].value.length == 0) continue;
+
           newconfig.zones[i] = new Object();
           newconfig.zones[i].name = form.zones[prefix+'name'].value;
           if (form.zones[prefix+'feed'].value) {
@@ -79,6 +82,9 @@ function saveConfig () {
 
        for (var i = 0; i < editing.feeds.length; i++) {
           var prefix = 'feed_'+i+'_';
+          if (!form.feeds[prefix+'name']) continue;
+          if (form.feeds[prefix+'name'].value.length == 0) continue;
+
           newconfig.feeds[i] = new Object();
           newconfig.feeds[i].name = form.feeds[prefix+'name'].value;
           if (form.feeds[prefix+'next'].value) {
@@ -98,6 +104,9 @@ function saveConfig () {
 
        for (var i = 0; i < editing.programs.length; i++) {
           var prefix = 'program_'+i+'_';
+          if (!form.program[prefix+'name']) continue;
+          if (form.program[prefix+'name'].value.length == 0) continue;
+
           newconfig.programs[i] = new Object();
           newconfig.programs[i].name = form.program[prefix+'name'].value;
           if (form.program[prefix+'season'].value)
@@ -126,6 +135,9 @@ function saveConfig () {
 
        for (var i = 0; i < editing.schedules.length; i++) {
           var prefix = 'schedule_'+i+'_';
+          if (!form.schedule[prefix+'program']) continue;
+          if (form.schedule[prefix+'program'].value.length == 0) continue;
+
           newconfig.schedules[i] = new Object();
           newconfig.schedules[i].disabled = (form.schedule[prefix+'enabled'].checked == false);
           newconfig.schedules[i].program = form.schedule[prefix+'program'].value;
@@ -147,6 +159,7 @@ function saveConfig () {
        for (var i = 0; i < editing.seasons.length; i++) {
           var prefix = 'seasonmonthly_'+i+'_';
           if (!form.seasonmonthly[prefix+'name']) continue;
+          if (form.seasonmonthly[prefix+'name'].value.length == 0) continue;
 
           newconfig.seasons[i] = new Object();
           newconfig.seasons[i].name = form.seasonmonthly[prefix+'name'].value;
