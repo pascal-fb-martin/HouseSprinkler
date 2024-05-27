@@ -15,7 +15,7 @@ The block on the left (which appears on most pages) provides an overview of the 
 * The current duration of the rain delay, or NONE if there is no pending rain delay.
 * The value (and origin) of the current watering index.
 
-The buttons on the right side are mostly self-explanatory. The Refresh button forces a rediscovery of the control and water index services. This is mostly used when one of these services was started (or restarted) and one does not want to wait for the periodic discovery. Disabling the Index mechanism actually disables all of them, including the season index (see later for the description of seaseason index).
+The buttons on the right side are mostly self-explanatory. The Refresh button forces a rediscovery of the control and water index services. This is mostly used when one of these services was started (or restarted) and one does not want to wait for the periodic discovery. Disabling the index mechanism actually disables both the online and season index (see later for the description of season index).
 
 The Zones page allow manual control of individual zones, bypassing programs:
 
@@ -55,5 +55,5 @@ A schedule combines the capability of a weekly or daily schedule. A weekly sched
 
 The list of seasons provide a local mean to configure watering indexes. One may define multiple seasons to handle various ground coverage situations (for example an area under the shadow of trees may be less sensitive than an area exposed to the sun).
 
-If the season index for one month is 0, then a program that references this season is disabled for this month, even if a live index is available. Otherwise, a season index is only used if no live index service is available. If the index mechanism is disabled, then both the live and season indexes are disabled and all programs run at 100%.
+If the season index for one month is 0, then a program that references this season is disabled for this month, even if an online index is available. Otherwise, a season index is only used if no online index is available. If the index mechanism is disabled, then both the online and season indexes are disabled and all programs run at 100%.
 
