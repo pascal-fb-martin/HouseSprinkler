@@ -55,3 +55,5 @@ A schedule combines the capability of a weekly or daily schedule. A weekly sched
 
 The list of seasons provide a local mean to configure watering indexes. One may define multiple seasons to handle various ground coverage situations (for example an area under the shadow of trees may be less sensitive than an area exposed to the sun).
 
+If the season index for one month is 0, then a program that references this season is disabled for this month, even if a live index is available. Otherwise, a season index is only used if no live index service is available. If the index mechanism is disabled, then both the live and season indexes are disabled and all programs run at 100%.
+
