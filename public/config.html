@@ -10,8 +10,10 @@ var editing = null;
 var ShownZoneCount = 0;
 var ShownFeedCount = 0;
 var ShownProgramCount = 0;
-var ShownWeeklyCount = 0;
+var ShownScheduleCount = 0;
 var ShownSeasonCount = 0;
+
+var ScheduleDictionary = new Array();
 
 var gui = new Object();
 
@@ -52,6 +54,12 @@ function getZones() {
         count += 1;
     }
     return result;
+}
+
+function uuidv4() {
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+    (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+  );
 }
 
 function saveConfig () {
@@ -148,7 +156,7 @@ function saveConfig () {
        newconfig.schedules = new Array();
 
        var count = 0;
-       for (var i = 0; i < ShownWeeklyCount; i++) {
+       for (var i = 0; i < ShownScheduleCount; i++) {
           var prefix = 'schedule_'+i+'_';
           if (!form.schedule[prefix+'program']) continue;
           if (form.schedule[prefix+'program'].value.length == 0) continue;
@@ -157,14 +165,22 @@ function saveConfig () {
           newconfig.schedules[count].disabled = (form.schedule[prefix+'enabled'].checked == false);
           newconfig.schedules[count].program = form.schedule[prefix+'program'].value;
           newconfig.schedules[count].start = form.schedule[prefix+'start'].value;
-          if (form.schedule[prefix+'date'].value)
-             newconfig.schedules[count].date = form.schedule[prefix+'date'].value;
-          newconfig.schedules[count].repeat = 'weekly';
+          if (form.schedule[prefix+'interval']) {
+              if (form.schedule[prefix+'interval'].value.length > 0) {
+                  newconfig.schedules[count].interval = parseInt (form.schedule[prefix+'interval'].value);
+              }
+          }
+          if (form.schedule[prefix+'begin'].value)
+             newconfig.schedules[count].begin = form.schedule[prefix+'begin'].value;
+          if (form.schedule[prefix+'end'].value)
+             newconfig.schedules[count].end = form.schedule[prefix+'end'].value;
+
           newconfig.schedules[count].days = new Array();
           for (var j = 0; j < 7; j++) {
              newconfig.schedules[count].days[j] =
                 form.schedule[prefix+'days_'+j].checked;
           }
+          newconfig.schedules[count].id = ScheduleDictionary[i];
           count += 1;
        }
     }
@@ -390,7 +406,10 @@ function showOneSchedule (schedules, i, elements, count) {
       showCheckboxColumn (outer, prefix+'enabled', (schedule.disabled == false));
       showTextInputColumn (outer, prefix+'program', schedule.program, 'Program name');
       showTextInputColumn (outer, prefix+'start', schedule.start, 'hh:mm (24)', 10);
-      showTextInputColumn (outer, prefix+'date', schedule.date, 'yyyymmdd', 8);
+      showTextInputColumn (outer, prefix+'interval', schedule.interval, 'days', 3);
+      showTextInputColumn (outer, prefix+'begin', schedule.begin, 'yyyymmdd', 8);
+      showTextInputColumn (outer, prefix+'end', schedule.end, 'yyyymmdd', 8);
+
       for (var d = 0; d < WeekDays.length; d++) {
           showCheckboxColumn (outer, prefix+'days_'+d, schedule.days[d]);
       }
@@ -412,8 +431,9 @@ function addSchedule () {
    editing.schedules[i].interval = 1;
 
    var elements = document.getElementsByName('scheduletable');
-   showOneSchedule (editing.schedules, i, elements, ShownWeeklyCount);
-   ShownWeeklyCount += 1;
+   ScheduleDictionary[ShownScheduleCount] = uuidv4();
+   showOneSchedule (editing.schedules, i, elements, ShownScheduleCount);
+   ShownScheduleCount += 1;
    forceVisible('configschedule');
 }
 
@@ -672,14 +692,19 @@ function showExistingSchedules (schedules) {
    var elements = document.getElementsByName('scheduletable');
 
    resetSection (elements);
-   ShownWeeklyCount = 0;
+   ShownScheduleCount = 0;
 
-   showTitle (elements, ["ENABLED", "PROGRAM", "TIME", "FIRST DAY"].concat(WeekDays));
+   showTitle (elements, ["ENABLED", "PROGRAM", "TIME", "INTERVAL", "BEGIN", "END"].concat(WeekDays));
    if (!schedules) return;
    for (var i = 0; i < schedules.length; i++) {
       if (schedules[i]) {
-          showOneSchedule (schedules, i, elements, ShownWeeklyCount);
-          ShownWeeklyCount += 1;
+          if (schedules[i].id) {
+              ScheduleDictionary[ShownScheduleCount] = schedules[i].id;
+          } else {
+              ScheduleDictionary[ShownScheduleCount] = uuidv4(); // Upgrade.
+          }
+          showOneSchedule (schedules, i, elements, ShownScheduleCount);
+          ShownScheduleCount += 1;
       }
    }
 }
@@ -762,7 +787,7 @@ window.onload = function() {
    </form>
    <table width="100%"><tr>
    <td width="10%"><button class="addbutton" onclick="addSchedule()">Add</button></td>
-   <td width="90%"><button class="configbuttonwithadd" onclick="visible('configschedule')">Weekly Schedules</button></td>
+   <td width="90%"><button class="configbuttonwithadd" onclick="visible('configschedule')">Schedules</button></td>
    </tr></table>
    <form name="schedule">
    <div name="configschedule" class="hidable" display="none">

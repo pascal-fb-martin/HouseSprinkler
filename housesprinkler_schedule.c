@@ -57,6 +57,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <uuid/uuid.h>
 
 #include <echttp.h>
 #include <echttp_json.h>
@@ -74,15 +75,15 @@
 static int SprinklerOn = 1;
 
 typedef struct {
+    uuid_t id;
     const char *program;
-    char enabled;
+    char disabled;
     time_t begin;
     time_t until;
     struct {
         short hour;
         short minute;
     } start;
-    char repeat;
     char days[7];
     char interval;
     time_t lastlaunch;
@@ -138,8 +139,11 @@ void housesprinkler_schedule_refresh (void) {
     char path[128];
     const char *programname = ".program";
 
+    // Keep the old schedule set on the side, to recover some live data.
+    SprinklerSchedule *oldschedules = Schedules;
+    int oldschedulescount = SchedulesCount;
+
     // Recalculate all watering schedules.
-    if (Schedules) free (Schedules);
     Schedules = 0;
     SchedulesCount = 0;
     content = housesprinkler_config_array (0, ".schedules");
@@ -170,33 +174,34 @@ void housesprinkler_schedule_refresh (void) {
             continue;
         }
 
-        Schedules[i].repeat = SPRINKLER_REPEAT_ONCE;
-        const char *s = housesprinkler_config_string (schedule, ".repeat");
-        if (s) {
-            if (strcmp(s, "weekly") == 0) {
+        // Retrieve the schedule's ID. If none can be recovered, just
+        // generate a new ID so that there is always one.
+        //
+        const char *id = housesprinkler_config_string (schedule, ".id");
+        if (id) {
+            if (uuid_parse (id, Schedules[i].id)) {
+                uuid_generate_random (Schedules[i].id);
+            }
+        } else {
+            uuid_generate_random (Schedules[i].id);
+        }
 
-                Schedules[i].repeat = SPRINKLER_REPEAT_WEEKLY;
-                int days = housesprinkler_config_array (schedule, ".days");
-                j = 0;
-                if (days > 0) {
-                    int daylist[8];
-                    int daycount = housesprinkler_config_enumerate (days, daylist);
-                    for (j = 0; j < daycount; ++j) {
-                        Schedules[i].days[j] =
-                            housesprinkler_config_boolean (daylist[j], "");
-                    }
-                }
-                for (; j < 8; ++j) Schedules[i].days[j] = 0;
-
-            } else if (strcmp(s, "daily") == 0) {
-
-                Schedules[i].repeat = SPRINKLER_REPEAT_DAILY;
-                Schedules[i].interval = housesprinkler_config_integer (schedule, ".interval");
+        int days = housesprinkler_config_array (schedule, ".days");
+        j = 0;
+        if (days > 0) {
+            int daylist[8];
+            int daycount = housesprinkler_config_enumerate (days, daylist);
+            for (j = 0; j < daycount; ++j) {
+                Schedules[i].days[j] =
+                    housesprinkler_config_boolean (daylist[j], "");
             }
         }
+        for (; j < 8; ++j) Schedules[i].days[j] = 0;
+
+        Schedules[i].interval = housesprinkler_config_integer (schedule, ".interval");
         Schedules[i].begin = housesprinkler_schedule_time (schedule, ".begin");
         Schedules[i].until = housesprinkler_schedule_time (schedule, ".until");
-        s = housesprinkler_config_string (schedule, ".start");
+        const char *s = housesprinkler_config_string (schedule, ".start");
         if (s) {
             Schedules[i].start.hour = atoi(s);
             const char *m = strchr (s, ':');
@@ -205,14 +210,30 @@ void housesprinkler_schedule_refresh (void) {
             Schedules[i].start.hour = -1; // Will never start, basically.
         }
         Schedules[i].lastlaunch = 0;
-        Schedules[i].enabled =
-            housesprinkler_config_boolean (schedule, ".disabled")?0:1;
+        Schedules[i].disabled =
+            housesprinkler_config_boolean (schedule, ".disabled");
         DEBUG ("\tSchedule program %s at %02d:%02d\n",
                Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute);
     }
 
     SprinklerOn = housesprinkler_config_backup_get (".on");
     RainDelay = (time_t)housesprinkler_config_backup_get (".raindelay");
+
+    // Last step: recover the last launch time of already existing schedules.
+    //
+    if (!oldschedules) return; // Nothing to recover or free.
+
+    for (i = 0; i < oldschedulescount; ++i) {
+        if (oldschedules[i].disabled) continue; // Nothing to recover.
+        for (j = 0; j < SchedulesCount; ++j) {
+            if (uuid_compare (oldschedules[i].id, Schedules[j].id)) continue;
+
+            Schedules[j].lastlaunch = oldschedules[i].lastlaunch;
+
+            DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from %d (%s at %02d:%02d)\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, i, oldschedules[i].program, oldschedules[i].start.hour, oldschedules[i].start.minute);
+        }
+    }
+    free (oldschedules);
 }
 
 void housesprinkler_schedule_switch (void) {
@@ -287,8 +308,8 @@ void housesprinkler_schedule_periodic (time_t now) {
 
             DEBUG ("== Checking schedule for program %s\n", schedule->program);
 
-            if (!schedule->enabled) continue;
-            DEBUG ("== schedule for program %s is enabled\n", schedule->program);
+            if (schedule->disabled) continue;
+            DEBUG ("== program %s is enabled\n", schedule->program);
 
             if (housesprinkler_program_running(schedule->program)) continue;
 
@@ -296,6 +317,7 @@ void housesprinkler_schedule_periodic (time_t now) {
 
             // Start only at the time specified.
             //
+            DEBUG ("== Program %s: must start at %02d:%02d\n", schedule->program, schedule->start.hour, schedule->start.minute);
             if (local.tm_hour != schedule->start.hour
                 || local.tm_min != schedule->start.minute) continue;
 
@@ -308,29 +330,18 @@ void housesprinkler_schedule_periodic (time_t now) {
 
             DEBUG ("== Program %s: schedule is active\n", schedule->program);
 
-            // Start only on the days specified, or at the daily interval
-            // specified.
+            // Start only on the days specified.
             //
-            int delta;
-            int match = 0;
-            switch (schedule->repeat) {
-                case SPRINKLER_REPEAT_WEEKLY:
-                    match = schedule->days[local.tm_wday];
-                    break;
-                case SPRINKLER_REPEAT_DAILY:
-                    match = (((now - schedule->lastlaunch) / 86400) >= schedule->interval);
-                    break;
-                case SPRINKLER_REPEAT_ONCE:
-                    delta = schedule->begin - now;
-                    match = (schedule->lastlaunch == 0 && delta > 0 && delta < 60);
-                    break;
-                default:
-                    match = 0;
+            if (!schedule->days[local.tm_wday]) continue;
+
+            DEBUG ("== Program %s: schedule is for this day\n", schedule->program);
+
+            // Start only after the specified day interval has passed.
+            //
+            if (schedule->interval > 1) {
+                if (((now - schedule->lastlaunch + 3) / 86400) < schedule->interval) continue;
             }
-            if (!match) {
-                DEBUG ("== Program %s is not active this day\n", schedule->program);
-                continue;
-            }
+            DEBUG ("== Program %s: interval  %d has passed\n", schedule->program, schedule->interval);
 
             DEBUG ("== Program %s activated\n", schedule->program);
             housesprinkler_program_start_scheduled (schedule->program);

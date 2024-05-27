@@ -15,7 +15,7 @@ The block on the left (which appears on most pages) provides an overview of the 
 * The current duration of the rain delay, or NONE if there is no pending rain delay.
 * The value (and origin) of the current watering index.
 
-The buttons on the right side are rather self-explanatory. The Refresh button forces a rediscovery of the control and water index services. This is mostly used when one of these services was started (or restarted) and one does not want to wait for the periodic discovery.
+The buttons on the right side are mostly self-explanatory. The Refresh button forces a rediscovery of the control and water index services. This is mostly used when one of these services was started (or restarted) and one does not want to wait for the periodic discovery. Disabling the Index mechanism actually disables all of them, including the season index (see later for the description of seaseason index).
 
 The Zones page allow manual control of individual zones, bypassing programs:
 
@@ -50,6 +50,8 @@ It is possible to create feed chains that merge, for example a first chain lists
 The list of programs define which zones are activated, and for how long, for each program. A program may also reference a season, which provide a local, static, monthly watering index. Seasons can be used when no online watering index is available.
 
 The list of schedules define when to activate a specific program. The same program may be activated at various times per week or day, but no activation can take place while the same program is active. Two different programs can be activated simultaneously: the application will silently combine them.
+
+A schedule combines the capability of a weekly or daily schedule. A weekly schedule defines which days of the week the program shall be run. A daily schedule defines how many days beween two runs of the program (like every other day or ever 5 days). Here, the two modes can be defined in combination. A weekly schedule will normally have a blank interval. A daily schedule normally have all days of the week selected, but it is possible to exclude days of the week. For example, a daily schedule might be setup to run the program every 3 days, but not on a Saturday; if the activation falls on a Saturday, excluding this day will cause the program to be run on Sunday (the next selected day). The Begin and End dates make it possible to enable the schedule for a time period only; it is valid to specify only one date and leave the other blank.
 
 The list of seasons provide a local mean to configure watering indexes. One may define multiple seasons to handle various ground coverage situations (for example an area under the shadow of trees may be less sensitive than an area exposed to the sun).
 
