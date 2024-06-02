@@ -59,11 +59,6 @@
 
 #define DEBUG if (sprinkler_isdebug()) printf
 
-#define MAX_PROVIDER 64
-
-static char *Providers[MAX_PROVIDER];
-static int   ProvidersCount = 0;
-
 typedef struct {
     const char *name;
     const char *next;
