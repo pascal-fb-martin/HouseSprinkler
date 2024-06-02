@@ -89,9 +89,8 @@
 
 #define DEBUG if (sprinkler_isdebug()) printf
 
-#define CONFIGMAXSIZE 1024
-
-static ParserToken ConfigParsed[CONFIGMAXSIZE];
+static ParserToken *ConfigParsed = 0;
+static int   ConfigTokenAllocated = 0;
 static int   ConfigTokenCount = 0;
 static char *ConfigText = 0;
 static int   ConfigTextSize = 0;
@@ -114,6 +113,19 @@ static const char *BackupFile = "/etc/house/sprinklerbkp.json";
 static const char FactoryBackupFile[] =
                       "/usr/local/share/house/public/sprinkler/backup.json";
 
+
+static const char *housesprinkler_config_parse (char *text) {
+    int count = echttp_json_estimate(text);
+    if (count > ConfigTokenAllocated) {
+        if (ConfigParsed) free (ConfigParsed);
+        ConfigTokenAllocated = count;
+        ConfigParsed = calloc (ConfigTokenAllocated, sizeof(ParserToken));
+    }
+    ConfigTokenCount = ConfigTokenAllocated;
+    const char *error = echttp_json_parse (text, ConfigParsed, &ConfigTokenCount);
+    DEBUG ("Planned config for %d JSON tokens, got %d\n", ConfigTokenAllocated, ConfigTokenCount);
+    return error;
+}
 
 const char *housesprinkler_config_load (int argc, const char **argv) {
 
@@ -171,8 +183,7 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
     ConfigText = newconfig;
     ConfigTextLength = strlen(ConfigText);
 
-    ConfigTokenCount = CONFIGMAXSIZE;
-    return echttp_json_parse (ConfigText, ConfigParsed, &ConfigTokenCount);
+    return housesprinkler_config_parse (ConfigText);
 }
 
 const char *housesprinkler_config_save (const char *text) {
@@ -193,8 +204,7 @@ const char *housesprinkler_config_save (const char *text) {
 
     newconfig = echttp_parser_string(text);
 
-    ConfigTokenCount = CONFIGMAXSIZE;
-    error = echttp_json_parse (newconfig, ConfigParsed, &ConfigTokenCount);
+    error = housesprinkler_config_parse (newconfig);
     if (error) {
         houselog_trace (HOUSE_FAILURE, "CONFIG",
                         "JSON error %s on %-0.60s", error, text);
