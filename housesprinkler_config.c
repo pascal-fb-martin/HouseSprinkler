@@ -102,9 +102,8 @@ static const char FactoryDefaultsConfigFile[] =
                       "/usr/local/share/house/public/sprinkler/defaults.json";
 static int UseFactoryDefaults = 0;
 
-#define BACKUPMAXSIZE 32
-
-static ParserToken BackupParsed[BACKUPMAXSIZE];
+static ParserToken *BackupParsed = 0;
+static int   BackupTokenAllocated = 0;
 static int   BackupTokenCount = 0;
 static char *BackupText = 0;
 
@@ -154,12 +153,22 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
                         "FILE %s", BackupFile);
     }
     if (newconfig) {
+        const char *error;
         BackupText = newconfig;
-        BackupTokenCount = BACKUPMAXSIZE;
-        if (echttp_json_parse (BackupText, BackupParsed, &BackupTokenCount)) {
+        BackupTokenCount = echttp_json_estimate(BackupText);
+        if (BackupTokenCount > BackupTokenAllocated) {
+            BackupTokenAllocated = BackupTokenCount+64;
+            if (BackupParsed) free (BackupParsed);
+            BackupParsed = calloc (BackupTokenAllocated, sizeof(ParserToken));
+        }
+        error = echttp_json_parse (BackupText, BackupParsed, &BackupTokenCount);
+        if (error) {
+            DEBUG ("Backup config parsing error: %s\n", error);
             echttp_parser_free (BackupText);
             BackupText = 0;
             BackupTokenCount = 0;
+        } else {
+            DEBUG ("Planned %d, read %d items of backup config\n", BackupTokenAllocated, BackupTokenCount);
         }
     }
 
@@ -317,15 +326,26 @@ void housesprinkler_config_backup_set (const char *path, long value) {
     char buffer[1024];
     int i = echttp_json_search(BackupParsed, path);
 
-    if (i < 0) return;
+    if (i < 0) {
+        DEBUG ("Item %s not found\n", path);
+        return;
+    }
     BackupParsed[i].value.integer = value;
 
     if (echttp_json_format (BackupParsed, BackupTokenCount,
                             buffer, sizeof(buffer), 0)) return;
 
     int fd = open (BackupFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
-    if (fd < 0) return;
-    write (fd, buffer, strlen(buffer));
+    if (fd < 0) {
+        DEBUG ("Cannot open %s\n", BackupFile);
+        return;
+    }
+    int written = write (fd, buffer, strlen(buffer));
+    if (written < 0) {
+        DEBUG ("Cannot write to %s\n", BackupFile);
+    } else {
+        DEBUG ("Wrote %d characters to %s\n", written, BackupFile);
+    }
     close(fd);
 }
 
