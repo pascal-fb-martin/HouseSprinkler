@@ -89,10 +89,6 @@ typedef struct {
     time_t lastlaunch;
 } SprinklerSchedule;
 
-#define SPRINKLER_REPEAT_ONCE      0
-#define SPRINKLER_REPEAT_DAILY     1
-#define SPRINKLER_REPEAT_WEEKLY    2
-
 static SprinklerSchedule *Schedules = 0;
 static int SchedulesCount = 0;
 

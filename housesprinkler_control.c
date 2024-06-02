@@ -92,10 +92,9 @@
 
 #define DEBUG if (sprinkler_isdebug()) printf
 
-#define MAX_PROVIDER 64
-
-static char *Providers[MAX_PROVIDER];
+static char **Providers = 0;
 static int   ProvidersCount = 0;
+static int   ProvidersAllocated = 0;
 
 typedef struct {
     const char *name;
@@ -335,6 +334,10 @@ static void housesprinkler_control_scan_server
 
     char url[256];
 
+    if (ProvidersCount >= ProvidersAllocated) {
+        ProvidersAllocated += 64;
+        Providers = realloc (Providers, ProvidersAllocated*(sizeof(char *)));
+    }
     Providers[ProvidersCount++] = strdup(provider); // Keep the string.
 
     snprintf (url, sizeof(url), "%s/status", provider);

@@ -71,17 +71,17 @@
 
 #define DEBUG if (sprinkler_isdebug()) printf
 
-#define SPRINKLER_MAX_ZONES 256
+typedef struct {
+    const char *name;
+    int runtime;
+} SprinklerProgramZone;
 
 typedef struct {
     const char *name;
     const char *season;
     char running;
     short count;
-    struct {
-        const char *name;
-        int runtime;
-    } zones[SPRINKLER_MAX_ZONES];
+    SprinklerProgramZone *zones;
 } SprinklerProgram;
 
 static SprinklerProgram *Programs = 0;
@@ -96,14 +96,19 @@ static int         WateringIndexTimestamp = 0;
 
 void housesprinkler_program_refresh (void) {
 
-    int i, j;
+    int i;
     short count;
     int content;
     char path[128];
 
     // Reload all watering programs.
     //
-    if (Programs) free (Programs);
+    if (Programs) {
+        for (i = 0; i < ProgramsCount; ++i) {
+            if (Programs[i].zones) free(Programs[i].zones);
+        }
+        free (Programs);
+    }
     Programs = 0;
     ProgramsCount = 0;
     content = housesprinkler_config_array (0, ".programs");
@@ -116,6 +121,12 @@ void housesprinkler_program_refresh (void) {
     }
 
     for (i = 0; i < ProgramsCount; ++i) {
+        Programs[i].name = 0;
+        Programs[i].zones = 0;
+        Programs[i].count = 0;
+        Programs[i].season = 0;
+        Programs[i].running = 0;
+
         snprintf (path, sizeof(path), "[%d]", i);
         int program = housesprinkler_config_object (content, path);
         if (program > 0) {
@@ -124,28 +135,22 @@ void housesprinkler_program_refresh (void) {
 
             Programs[i].season = housesprinkler_config_string (program, ".season");
             int zones = housesprinkler_config_array (program, ".zones");
-            count = 0;
-            if (zones <= 0) {
-                Programs[i].count = 0;
-                continue;
-            }
+            if (zones <= 0) continue;
+
             count = housesprinkler_config_array_length (zones);
-            if (count > SPRINKLER_MAX_ZONES) {
-                houselog_event ("PROGRAM", Programs[i].name, "TRUNCATED",
-                                "TOO MANY ZONES (%d), USE ONLY THE FIRST %d",
-                                count, SPRINKLER_MAX_ZONES);
-                count = SPRINKLER_MAX_ZONES;
-            }
-            for (j = 0; j < count; ++j) {
-                snprintf (path, sizeof(path), "[%d]", j);
-                int zone = housesprinkler_config_object (zones, path);
-                Programs[i].zones[j].name =
-                    housesprinkler_config_string (zone, ".name");
-                Programs[i].zones[j].runtime =
-                    housesprinkler_config_integer (zone, ".time");
+            if (count > 0) {
+                int j;
+                Programs[i].zones = calloc (count, sizeof(SprinklerProgramZone));
+                for (j = 0; j < count; ++j) {
+                    snprintf (path, sizeof(path), "[%d]", j);
+                    int zone = housesprinkler_config_object (zones, path);
+                    Programs[i].zones[j].name =
+                        housesprinkler_config_string (zone, ".name");
+                    Programs[i].zones[j].runtime =
+                        housesprinkler_config_integer (zone, ".time");
+                }
             }
             Programs[i].count = count;
-            Programs[i].running = 0;
             DEBUG ("\tProgram %s (%d zones)\n", Programs[i].name, count);
         }
     }
