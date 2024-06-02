@@ -46,7 +46,7 @@
 #include "housesprinkler_config.h"
 #include "housesprinkler_season.h"
 
-#define DEBUG if (echttp_isdebug()) printf
+#define DEBUG if (sprinkler_isdebug()) printf
 
 typedef struct {
     const char *name;

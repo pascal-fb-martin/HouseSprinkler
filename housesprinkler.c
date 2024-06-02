@@ -51,24 +51,7 @@
 static int use_houseportal = 0;
 static char hostname[128];
 
-static void hs_help (const char *argv0) {
-
-    int i = 1;
-    const char *help;
-
-    printf ("%s [-h] [-debug] [-test]%s\n", argv0, echttp_help(0));
-
-    printf ("\nGeneral options:\n");
-    printf ("   -h:              print this help.\n");
-
-    printf ("\nHTTP options:\n");
-    help = echttp_help(i=1);
-    while (help) {
-        printf ("   %s\n", help);
-        help = echttp_help(++i);
-    }
-    exit (0);
-}
+static int SprinklerDebug = 0;
 
 static void sprinkler_reset (void) {
     housesprinkler_control_periodic (0);
@@ -267,6 +250,10 @@ static void sprinkler_protect (const char *method, const char *uri) {
     }
 }
 
+int sprinkler_isdebug (void) {
+    return SprinklerDebug;
+}
+
 int main (int argc, const char **argv) {
 
     // These strange statements are to make sure that fds 0 to 2 are
@@ -284,6 +271,10 @@ int main (int argc, const char **argv) {
     if (echttp_dynamic_port()) {
         houseportal_initialize (argc, argv);
         use_houseportal = 1;
+    }
+    int i;
+    for (i = 0; i < argc; ++i) {
+        if (echttp_option_present ("-debug", argv[i])) SprinklerDebug = 1;
     }
     houselog_initialize ("sprinkler", argc, argv);
 

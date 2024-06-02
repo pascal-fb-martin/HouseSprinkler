@@ -30,3 +30,5 @@
 
 #include "echttp.h"
 
+int sprinkler_isdebug (void);
+

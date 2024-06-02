@@ -48,7 +48,7 @@
 #include "housesprinkler.h"
 #include "housesprinkler_time.h"
 
-#define DEBUG if (echttp_isdebug()) printf
+#define DEBUG if (sprinkler_isdebug()) printf
 
 
 static const char *housesprinkler_time_print (int h, const char *hlabel,

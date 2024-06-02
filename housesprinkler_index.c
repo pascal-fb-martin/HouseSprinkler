@@ -79,7 +79,7 @@
 #include "housesprinkler_index.h"
 #include "housesprinkler_config.h"
 
-#define DEBUG if (echttp_isdebug()) printf
+#define DEBUG if (sprinkler_isdebug()) printf
 
 #define ONEDAY       86400
 #define DEFAULTINDEX   100
@@ -238,7 +238,7 @@ static void housesprinkler_index_query
         return;
     }
 
-    echttp_submit (0, 0, housesprinkler_index_response, (void *)url);
+    echttp_submit (0, 0, housesprinkler_index_response, (void *)service);
 }
 
 void housesprinkler_index_periodic (time_t now) {

@@ -70,7 +70,7 @@
 #include "housesprinkler_program.h"
 #include "housesprinkler_schedule.h"
 
-#define DEBUG if (echttp_isdebug()) printf
+#define DEBUG if (sprinkler_isdebug()) printf
 
 static int SprinklerOn = 1;
 
@@ -285,9 +285,9 @@ void housesprinkler_schedule_periodic (time_t now) {
     static char lasthour = -1;
     static char lastminute = -1;
 
-    int i;
-    struct tm local = *localtime(&now);
+    if (!SprinklerOn) return;
 
+    struct tm local = *localtime(&now);
     if (local.tm_hour == lasthour && local.tm_min == lastminute) return;
     lasthour = local.tm_hour;
     lastminute = local.tm_min;
@@ -297,56 +297,56 @@ void housesprinkler_schedule_periodic (time_t now) {
         housesprinkler_config_backup_set (".raindelay", 0);
         houselog_event ("SYSTEM", "RAIN DELAY", "EXPIRED", "");
     }
+    if (RainDelay > 0) return;
 
-    if (SprinklerOn && (RainDelay <= 0)) {
+    DEBUG ("== Checking schedule at %02d:%02d\n", local.tm_hour, local.tm_min);
 
-        DEBUG ("== Checking schedule at %02d:%02d\n", local.tm_hour, local.tm_min);
+    int i;
 
-        for (i = 0; i < SchedulesCount; ++i) {
+    for (i = 0; i < SchedulesCount; ++i) {
 
-            SprinklerSchedule *schedule = Schedules + i;
+        SprinklerSchedule *schedule = Schedules + i;
 
-            DEBUG ("== Checking schedule for program %s\n", schedule->program);
+        DEBUG ("== Checking schedule for program %s\n", schedule->program);
 
-            if (schedule->disabled) continue;
-            DEBUG ("== program %s is enabled\n", schedule->program);
+        if (schedule->disabled) continue;
+        DEBUG ("== program %s is enabled\n", schedule->program);
 
-            if (housesprinkler_program_running(schedule->program)) continue;
+        if (housesprinkler_program_running(schedule->program)) continue;
 
-            DEBUG ("== Program %s is not running\n", schedule->program);
+        DEBUG ("== Program %s is not running\n", schedule->program);
 
-            // Start only at the time specified.
-            //
-            DEBUG ("== Program %s: must start at %02d:%02d\n", schedule->program, schedule->start.hour, schedule->start.minute);
-            if (local.tm_hour != schedule->start.hour
-                || local.tm_min != schedule->start.minute) continue;
+        // Start only at the time specified.
+        //
+        DEBUG ("== Program %s: must start at %02d:%02d\n", schedule->program, schedule->start.hour, schedule->start.minute);
+        if (local.tm_hour != schedule->start.hour
+            || local.tm_min != schedule->start.minute) continue;
 
-            DEBUG ("== Program %s: time of day matches\n", schedule->program);
+        DEBUG ("== Program %s: time of day matches\n", schedule->program);
 
-            // Start only if the schedule entry is active at that time.
-            //
-            if (schedule->begin > now) continue;
-            if (schedule->until > 0 && schedule->until < now) continue;
+        // Start only if the schedule entry is active at that time.
+        //
+        if (schedule->begin > now) continue;
+        if (schedule->until > 0 && schedule->until < now) continue;
 
-            DEBUG ("== Program %s: schedule is active\n", schedule->program);
+        DEBUG ("== Program %s: schedule is active\n", schedule->program);
 
-            // Start only on the days specified.
-            //
-            if (!schedule->days[local.tm_wday]) continue;
+        // Start only on the days specified.
+        //
+        if (!schedule->days[local.tm_wday]) continue;
 
-            DEBUG ("== Program %s: schedule is for this day\n", schedule->program);
+        DEBUG ("== Program %s: schedule is for this day\n", schedule->program);
 
-            // Start only after the specified day interval has passed.
-            //
-            if (schedule->interval > 1) {
-                if (((now - schedule->lastlaunch + 3) / 86400) < schedule->interval) continue;
-            }
-            DEBUG ("== Program %s: interval  %d has passed\n", schedule->program, schedule->interval);
-
-            DEBUG ("== Program %s activated\n", schedule->program);
-            housesprinkler_program_start_scheduled (schedule->program);
-            schedule->lastlaunch = now;
+        // Start only after the specified day interval has passed.
+        //
+        if (schedule->interval > 1) {
+            if (((now - schedule->lastlaunch + 3) / 86400) < schedule->interval) continue;
         }
+        DEBUG ("== Program %s: interval  %d has passed\n", schedule->program, schedule->interval);
+
+        DEBUG ("== Program %s activated\n", schedule->program);
+        housesprinkler_program_start_scheduled (schedule->program);
+        schedule->lastlaunch = now;
     }
 }
 

@@ -87,7 +87,7 @@
 #include "housesprinkler.h"
 #include "housesprinkler_config.h"
 
-#define DEBUG if (echttp_isdebug()) printf
+#define DEBUG if (sprinkler_isdebug()) printf
 
 #define CONFIGMAXSIZE 1024
 

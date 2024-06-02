@@ -90,7 +90,7 @@
 #include "housesprinkler_time.h"
 #include "housesprinkler_control.h"
 
-#define DEBUG if (echttp_isdebug()) printf
+#define DEBUG if (sprinkler_isdebug()) printf
 
 #define MAX_PROVIDER 64
 

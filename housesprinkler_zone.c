@@ -94,7 +94,7 @@
 #include "housesprinkler_config.h"
 #include "housesprinkler_control.h"
 
-#define DEBUG if (echttp_isdebug()) printf
+#define DEBUG if (sprinkler_isdebug()) printf
 
 #define MAX_PROVIDER 64
 
@@ -224,7 +224,7 @@ void housesprinkler_zone_activate (const char *name,
                 Queue[QueueNext].context[0] = 0;
             Queue[QueueNext].nexton = time(0);
             DEBUG ("Activated zone %s for %d seconds (%s, queue entry %d)\n",
-                   name, pulse, context?"auto":"manual", QueueNext);
+                   name, pulse, context?context:"manual", QueueNext);
             QueueNext += 1;
         }
     }
@@ -239,10 +239,18 @@ void housesprinkler_zone_stop (void) {
     houselog_event ("ZONE", "ALL", "STOP", "MANUAL");
     for (i = 0; i < QueueNext; ++i) {
         Queue[i].runtime = 0;
+        Queue[i].nexton = 0;
     }
     QueueNext = 0;
     ZonesBusy = 0;
     PulseEnd = 0;
+}
+
+static int housesprinkler_zone_elapsed (int queued) {
+    int zone = Queue[queued].zone;
+    int soaks = Queue[queued].runtime / Zones[zone].pulse;
+    if (Queue[queued].runtime % Zones[zone].pulse == 0) soaks -= 1;
+    return Queue[queued].runtime + (Zones[zone].pause * soaks);
 }
 
 static void housesprinkler_zone_schedule (time_t now) {
@@ -280,8 +288,8 @@ static void housesprinkler_zone_schedule (time_t now) {
     // to start, and the "oldest" to be so. This is done to maximize
     // the soak time, beyond the minimum as configured.
     // If there are multiple zones of the same "age", then the one with
-    // the longest runtime is selected: this is done to prioritize the
-    // longest running zones, especially when the program starts,
+    // the longest elapsed runtime is selected: this is done to prioritize
+    // the longest running zones, especially when the program starts,
     // because these long running zones are on the critical path and
     // define when the program will end.
     //
@@ -290,18 +298,29 @@ static void housesprinkler_zone_schedule (time_t now) {
     time_t nexttime = now + 1;
     for (i = 0; i < QueueNext; ++i) {
         if (Queue[i].runtime == 0) continue;
+        if (Queue[i].context[0]) {
+            // Activate a zone that is part of a program only at the start of
+            // the minute.
+            // The reason for doing so it to make it easier to calculate
+            // water usage: we can sample water flow sensor on a minute basis.
+            // We don't do this synchronization for manual controls.
+            // We accept to be late by one second, as this is the time
+            // precision used by the periodic mechanism anyway.
+            //
+            if (now % 60 > 1) continue;
+        }
         time_t nexton = Queue[i].nexton;
         if (nexton > 0) {
             if (nexton > nexttime) continue;
+            int elapsed = housesprinkler_zone_elapsed(i);
+            DEBUG ("queue %s has elapse time %d\n", Zones[Queue[i].zone].name, elapsed);
             if (nexton < nexttime) {
                 nextzone = i;
                 nexttime = nexton;
-                remaining = Queue[i].runtime;
-            } else {
-                if (Queue[i].runtime > remaining) {
-                    nextzone = i;
-                    remaining = Queue[i].runtime;
-                }
+                remaining = elapsed;
+            } else if (elapsed > remaining) {
+                nextzone = i;
+                remaining = elapsed;
             }
         }
     }
@@ -314,16 +333,6 @@ static void housesprinkler_zone_schedule (time_t now) {
             Queue[nextzone].runtime = 0;
             Queue[nextzone].nexton = now + pulse;
         } else {
-            // Activate a zone that is part of a program only at the start of
-            // the minute.
-            // The reason for doing so it to make it easier to calculate
-            // water usage: we can sample water flow sensor on a minute basis.
-            // We don't do this synchronization for manual controls.
-            // We accept to be late by one second, as this is the time
-            // precision used by the periodic mechanism anyway.
-            //
-            if (now % 60 > 1) return;
-
             if (pulse == 0 || Queue[nextzone].runtime <= pulse) {
                 pulse = Queue[nextzone].runtime;
                 Queue[nextzone].runtime = 0;
