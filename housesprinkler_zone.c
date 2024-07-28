@@ -99,6 +99,7 @@
 typedef struct {
     const char *name;
     const char *feed;
+    int hydrate;
     int pulse;
     int pause;
     char manual;
@@ -114,6 +115,7 @@ static SprinklerZone *ZoneActive = 0; // One zone active at a time.
 
 typedef struct {
     int zone;
+    int hydrate;
     int runtime;
     time_t nexton;
     char context[32];
@@ -155,13 +157,14 @@ void housesprinkler_zone_refresh (void) {
         if (zone > 0) {
             Zones[i].name = housesprinkler_config_string (zone, ".name");
             Zones[i].feed = housesprinkler_config_string (zone, ".feed");
+            Zones[i].hydrate = housesprinkler_config_integer (zone, ".hydrate");
             Zones[i].pulse = housesprinkler_config_integer (zone, ".pulse");
             Zones[i].pause = housesprinkler_config_integer (zone, ".pause");
             Zones[i].manual = housesprinkler_config_boolean (zone, ".manual");
             Zones[i].status = 'i';
             housesprinkler_control_declare (Zones[i].name, "ZONE");
-            DEBUG ("\tZone %s (pulse=%d, pause=%d, manual=%s)\n",
-                   Zones[i].name, Zones[i].pulse, Zones[i].pause,
+            DEBUG ("\tZone %s (hydrate=%d, pulse=%d, pause=%d, manual=%s)\n",
+                   Zones[i].name, Zones[i].hydrate, Zones[i].pulse, Zones[i].pause,
                    Zones[i].manual?"true":"false");
         }
     }
@@ -191,7 +194,7 @@ void housesprinkler_zone_activate (const char *name,
     int zone = housesprinkler_zone_search (name);
     if (zone >= 0) {
         int i;
-        time_t now = time(0);
+        time_t now = sprinkler_schedulingtime(time(0));
         if (Zones[zone].manual && context) {
             houselog_event ("ZONE", Zones[zone].name, "IGNORE", "MANUAL MODE ONLY");
             return;
@@ -204,20 +207,21 @@ void housesprinkler_zone_activate (const char *name,
                 // This zone was already queued. Add this pulse
                 // to the total remaining runtime.
                 Queue[i].runtime += pulse;
-                if (Queue[i].nexton == 0) Queue[i].nexton = time(0);
+                if (Queue[i].nexton == 0) Queue[i].nexton = now;
                 return;
             }
         }
         if (QueueNext < ZonesCount) {
             // This zone was not queued yet: create a new entry.
             Queue[QueueNext].zone = zone;
+            Queue[QueueNext].hydrate = Zones[zone].hydrate;
             Queue[QueueNext].runtime = pulse;
             if (context)
                 snprintf (Queue[QueueNext].context, sizeof(Queue[0].context),
                           "%s", context);
             else
                 Queue[QueueNext].context[0] = 0;
-            Queue[QueueNext].nexton = time(0);
+            Queue[QueueNext].nexton = now;
             DEBUG ("Activated zone %s for %d seconds (%s, queue entry %d)\n",
                    name, pulse, context?context:"manual", QueueNext);
             QueueNext += 1;
@@ -233,6 +237,7 @@ void housesprinkler_zone_stop (void) {
     DEBUG ("%ld: Stop all zones\n", now);
     houselog_event ("ZONE", "ALL", "STOP", "MANUAL");
     for (i = 0; i < QueueNext; ++i) {
+        Queue[i].hydrate = 0;
         Queue[i].runtime = 0;
         Queue[i].nexton = 0;
     }
@@ -322,12 +327,25 @@ static void housesprinkler_zone_schedule (time_t now) {
 
     if (nextzone >= 0) {
         int zone = Queue[nextzone].zone;
-        int pulse = Zones[zone].pulse;
+        int pulse = 0;
         if (Queue[nextzone].context[0] == 0) {
+            // This is a manual zone control: just use the runtime as provided
+            // by the user without any adjustment or cycle.
+            //
             pulse = Queue[nextzone].runtime;
             Queue[nextzone].runtime = 0;
+            Queue[nextzone].hydrate = 0;
             Queue[nextzone].nexton = now + pulse;
         } else {
+            // This zone control is part of a program: apply adjustments
+            // and follow the configured cycle.
+            //
+            pulse = Zones[zone].pulse;
+            if (Queue[nextzone].hydrate > 0) {
+                // The first pulse is meant to hydrate the soil (clay).
+                pulse = Queue[nextzone].hydrate;
+                Queue[nextzone].hydrate = 0; // Don't do it again.
+            }
             if (pulse == 0 || Queue[nextzone].runtime <= pulse) {
                 pulse = Queue[nextzone].runtime;
                 Queue[nextzone].runtime = 0;
@@ -374,7 +392,7 @@ int housesprinkler_zone_idle (void) {
     // or so after the last watering.
     //
     int i;
-    time_t now = time(0);
+    time_t now = sprinkler_schedulingtime(time(0));
 
     if (PulseEnd >= now) return 0; // One zone is active.
     for (i = 0; i < QueueNext; ++i) {

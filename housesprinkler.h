@@ -30,5 +30,6 @@
 
 #include "echttp.h"
 
+time_t sprinkler_schedulingtime (time_t now);
 int sprinkler_isdebug (void);
 

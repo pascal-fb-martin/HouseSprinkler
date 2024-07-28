@@ -26,6 +26,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <ctype.h>
 #include <fcntl.h>
 
 #include "housesprinkler.h"
@@ -52,6 +53,20 @@ static int use_houseportal = 0;
 static char hostname[128];
 
 static int SprinklerDebug = 0;
+
+static int SprinklerSimSpeed = 0;
+static int SprinklerSimDelta = 0;
+static time_t SprinklerSimStart = 0;
+
+time_t sprinkler_schedulingtime (time_t now) {
+    if (!SprinklerSimStart) return now;
+    now += ((now - SprinklerSimStart) * SprinklerSimSpeed) + SprinklerSimDelta;
+    // The scheduling logic is synchronized on the start of each minute.
+    // This simulated time must match the beginning of each minute, or else
+    // nothing will be started. (We have already enforced that the speed
+    // must be a denominator of 60.)
+    return now - (now % SprinklerSimSpeed);
+}
 
 static void sprinkler_reset (void) {
     housesprinkler_control_periodic (0);
@@ -214,9 +229,12 @@ static const char *sprinkler_weatheroff (const char *method, const char *uri,
 static void hs_background (int fd, int mode) {
 
     static time_t DelayConfigDiscovery = 0;
+    static time_t LastCall = 0;
     static time_t LastRenewal = 0;
     time_t now = time(0);
 
+    if (now == LastCall) return;
+    LastCall = now;
 
     if (use_houseportal) {
         static const char *path[] = {"sprinkler:/sprinkler"};
@@ -235,9 +253,9 @@ static void hs_background (int fd, int mode) {
     if (now >= DelayConfigDiscovery) {
         housesprinkler_control_periodic(now);
         housesprinkler_index_periodic (now);
-        housesprinkler_zone_periodic(now);
-        housesprinkler_program_periodic(now);
-        housesprinkler_schedule_periodic(now);
+        housesprinkler_zone_periodic(sprinkler_schedulingtime(now));
+        housesprinkler_program_periodic(sprinkler_schedulingtime(now));
+        housesprinkler_schedule_periodic(sprinkler_schedulingtime(now));
     }
     houselog_background (now);
     housediscover (now);
@@ -252,6 +270,36 @@ static void sprinkler_protect (const char *method, const char *uri) {
 
 int sprinkler_isdebug (void) {
     return SprinklerDebug;
+}
+
+static void sprinkler_initialize (int argc, const char **argv) {
+    int i;
+    const char *sim = 0;
+    for (i = 0; i < argc; ++i) {
+        if (echttp_option_present ("-debug", argv[i])) {
+            SprinklerDebug = 1;
+        } else if (echttp_option_match ("-sim-speed=", argv[i], &sim)) {
+            SprinklerSimSpeed = atoi(sim);
+            if (SprinklerSimSpeed > 60) {
+                // Not more than a minute per second.
+                SprinklerSimSpeed = 60;
+            } else {
+                // 60 must be a multiple of SprinklerSimSpeed.
+                while (60 % SprinklerSimSpeed) SprinklerSimSpeed -= 1;
+            }
+            if (sprinkler_isdebug()) printf ("Running at x%d speed\n", SprinklerSimSpeed);
+        } else if (echttp_option_match ("-sim-delta=", argv[i], &sim)) {
+            SprinklerSimDelta = atoi(sim);
+            if (*sim == '-') sim += 1;
+            while (isdigit(*sim)) sim += 1;
+            switch (*sim) {
+                case 'd': SprinklerSimDelta *= 86400; break;
+                case 'h': SprinklerSimDelta *= 3600; break;
+                case 'm': SprinklerSimDelta *= 60; break;
+            }
+        }
+    }
+    if (SprinklerSimSpeed || SprinklerSimDelta) SprinklerSimStart = time(0);
 }
 
 int main (int argc, const char **argv) {
@@ -272,10 +320,7 @@ int main (int argc, const char **argv) {
         houseportal_initialize (argc, argv);
         use_houseportal = 1;
     }
-    int i;
-    for (i = 0; i < argc; ++i) {
-        if (echttp_option_present ("-debug", argv[i])) SprinklerDebug = 1;
-    }
+    sprinkler_initialize (argc, argv);
     houselog_initialize ("sprinkler", argc, argv);
 
     const char *error = housesprinkler_config_load (argc, argv);

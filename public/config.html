@@ -82,6 +82,9 @@ function saveConfig () {
           if (form.zones[prefix+'feed'].value) {
              newconfig.zones[count].feed = form.zones[prefix+'feed'].value;
           }
+          if (form.zones[prefix+'hydrate'].value) {
+             newconfig.zones[count].hydrate = toSeconds(form.zones[prefix+'hydrate'].value);
+          }
           if (form.zones[prefix+'pulse'].value) {
              newconfig.zones[count].pulse = toSeconds(form.zones[prefix+'pulse'].value);
           }
@@ -282,6 +285,7 @@ function showOneZone (zones, i, elements, count) {
       var prefix = 'zone_'+count+'_';
 
       showTextInputColumn (outer, prefix+'name', zones[i].name, 'Zone name');
+      showTextInputColumn (outer, prefix+'hydrate', showSeconds(zones[i].hydrate), 'mm:ss', 5);
       showTextInputColumn (outer, prefix+'pulse', showSeconds(zones[i].pulse), 'mm:ss', 5);
       showTextInputColumn (outer, prefix+'pause', showSeconds(zones[i].pause), 'mm:ss', 5);
       showTextInputColumn (outer, prefix+'feed', zones[i].feed, 'Feed Name');
@@ -626,7 +630,7 @@ function showExistingZones (zones) {
    resetSection (elements);
    ShownZoneCount = 0;
 
-   showTitle (elements, ["NAME", "PULSE", "PAUSE", "FEED", "MANUAL"]);
+   showTitle (elements, ["NAME", "HYDRATE", "PULSE", "PAUSE", "FEED", "MANUAL"]);
    if (!zones) return;
    for (var i = 0; i < zones.length; i++) {
       if (zones[i]) {
