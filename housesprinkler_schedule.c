@@ -361,9 +361,12 @@ void housesprinkler_schedule_periodic (time_t now) {
         DEBUG ("== Program %s: schedule is for this day\n", schedule->program);
 
         // Start only after the specified day interval has passed.
+        // We use a 6 hours (21600 sec) leniency to account for changes
+        // to the schedule start time, for example when the start time is
+        // changed to be a few hours early.
         //
         if (schedule->interval > 1) {
-            if (((now - schedule->lastlaunch + 3) / 86400) < schedule->interval) continue;
+            if (((now - schedule->lastlaunch + 21600) / 86400) < schedule->interval) continue;
         }
         DEBUG ("== Program %s: interval  %d has passed\n", schedule->program, schedule->interval);
 
