@@ -64,12 +64,26 @@
  *    Get the name of the current configuration file, for informational
  *    purpose (e.g. error messages).
  *
+ * void housesprinkler_config_backup_register (BackupWorker *worker);
  * long housesprinkler_config_backup_get (const char *path);
- * void housesprinkler_config_backup_set (const char *path, long value);
+ * const char *housesprinkler_config_backup_get_string (const char *path);
+ * void housesprinkler_config_backup_changed (void);
  *
  *    Read from, and write to, the backup file. This backup file contains
- *    a handful of saved values that are system-wide and can be changed
- *    from the user interface. They are all integer type.
+ *    saved live values that can be changed from the user interface and must
+ *    survive a program restart. They are integer  or string type (for now).
+ *    Modules that need to backup data must register a worker function
+ *    That populates the JSON structure.
+ *
+ *    Note that saving the backup data is asynchronous: the client indicates
+ *    that the data has changed, but saving the data will be decided later.
+ *    The reason for this is that multiple clients might change their data
+ *    at around the same time, but we do not want to save each time: it is
+ *    better to delay and do the save only once.
+ *
+ * void housesprinkler_config_periodic (void);
+ *
+ *    Background config activity (mostly: save data when changed).
  */
 
 #include <string.h>
@@ -112,6 +126,8 @@ static const char *BackupFile = "/etc/house/sprinklerbkp.json";
 static const char FactoryBackupFile[] =
                       "/usr/local/share/house/public/sprinkler/backup.json";
 
+static int BackupDataHasChanged = 0;
+
 
 static const char *housesprinkler_config_parse (char *text) {
     int count = echttp_json_estimate(text);
@@ -126,34 +142,27 @@ static const char *housesprinkler_config_parse (char *text) {
     return error;
 }
 
-const char *housesprinkler_config_load (int argc, const char **argv) {
+static void housesprinkler_config_loadbackup (void) {
 
-    struct stat filestat;
-    int fd;
     char *newconfig;
 
-    int i;
-    for (i = 1; i < argc; ++i) {
-        if (echttp_option_match ("-config=", argv[i], &ConfigFile)) continue;
-        if (echttp_option_match ("-backup=", argv[i], &BackupFile)) continue;
-    }
-
-    DEBUG ("Loading backup from %s\n", BackupFile);
     if (BackupText) echttp_parser_free (BackupText);
     BackupText = 0;
     BackupTokenCount = 0;
-    newconfig = echttp_parser_load (BackupFile);
+
+    const char *name = BackupFile;
+    DEBUG ("Loading backup from %s\n", name);
+    newconfig = echttp_parser_load (name);
     if (!newconfig) {
-        DEBUG ("Loading backup from %s\n", FactoryBackupFile);
-        newconfig = echttp_parser_load (FactoryBackupFile);
-        houselog_event ("SYSTEM", "BACKUP", "LOAD",
-                        "FILE %s", FactoryBackupFile);
-    } else {
-        houselog_event ("SYSTEM", "BACKUP", "LOAD",
-                        "FILE %s", BackupFile);
+        name = FactoryBackupFile;
+        DEBUG ("Loading backup from %s\n", name);
+        newconfig = echttp_parser_load (name);
+        BackupDataHasChanged = 1; // Force creation of the backup file.
     }
+
     if (newconfig) {
         const char *error;
+        houselog_event ("SYSTEM", "BACKUP", "LOAD", "FILE %s", name);
         BackupText = newconfig;
         BackupTokenCount = echttp_json_estimate(BackupText);
         if (BackupTokenCount > BackupTokenAllocated) {
@@ -171,6 +180,21 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
             DEBUG ("Planned %d, read %d items of backup config\n", BackupTokenAllocated, BackupTokenCount);
         }
     }
+}
+
+const char *housesprinkler_config_load (int argc, const char **argv) {
+
+    struct stat filestat;
+    int fd;
+    char *newconfig;
+
+    int i;
+    for (i = 1; i < argc; ++i) {
+        if (echttp_option_match ("-config=", argv[i], &ConfigFile)) continue;
+        if (echttp_option_match ("-backup=", argv[i], &BackupFile)) continue;
+    }
+
+    housesprinkler_config_loadbackup ();
 
     DEBUG ("Loading config from %s\n", ConfigFile);
 
@@ -315,37 +339,93 @@ const char *housesprinkler_config_name (void) {
     return ConfigFile;
 }
 
+const char *housesprinkler_config_backup_get_string (const char *path) {
+
+    int i = echttp_json_search(BackupParsed, path);
+    return (i >= 0) ? BackupParsed[i].value.string : 0;
+}
+
 long housesprinkler_config_backup_get (const char *path) {
 
     int i = echttp_json_search(BackupParsed, path);
     return (i >= 0) ? BackupParsed[i].value.integer : 0;
 }
 
-void housesprinkler_config_backup_set (const char *path, long value) {
+// The backup mechanism relies on collaboration from the modules that
+// need to backup data: only these modules know what data is to be saved.
+// For the time being, assume that there is no more than 16 of these modules..
+//
+static BackupWorker *BackupRegistered[16];
+static int BackupRegisteredCount = 0;
 
-    char buffer[1024];
-    int i = echttp_json_search(BackupParsed, path);
+void housesprinkler_config_backup_register (BackupWorker *worker) {
 
-    if (i < 0) {
-        DEBUG ("Item %s not found\n", path);
-        return;
+    int i;
+    if (! worker) return; // Just a check against gross error.
+    for (i = 0; i < BackupRegisteredCount; ++i) {
+        if (BackupRegistered[i] == worker) return; // Already registered.
     }
-    BackupParsed[i].value.integer = value;
+    if (BackupRegisteredCount < 16) {
+        BackupRegistered[BackupRegisteredCount++] = worker;
+    }
+}
 
-    if (echttp_json_format (BackupParsed, BackupTokenCount,
-                            buffer, sizeof(buffer), 0)) return;
+void housesprinkler_config_backup_changed (void) {
+    if (!BackupDataHasChanged)
+        DEBUG("Backup data has changed.\n");
+    BackupDataHasChanged = 1;
+}
+
+static int housesprinkler_config_backup_save (void) {
+
+    static char *buffer = 0;
+    static int size = 0;
+
+    int status = 1;
+    int cursor = 0;
+    int i;
+    if (!buffer) {
+       size = 1024;
+       buffer = malloc(size);
+    }
+    DEBUG("Saving backup data to %s\n", BackupFile);
+    const char *sep = "{";
+    for (i = 0; i < BackupRegisteredCount; ++i) {
+        cursor += snprintf (buffer+cursor, size-cursor, sep);
+        if (cursor >= size) goto abort;
+        cursor += BackupRegistered[i] (buffer+cursor, size-cursor);
+        if (cursor >= size) goto abort;
+        sep = ",";
+    }
+    cursor += snprintf (buffer+cursor, size-cursor, "}");
+    if (cursor >= size) goto abort;
 
     int fd = open (BackupFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
     if (fd < 0) {
         DEBUG ("Cannot open %s\n", BackupFile);
-        return;
+        return 0; // Failure.
     }
-    int written = write (fd, buffer, strlen(buffer));
+    int written = write (fd, buffer, cursor);
     if (written < 0) {
         DEBUG ("Cannot write to %s\n", BackupFile);
+        status = 0; // failure.
     } else {
         DEBUG ("Wrote %d characters to %s\n", written, BackupFile);
     }
     close(fd);
+    return status;
+
+abort:
+    DEBUG ("Backup failed: buffer too small\n");
+    size += 1024;
+    free (buffer);
+    buffer = malloc(size);
+    return housesprinkler_config_backup_save (); // Retry.
+}
+
+void housesprinkler_config_periodic (void) {
+    if (BackupDataHasChanged) {
+        if (housesprinkler_config_backup_save()) BackupDataHasChanged = 0;
+    }
 }
 

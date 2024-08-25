@@ -38,6 +38,12 @@ int housesprinkler_config_object       (int parent, const char *path);
 
 const char *housesprinkler_config_name (void);
 
+typedef int BackupWorker (char *buffer, int size);
+void housesprinkler_config_backup_register (BackupWorker *worker);
+
 long housesprinkler_config_backup_get (const char *path);
-void housesprinkler_config_backup_set (const char *path, long value);
+const char *housesprinkler_config_backup_get_string (const char *path);
+void housesprinkler_config_backup_changed (void);
+
+void housesprinkler_config_periodic (void);
 

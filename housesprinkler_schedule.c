@@ -100,6 +100,27 @@ static int         WateringIndexTimestamp = 0;
 static int    RainDelayEnabled = 1;
 static time_t RainDelay = 0;
 
+static int housesprinkler_schedule_backup (char *buffer, int size) {
+    char ascii[40];
+    int cursor = snprintf (buffer, size,
+                           "\"on\":%d,\"raindelay\":%ld", SprinklerOn, (long)RainDelay);
+    if (cursor >= size) return cursor;
+
+    int i;
+    const char *sep = ",\"schedule\":[";
+    for (i = 0; i < SchedulesCount; ++i) {
+        if (!Schedules[i].lastlaunch) continue;
+        uuid_unparse (Schedules[i].id, ascii);
+        cursor += snprintf (buffer+cursor, size-cursor, "%s{\"id\":\"%s\",\"launched\":%ld}",
+                            sep, ascii, (long)(Schedules[i].lastlaunch));
+        if (cursor >= size) return cursor;
+        sep = ",";
+    }
+    if (sep[1] == 0)
+        cursor += snprintf (buffer+cursor,size-cursor,"]");
+    return cursor;
+}
+
 static time_t housesprinkler_schedule_time (int index, const char *path) {
 
     struct tm local = {0};
@@ -134,6 +155,8 @@ void housesprinkler_schedule_refresh (void) {
     int content;
     char path[128];
     const char *programname = ".program";
+
+    housesprinkler_config_backup_register (housesprinkler_schedule_backup);
 
     // Keep the old schedule set on the side, to recover some live data.
     SprinklerSchedule *oldschedules = Schedules;
@@ -214,37 +237,62 @@ void housesprinkler_schedule_refresh (void) {
 
     SprinklerOn = housesprinkler_config_backup_get (".on");
     RainDelay = (time_t)housesprinkler_config_backup_get (".raindelay");
+    if (RainDelay < time(0)) RainDelay = 0; // Expired.
 
     // Last step: recover the last launch time of already existing schedules.
     //
-    if (!oldschedules) return; // Nothing to recover or free.
+    if (oldschedules) {
+        for (i = 0; i < oldschedulescount; ++i) {
+            if (oldschedules[i].disabled) continue; // Nothing to recover.
+            for (j = 0; j < SchedulesCount; ++j) {
+                if (uuid_compare (oldschedules[i].id, Schedules[j].id)) continue;
 
-    for (i = 0; i < oldschedulescount; ++i) {
-        if (oldschedules[i].disabled) continue; // Nothing to recover.
-        for (j = 0; j < SchedulesCount; ++j) {
-            if (uuid_compare (oldschedules[i].id, Schedules[j].id)) continue;
+                Schedules[j].lastlaunch = oldschedules[i].lastlaunch;
 
-            Schedules[j].lastlaunch = oldschedules[i].lastlaunch;
-
-            DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from %d (%s at %02d:%02d)\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, i, oldschedules[i].program, oldschedules[i].start.hour, oldschedules[i].start.minute);
+                DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from %d (%s at %02d:%02d)\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, i, oldschedules[i].program, oldschedules[i].start.hour, oldschedules[i].start.minute);
+                break;
+            }
         }
+        free (oldschedules);
+        return;
     }
-    free (oldschedules);
+
+    // Program start (this is the first time the configuration is loaded):
+    // recover the last launch times from the backup.
+    //
+    i = 0;
+    for (;;) {
+        uuid_t uuid;
+        snprintf (path, sizeof(path), ".schedule[%d].id", i);
+        const char *id = housesprinkler_config_backup_get_string (path);
+        if (!id) break;
+        uuid_parse (id, uuid);
+        for (j = 0; j < SchedulesCount; ++j) {
+            if (uuid_compare (uuid, Schedules[j].id)) continue;
+            snprintf (path, sizeof(path), ".schedule[%d].launched", i);
+            Schedules[j].lastlaunch = housesprinkler_config_backup_get (path);
+            DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from backup: lastlaunch = %ld\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, (long)(Schedules[j].lastlaunch));
+            break;
+        }
+        i += 1;
+    }
 }
 
 void housesprinkler_schedule_switch (void) {
     time_t now = time(0);
     SprinklerOn = !SprinklerOn;
     houselog_event ("PROGRAM", "SWITCH", SprinklerOn?"ON":"OFF", "");
-    housesprinkler_config_backup_set (".on", SprinklerOn);
+    housesprinkler_config_backup_changed();
 }
 
 void housesprinkler_schedule_rain (int enabled) {
     if (RainDelayEnabled == enabled) return; // No change.
     RainDelayEnabled = enabled;
     if (!enabled) {
-        RainDelay = 0;
-        housesprinkler_config_backup_set (".raindelay", 0);
+        if (RainDelay > time(0)) {
+           RainDelay = 0;
+           housesprinkler_config_backup_changed();
+        }
     }
     houselog_event ("SYSTEM", "RAIN DELAY", enabled?"ENABLED":"DISABLED", "");
 }
@@ -273,7 +321,7 @@ void housesprinkler_schedule_set_rain (int delay) {
         houselog_event ("SYSTEM", "RAIN DELAY", "EXTENDED",
                         housesprinkler_time_delta_printable (now, RainDelay));
     }
-    housesprinkler_config_backup_set (".raindelay", (long)RainDelay);
+    housesprinkler_config_backup_changed();
 }
 
 void housesprinkler_schedule_periodic (time_t now) {
@@ -289,8 +337,7 @@ void housesprinkler_schedule_periodic (time_t now) {
     lastminute = local.tm_min;
 
     if ((RainDelay > 0) && (RainDelay < now)) {
-        RainDelay = 0;
-        housesprinkler_config_backup_set (".raindelay", 0);
+        RainDelay = 0; // No need to save: what was saved is an expired value anyway.
         houselog_event ("SYSTEM", "RAIN DELAY", "EXPIRED", "");
     }
     if (RainDelay > 0) return;
@@ -340,9 +387,10 @@ void housesprinkler_schedule_periodic (time_t now) {
         }
         DEBUG ("== Program %s: interval  %d has passed\n", schedule->program, schedule->interval);
 
-        DEBUG ("== Program %s activated\n", schedule->program);
+        DEBUG ("== Program %s activated at %ld\n", schedule->program, (long)now);
         housesprinkler_program_start_scheduled (schedule->program);
         schedule->lastlaunch = now;
+        housesprinkler_config_backup_changed();
     }
 }
 

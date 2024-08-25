@@ -93,6 +93,9 @@ static int         WateringIndex = 100;
 static const char *WateringIndexOrigin = 0;
 static int         WateringIndexTimestamp = 0;
 
+static int housesprinkler_program_backup (char *buffer, int size) {
+    return snprintf (buffer, size, "\"useindex\":%d", WateringIndexEnabled);
+}
 
 void housesprinkler_program_refresh (void) {
 
@@ -100,6 +103,8 @@ void housesprinkler_program_refresh (void) {
     short count;
     int content;
     char path[128];
+
+    housesprinkler_config_backup_register (housesprinkler_program_backup);
 
     // Reload all watering programs.
     //
@@ -159,7 +164,7 @@ void housesprinkler_program_refresh (void) {
 
 void housesprinkler_program_index (int state) {
     WateringIndexEnabled = state;
-    housesprinkler_config_backup_set (".useindex", state);
+    housesprinkler_config_backup_changed ();
 }
 
 void housesprinkler_program_set_index 

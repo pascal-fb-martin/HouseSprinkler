@@ -259,6 +259,7 @@ static void hs_background (int fd, int mode) {
     }
     houselog_background (now);
     housediscover (now);
+    housesprinkler_config_periodic();
 }
 
 static void sprinkler_protect (const char *method, const char *uri) {
