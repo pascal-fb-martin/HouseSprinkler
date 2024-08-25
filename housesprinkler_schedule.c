@@ -100,26 +100,6 @@ static int         WateringIndexTimestamp = 0;
 static int    RainDelayEnabled = 1;
 static time_t RainDelay = 0;
 
-static int housesprinkler_schedule_backup (char *buffer, int size) {
-    char ascii[40];
-    int cursor = snprintf (buffer, size,
-                           "\"on\":%d,\"raindelay\":%ld", SprinklerOn, (long)RainDelay);
-    if (cursor >= size) return cursor;
-
-    int i;
-    const char *sep = ",\"schedule\":[";
-    for (i = 0; i < SchedulesCount; ++i) {
-        if (!Schedules[i].lastlaunch) continue;
-        uuid_unparse (Schedules[i].id, ascii);
-        cursor += snprintf (buffer+cursor, size-cursor, "%s{\"id\":\"%s\",\"launched\":%ld}",
-                            sep, ascii, (long)(Schedules[i].lastlaunch));
-        if (cursor >= size) return cursor;
-        sep = ",";
-    }
-    if (sep[1] == 0)
-        cursor += snprintf (buffer+cursor,size-cursor,"]");
-    return cursor;
-}
 
 static time_t housesprinkler_schedule_time (int index, const char *path) {
 
@@ -156,7 +136,7 @@ void housesprinkler_schedule_refresh (void) {
     char path[128];
     const char *programname = ".program";
 
-    housesprinkler_config_backup_register (housesprinkler_schedule_backup);
+    housesprinkler_config_backup_register (housesprinkler_schedule_status);
 
     // Keep the old schedule set on the side, to recover some live data.
     SprinklerSchedule *oldschedules = Schedules;
@@ -396,11 +376,10 @@ void housesprinkler_schedule_periodic (time_t now) {
 
 int housesprinkler_schedule_status (char *buffer, int size) {
 
-    int i;
     int cursor = 0;
 
     cursor = snprintf (buffer, size,
-                       "\"enabled\":%s", SprinklerOn?"true":"false");
+                       "\"on\":%s", SprinklerOn?"true":"false");
     if (cursor >= size) goto overflow;
 
     if (RainDelayEnabled) {
@@ -409,6 +388,19 @@ int housesprinkler_schedule_status (char *buffer, int size) {
         if (cursor >= size) goto overflow;
     }
 
+    int i;
+    char ascii[40];
+    const char *sep = ",\"schedule\":[";
+    for (i = 0; i < SchedulesCount; ++i) {
+        if (!Schedules[i].lastlaunch) continue;
+        uuid_unparse (Schedules[i].id, ascii);
+        cursor += snprintf (buffer+cursor, size-cursor, "%s{\"id\":\"%s\",\"launched\":%ld}",
+                            sep, ascii, (long)(Schedules[i].lastlaunch));
+        if (cursor >= size) return cursor;
+        sep = ",";
+    }
+    if (sep[1] == 0)
+        cursor += snprintf (buffer+cursor,size-cursor,"]");
     return cursor;
 
 overflow:

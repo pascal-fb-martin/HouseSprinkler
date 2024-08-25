@@ -94,7 +94,8 @@ static const char *WateringIndexOrigin = 0;
 static int         WateringIndexTimestamp = 0;
 
 static int housesprinkler_program_backup (char *buffer, int size) {
-    return snprintf (buffer, size, "\"useindex\":%d", WateringIndexEnabled);
+    return snprintf (buffer, size,
+                     "\"useindex\":%s", WateringIndexEnabled?"true":"false");
 }
 
 void housesprinkler_program_refresh (void) {
@@ -286,11 +287,9 @@ void housesprinkler_program_periodic (time_t now) {
 int housesprinkler_program_status (char *buffer, int size) {
 
     int i;
-    int cursor = 0;
     const char *prefix = "";
 
-    cursor += snprintf (buffer+cursor, size-cursor,
-                        "\"useindex\":%s", WateringIndexEnabled?"true":"false");
+    int cursor = housesprinkler_program_backup (buffer, size);
     if (cursor >= size) goto overflow;
 
     cursor += snprintf (buffer+cursor, size-cursor, ",\"active\":[");

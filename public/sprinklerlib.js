@@ -134,7 +134,7 @@ function sprinklerApplyUpdate (text) {
       if (! program) program = 'IDLE';
    }
 
-   if (response.sprinkler.schedule.enabled == false) {
+   if (response.sprinkler.schedule.on == false) {
       program = 'OFF';
    }
    sprinklerSetContent ('activeprogram', program);
@@ -176,6 +176,15 @@ function sprinklerApplyUpdate (text) {
            } else {
                label.innerHTML = zone[0];
            }
+       }
+   }
+
+   for (var i = 0; i < response.sprinkler.schedule.schedule.length; ++i) {
+       var schedule = response.sprinkler.schedule.schedule[i];
+       var latest = document.getElementById (schedule.id+'_latest');
+       if (latest) {
+           var now = new Date(schedule.launched * 1000);
+           latest.innerHTML = now.toDateString();
        }
    }
 }

@@ -255,6 +255,15 @@ function showTitle (elements, columns) {
     }
 }
 
+function showTextColumn (parent, id, value) {
+    var column = document.createElement("td");
+    var field = document.createElement("span");
+    field.id = id;
+    if (value) field.innerHTML = value;
+    column.appendChild(field);
+    parent.appendChild(column);
+}
+
 function showTextInputColumn (parent, id, value, help, size) {
     var column = document.createElement("td");
     var input = document.createElement("input");
@@ -413,6 +422,8 @@ function showOneSchedule (schedules, i, elements, count) {
       showTextInputColumn (outer, prefix+'interval', schedule.interval, 'days', 3);
       showTextInputColumn (outer, prefix+'begin', schedule.begin, 'yyyymmdd', 8);
       showTextInputColumn (outer, prefix+'end', schedule.end, 'yyyymmdd', 8);
+
+      showTextColumn (outer, ScheduleDictionary[count]+'_latest');
 
       for (var d = 0; d < WeekDays.length; d++) {
           showCheckboxColumn (outer, prefix+'days_'+d, schedule.days[d]);
@@ -698,7 +709,7 @@ function showExistingSchedules (schedules) {
    resetSection (elements);
    ShownScheduleCount = 0;
 
-   showTitle (elements, ["ENABLED", "PROGRAM", "TIME", "INTERVAL", "BEGIN", "END"].concat(WeekDays));
+   showTitle (elements, ["ENABLED", "PROGRAM", "TIME", "INTERVAL", "BEGIN", "END", "LATEST"].concat(WeekDays));
    if (!schedules) return;
    for (var i = 0; i < schedules.length; i++) {
       if (schedules[i]) {
@@ -711,6 +722,7 @@ function showExistingSchedules (schedules) {
           ShownScheduleCount += 1;
       }
    }
+   sprinklerUpdate();
 }
 
 function showExistingSeasons (seasons) {

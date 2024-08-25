@@ -71,7 +71,9 @@
  *
  *    Read from, and write to, the backup file. This backup file contains
  *    saved live values that can be changed from the user interface and must
- *    survive a program restart. They are integer  or string type (for now).
+ *    survive a program restart. Supported data types are boolean, integer and
+ *    string (for now). A boolean is reported as an integer (0 or 1).
+ *
  *    Modules that need to backup data must register a worker function
  *    That populates the JSON structure.
  *
@@ -342,13 +344,26 @@ const char *housesprinkler_config_name (void) {
 const char *housesprinkler_config_backup_get_string (const char *path) {
 
     int i = echttp_json_search(BackupParsed, path);
-    return (i >= 0) ? BackupParsed[i].value.string : 0;
+    if (i < 0) return 0;
+    switch (BackupParsed[i].type) {
+        case PARSER_STRING: return BackupParsed[i].value.string;
+    }
+    return 0;
 }
 
 long housesprinkler_config_backup_get (const char *path) {
 
+    // Support boolean and integer, all converted to integer.
+    // Anything else: return 0
+    //
+    long value = 0;
     int i = echttp_json_search(BackupParsed, path);
-    return (i >= 0) ? BackupParsed[i].value.integer : 0;
+    if (i < 0) return 0;
+    switch (BackupParsed[i].type) {
+        case PARSER_BOOL: value = BackupParsed[i].value.bool; break;
+        case PARSER_INTEGER: value = BackupParsed[i].value.integer; break;
+    }
+    return value;
 }
 
 // The backup mechanism relies on collaboration from the modules that
