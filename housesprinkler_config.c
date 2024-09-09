@@ -432,6 +432,8 @@ static int housesprinkler_config_backup_save (void) {
 
 abort:
     DEBUG ("Backup failed: buffer too small\n");
+    houselog_trace (HOUSE_FAILURE, "BACKUP",
+                    "BUFFER TOO SMALL (NEED %d bytes)", cursor);
     size += 1024;
     free (buffer);
     buffer = malloc(size);

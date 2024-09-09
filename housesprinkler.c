@@ -122,6 +122,9 @@ static const char *sprinkler_status (const char *method, const char *uri,
     cursor += housesprinkler_index_status (buffer+cursor, sizeof(buffer)-cursor);
     cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "}}}");
 
+    if (cursor > sizeof(buffer))
+        houselog_trace (HOUSE_FAILURE, "STATUS",
+                        "BUFFER TOO SMALL (NEED %d bytes)", cursor);
     echttp_content_type_json ();
     return buffer;
 }

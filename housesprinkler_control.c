@@ -448,7 +448,8 @@ int housesprinkler_control_status (char *buffer, int size) {
     return cursor;
 
 overflow:
-    houselog_trace (HOUSE_FAILURE, "BUFFER", "overflow");
+    houselog_trace (HOUSE_FAILURE, "STATUS",
+                    "BUFFER TOO SMALL (NEED %d bytes)", cursor);
     buffer[0] = 0;
     return 0;
 }
