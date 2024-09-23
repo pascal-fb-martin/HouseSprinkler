@@ -40,6 +40,7 @@
 #include "houselog.h"
 #include "housediscover.h"
 
+#include "housesprinkler_state.h"
 #include "housesprinkler_config.h"
 #include "housesprinkler_index.h"
 #include "housesprinkler_feed.h"
@@ -265,6 +266,7 @@ static void hs_background (int fd, int mode) {
     }
     houselog_background (now);
     housediscover (now);
+    housesprinkler_state_periodic();
     housesprinkler_config_periodic();
 }
 
@@ -334,6 +336,7 @@ int main (int argc, const char **argv) {
     sprinkler_initialize (argc, argv);
     houselog_initialize ("sprinkler", argc, argv);
 
+    housesprinkler_state_load (argc, argv);
     const char *error = housesprinkler_config_load (argc, argv);
     if (error) {
         houselog_trace

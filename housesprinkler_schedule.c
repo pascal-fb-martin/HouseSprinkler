@@ -66,6 +66,7 @@
 
 #include "housesprinkler.h"
 #include "housesprinkler_time.h"
+#include "housesprinkler_state.h"
 #include "housesprinkler_config.h"
 #include "housesprinkler_program.h"
 #include "housesprinkler_schedule.h"
@@ -136,7 +137,7 @@ void housesprinkler_schedule_refresh (void) {
     char path[128];
     const char *programname = ".program";
 
-    housesprinkler_config_backup_register (housesprinkler_schedule_status);
+    housesprinkler_state_register (housesprinkler_schedule_status);
 
     // Keep the old schedule set on the side, to recover some live data.
     SprinklerSchedule *oldschedules = Schedules;
@@ -215,8 +216,8 @@ void housesprinkler_schedule_refresh (void) {
                Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute);
     }
 
-    SprinklerOn = housesprinkler_config_backup_get (".on");
-    RainDelay = (time_t)housesprinkler_config_backup_get (".raindelay");
+    SprinklerOn = housesprinkler_state_get (".on");
+    RainDelay = (time_t)housesprinkler_state_get (".raindelay");
     if (RainDelay < time(0)) RainDelay = 0; // Expired.
 
     // Last step: recover the last launch time of already existing schedules.
@@ -244,13 +245,13 @@ void housesprinkler_schedule_refresh (void) {
     for (;;) {
         uuid_t uuid;
         snprintf (path, sizeof(path), ".schedule[%d].id", i);
-        const char *id = housesprinkler_config_backup_get_string (path);
+        const char *id = housesprinkler_state_get_string (path);
         if (!id) break;
         uuid_parse (id, uuid);
         for (j = 0; j < SchedulesCount; ++j) {
             if (uuid_compare (uuid, Schedules[j].id)) continue;
             snprintf (path, sizeof(path), ".schedule[%d].launched", i);
-            Schedules[j].lastlaunch = housesprinkler_config_backup_get (path);
+            Schedules[j].lastlaunch = housesprinkler_state_get (path);
             DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from backup: lastlaunch = %ld\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, (long)(Schedules[j].lastlaunch));
             break;
         }
@@ -262,7 +263,7 @@ void housesprinkler_schedule_switch (void) {
     time_t now = time(0);
     SprinklerOn = !SprinklerOn;
     houselog_event ("PROGRAM", "SWITCH", SprinklerOn?"ON":"OFF", "");
-    housesprinkler_config_backup_changed();
+    housesprinkler_state_changed();
 }
 
 void housesprinkler_schedule_rain (int enabled) {
@@ -271,7 +272,7 @@ void housesprinkler_schedule_rain (int enabled) {
     if (!enabled) {
         if (RainDelay > time(0)) {
            RainDelay = 0;
-           housesprinkler_config_backup_changed();
+           housesprinkler_state_changed();
         }
     }
     houselog_event ("SYSTEM", "RAIN DELAY", enabled?"ENABLED":"DISABLED", "");
@@ -301,7 +302,7 @@ void housesprinkler_schedule_set_rain (int delay) {
         houselog_event ("SYSTEM", "RAIN DELAY", "EXTENDED",
                         housesprinkler_time_delta_printable (now, RainDelay));
     }
-    housesprinkler_config_backup_changed();
+    housesprinkler_state_changed();
 }
 
 void housesprinkler_schedule_periodic (time_t now) {
@@ -373,7 +374,7 @@ void housesprinkler_schedule_periodic (time_t now) {
         DEBUG ("== Program %s activated at %ld\n", schedule->program, (long)now);
         housesprinkler_program_start_scheduled (schedule->program);
         schedule->lastlaunch = now;
-        housesprinkler_config_backup_changed();
+        housesprinkler_state_changed();
     }
 }
 

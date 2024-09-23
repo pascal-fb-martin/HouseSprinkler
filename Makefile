@@ -32,6 +32,7 @@ OBJS= housesprinkler.o \
       housesprinkler_zone.o \
       housesprinkler_feed.o \
       housesprinkler_time.o \
+      housesprinkler_state.o \
       housesprinkler_config.o
 
 ICONS= favicon_1_16x16x4.png

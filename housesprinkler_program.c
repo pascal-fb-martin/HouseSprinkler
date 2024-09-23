@@ -65,6 +65,7 @@
 #include "houselog.h"
 
 #include "housesprinkler.h"
+#include "housesprinkler_state.h"
 #include "housesprinkler_config.h"
 #include "housesprinkler_zone.h"
 #include "housesprinkler_season.h"
@@ -105,7 +106,7 @@ void housesprinkler_program_refresh (void) {
     int content;
     char path[128];
 
-    housesprinkler_config_backup_register (housesprinkler_program_backup);
+    housesprinkler_state_register (housesprinkler_program_backup);
 
     // Reload all watering programs.
     //
@@ -160,12 +161,12 @@ void housesprinkler_program_refresh (void) {
             DEBUG ("\tProgram %s (%d zones)\n", Programs[i].name, count);
         }
     }
-    WateringIndexEnabled = housesprinkler_config_backup_get (".useindex");
+    WateringIndexEnabled = housesprinkler_state_get (".useindex");
 }
 
 void housesprinkler_program_index (int state) {
     WateringIndexEnabled = state;
-    housesprinkler_config_backup_changed ();
+    housesprinkler_state_changed ();
 }
 
 void housesprinkler_program_set_index 
