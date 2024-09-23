@@ -39,6 +39,7 @@
 #include "houseportalclient.h"
 #include "houselog.h"
 #include "housediscover.h"
+#include "housedepositor.h"
 
 #include "housesprinkler_state.h"
 #include "housesprinkler_config.h"
@@ -268,6 +269,7 @@ static void hs_background (int fd, int mode) {
     housediscover (now);
     housesprinkler_state_periodic(now);
     housesprinkler_config_periodic();
+    housedepositor_periodic (now);
 }
 
 static void sprinkler_protect (const char *method, const char *uri) {
@@ -335,6 +337,7 @@ int main (int argc, const char **argv) {
     }
     sprinkler_initialize (argc, argv);
     houselog_initialize ("sprinkler", argc, argv);
+    housedepositor_initialize (argc, argv);
 
     housesprinkler_state_load (argc, argv);
     const char *error = housesprinkler_config_load (argc, argv);
