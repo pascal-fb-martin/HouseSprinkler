@@ -33,3 +33,5 @@
 time_t sprinkler_schedulingtime (time_t now);
 int sprinkler_isdebug (void);
 
+const char *sprinkler_host(void);
+

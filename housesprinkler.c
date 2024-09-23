@@ -22,6 +22,9 @@
  *
  * SYNOPSYS:
  *
+ * const char *sprinkler_host(void):
+ *
+ *    Return the name of the machine running this application.
  */
 
 #include <sys/types.h>
@@ -304,6 +307,10 @@ static void sprinkler_initialize (int argc, const char **argv) {
         }
     }
     if (SprinklerSimSpeed || SprinklerSimDelta) SprinklerSimStart = time(0);
+}
+
+const char *sprinkler_host(void) {
+    return hostname;
 }
 
 int main (int argc, const char **argv) {

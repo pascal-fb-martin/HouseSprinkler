@@ -404,13 +404,12 @@ static int housesprinkler_config_backup_save (void) {
        buffer = malloc(size);
     }
     DEBUG("Saving backup data to %s\n", BackupFile);
-    const char *sep = "{";
+    cursor = snprintf (buffer, size, "{\"host\":\"%s\"", sprinkler_host());
     for (i = 0; i < BackupRegisteredCount; ++i) {
-        cursor += snprintf (buffer+cursor, size-cursor, sep);
+        cursor += snprintf (buffer+cursor, size-cursor, ",");
         if (cursor >= size) goto abort;
         cursor += BackupRegistered[i] (buffer+cursor, size-cursor);
         if (cursor >= size) goto abort;
-        sep = ",";
     }
     cursor += snprintf (buffer+cursor, size-cursor, "}");
     if (cursor >= size) goto abort;
