@@ -28,5 +28,5 @@ long housesprinkler_state_get (const char *path);
 const char *housesprinkler_state_get_string (const char *path);
 void housesprinkler_state_changed (void);
 
-void housesprinkler_state_periodic (void);
+void housesprinkler_state_periodic (time_t now);
 

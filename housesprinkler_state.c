@@ -63,6 +63,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -86,7 +87,7 @@ static const char *BackupFile = "/etc/house/sprinklerbkp.json";
 static const char FactoryBackupFile[] =
                       "/usr/local/share/house/public/sprinkler/backup.json";
 
-static int BackupDataHasChanged = 0;
+static time_t StateDataHasChanged = 0;
 
 
 const char *housesprinkler_state_load (int argc, const char **argv) {
@@ -109,7 +110,7 @@ const char *housesprinkler_state_load (int argc, const char **argv) {
         name = FactoryBackupFile;
         DEBUG ("Loading backup from %s\n", name);
         newconfig = echttp_parser_load (name);
-        BackupDataHasChanged = 1; // Force creation of the backup file.
+        StateDataHasChanged = time(0); // Force creation of the backup file.
     }
 
     if (newconfig) {
@@ -179,9 +180,10 @@ void housesprinkler_state_register (BackupWorker *worker) {
 }
 
 void housesprinkler_state_changed (void) {
-    if (!BackupDataHasChanged)
-        DEBUG("Backup data has changed.\n");
-    BackupDataHasChanged = 1;
+    if (!StateDataHasChanged) {
+        DEBUG("State data has changed.\n");
+        StateDataHasChanged = time(0);
+    }
 }
 
 static int housesprinkler_state_save (void) {
@@ -232,9 +234,11 @@ retry:
     return housesprinkler_state_save ();
 }
 
-void housesprinkler_state_periodic (void) {
-    if (BackupDataHasChanged) {
-        if (housesprinkler_state_save()) BackupDataHasChanged = 0;
+void housesprinkler_state_periodic (time_t now) {
+    if (StateDataHasChanged) {
+        if (StateDataHasChanged < now) {
+            if (housesprinkler_state_save()) StateDataHasChanged = 0;
+        }
     }
 }
 

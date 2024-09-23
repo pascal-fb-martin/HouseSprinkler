@@ -266,7 +266,7 @@ static void hs_background (int fd, int mode) {
     }
     houselog_background (now);
     housediscover (now);
-    housesprinkler_state_periodic();
+    housesprinkler_state_periodic(now);
     housesprinkler_config_periodic();
 }
 
