@@ -94,6 +94,10 @@ static int         WateringIndex = 100;
 static const char *WateringIndexOrigin = 0;
 static int         WateringIndexTimestamp = 0;
 
+static void housesprinkler_program_restore (void) {
+    WateringIndexEnabled = housesprinkler_state_get (".useindex");
+}
+
 static int housesprinkler_program_backup (char *buffer, int size) {
     return snprintf (buffer, size,
                      "\"useindex\":%s", WateringIndexEnabled?"true":"false");
@@ -106,6 +110,7 @@ void housesprinkler_program_refresh (void) {
     int content;
     char path[128];
 
+    housesprinkler_state_listen (housesprinkler_program_restore);
     housesprinkler_state_register (housesprinkler_program_backup);
 
     // Reload all watering programs.
@@ -115,6 +120,9 @@ void housesprinkler_program_refresh (void) {
             if (Programs[i].zones) free(Programs[i].zones);
         }
         free (Programs);
+    } else {
+        // Program start: restore the internal state.
+        housesprinkler_program_restore();
     }
     Programs = 0;
     ProgramsCount = 0;
@@ -161,7 +169,6 @@ void housesprinkler_program_refresh (void) {
             DEBUG ("\tProgram %s (%d zones)\n", Programs[i].name, count);
         }
     }
-    WateringIndexEnabled = housesprinkler_state_get (".useindex");
 }
 
 void housesprinkler_program_index (int state) {

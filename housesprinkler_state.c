@@ -40,18 +40,40 @@
  *
  * SYNOPSYS:
  *
+ * void housesprinkler_state_share (int on);
+ *
+ *    Turn the depot mechanism on and off. The intent is to turn it
+ *    on only when the sprinkler system is on. That does mean that turning
+ *    the sprinkler system off will not be recorded in the depot's
+ *    repository. The logic is to record which instance is on, not that
+ *    a specific instance is off (there can be multiple instances off,
+ *    and that does not identify which one is on).
+ *
+ * void housesprinkler_state_listen (BackupListener *listener);
+ *
+ *    Listen to external changes to the state backup. Such changes typically
+ *    come from the depot repository.
+ *
  * void housesprinkler_state_register (BackupWorker *worker);
+ *
+ *    Register a worker function to export a module's internal state to JSON.
+ *    Worker functions are called when the state must be saved.
+ *
+ *    Modules that need to backup data must use this to register a worker
+ *    function that exports the module's internal state to a JSON structure
+ *    that will be saved to disk (local or depot repository)..
+ *
  * long housesprinkler_state_get (const char *path);
  * const char *housesprinkler_state_get_string (const char *path);
- * void housesprinkler_state_changed (void);
  *
- *    Read from, and write to, the state backup file. This backup file contains
+ *    Retrieve items from the state backup file. This backup file contains
  *    saved live values that can be changed from the user interface and must
  *    survive a program restart. Supported data types are boolean, integer and
  *    string (for now). A boolean is reported as an integer (0 or 1).
  *
- *    Modules that need to backup data must register a worker function
- *    That populates the JSON structure.
+ * void housesprinkler_state_changed (void);
+ *
+ *    Report that the internal state has changed.
  *
  *    Note that saving the backup data is asynchronous: the client indicates
  *    that the data has changed, but saving the data will be decided later.
@@ -86,7 +108,7 @@
 static ParserToken *BackupParsed = 0;
 static int   BackupTokenAllocated = 0;
 static int   BackupTokenCount = 0;
-static char *BackupText = 0;
+static char *BackupInText = 0;
 
 static const char *BackupFile = "/etc/house/sprinklerbkp.json";
 
@@ -95,17 +117,66 @@ static const char FactoryBackupFile[] =
 
 static time_t StateDataHasChanged = 0;
 
+static int ShareStateData = 1;
+
 static int BackupOrigin = 0;
 #define BACKUP_ORIGIN_FILE  1
 #define BACKUP_ORIGIN_DEPOT 2
 
+static char *BackupOutBuffer = 0;
+static int BackupOutBufferSize = 0;
+
+// The backup mechanism relies on collaboration from the modules that
+// need to backup data: only these modules know what data is to be saved.
+//
+static BackupListener **BackupRegisteredListener = 0;
+static int BackupListenerSize = 0;
+static int BackupListenerCount = 0;
+
+void housesprinkler_state_listen (BackupListener *listener) {
+
+    int i;
+    if (! listener) return; // Just a check against gross error.
+    for (i = 0; i < BackupListenerCount; ++i) {
+        if (BackupRegisteredListener[i] == listener)
+            return; // Already registered.
+    }
+    if (BackupListenerCount >= BackupListenerSize) {
+        BackupListenerSize += 16;
+        BackupRegisteredListener =
+            realloc (BackupRegisteredListener,
+                     sizeof(BackupListener *) * BackupListenerSize);
+    }
+    BackupRegisteredListener[BackupListenerCount++] = listener;
+}
+
+static BackupWorker **BackupRegisteredWorker = 0;
+static int BackupWorkerSize = 0;
+static int BackupWorkerCount = 0;
+
+void housesprinkler_state_register (BackupWorker *worker) {
+
+    int i;
+    if (! worker) return; // Just a check against gross error.
+    for (i = 0; i < BackupWorkerCount; ++i) {
+        if (BackupRegisteredWorker[i] == worker) return; // Already registered.
+    }
+    if (BackupWorkerCount >= BackupWorkerSize) {
+        BackupWorkerSize += 16;
+        BackupRegisteredWorker =
+            realloc (BackupRegisteredWorker,
+                     sizeof(BackupWorker *) * BackupWorkerSize);
+    }
+    BackupRegisteredWorker[BackupWorkerCount++] = worker;
+}
+
 static void housesprinkler_state_clear (void) {
-    if (BackupText) {
+    if (BackupInText) {
         switch (BackupOrigin) {
-            case BACKUP_ORIGIN_FILE: echttp_parser_free (BackupText); break;
-            case BACKUP_ORIGIN_DEPOT: free (BackupText); break;
+            case BACKUP_ORIGIN_FILE: echttp_parser_free (BackupInText); break;
+            case BACKUP_ORIGIN_DEPOT: free (BackupInText); break;
         }
-        BackupText = 0;
+        BackupInText = 0;
     }
     BackupOrigin = 0;
     BackupTokenCount = 0;
@@ -115,15 +186,15 @@ static const char *housesprinkler_state_new (int origin, char *data) {
 
     const char *error;
 
-    BackupText = data;
+    BackupInText = data;
     BackupOrigin = origin;
-    BackupTokenCount = echttp_json_estimate(BackupText);
+    BackupTokenCount = echttp_json_estimate(BackupInText);
     if (BackupTokenCount > BackupTokenAllocated) {
         BackupTokenAllocated = BackupTokenCount+64;
         if (BackupParsed) free (BackupParsed);
         BackupParsed = calloc (BackupTokenAllocated, sizeof(ParserToken));
     }
-    error = echttp_json_parse (BackupText, BackupParsed, &BackupTokenCount);
+    error = echttp_json_parse (BackupInText, BackupParsed, &BackupTokenCount);
     if (error) {
         DEBUG ("Backup config parsing error: %s\n", error);
         housesprinkler_state_clear ();
@@ -132,12 +203,48 @@ static const char *housesprinkler_state_new (int origin, char *data) {
     }
 }
 
+static int housesprinkler_state_save (int size) {
+
+    int fd = open (BackupFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
+    if (fd < 0) {
+        DEBUG ("Cannot open %s\n", BackupFile);
+        return 0; // Failure.
+    }
+    int written = write (fd, BackupOutBuffer, size);
+    if (written < 0) {
+        DEBUG ("Cannot write to %s\n", BackupFile);
+    } else {
+        DEBUG ("Wrote %d characters to %s\n", written, BackupFile);
+    }
+    close(fd);
+    return written;
+}
+
 static void housesprinkler_state_listener (const char *name, time_t timestamp,
                                            const char *data, int length) {
 
     houselog_event ("SYSTEM", "BACKUP", "LOAD", "FROM DEPOT %s", name);
     const char *error = housesprinkler_state_new (BACKUP_ORIGIN_DEPOT, strdup(data));
-    if (error) houselog_event ("SYSTEM", "BACKUP", "ERROR", "%s", error);
+    if (error) {
+        houselog_event ("SYSTEM", "BACKUP", "ERROR", "%s", error);
+        return;
+    }
+    // We need to make a copy because we do not control the lifetime of
+    // the caller's data buffer.
+    //
+    if (BackupOutBufferSize < length) {
+        if (BackupOutBuffer) free (BackupOutBuffer);
+        BackupOutBuffer = strdup (data);
+        BackupOutBufferSize = length;
+    } else {
+        snprintf (BackupOutBuffer, BackupOutBufferSize, "%s", data);
+    }
+    housesprinkler_state_save (length); // Best effort only, ignore errors.
+
+    int i;
+    for (i = 0; i < BackupListenerCount; ++i) {
+        BackupRegisteredListener[i] ();
+    }
 }
 
 const char *housesprinkler_state_load (int argc, const char **argv) {
@@ -171,6 +278,10 @@ const char *housesprinkler_state_load (int argc, const char **argv) {
                               housesprinkler_state_listener);
 }
 
+void housesprinkler_state_share (int on) {
+    ShareStateData = on;
+}
+
 const char *housesprinkler_state_get_string (const char *path) {
 
     int i = echttp_json_search(BackupParsed, path);
@@ -196,25 +307,6 @@ long housesprinkler_state_get (const char *path) {
     return value;
 }
 
-// The backup mechanism relies on collaboration from the modules that
-// need to backup data: only these modules know what data is to be saved.
-// For the time being, assume that there is no more than 16 of these modules..
-//
-static BackupWorker *BackupRegistered[16];
-static int BackupRegisteredCount = 0;
-
-void housesprinkler_state_register (BackupWorker *worker) {
-
-    int i;
-    if (! worker) return; // Just a check against gross error.
-    for (i = 0; i < BackupRegisteredCount; ++i) {
-        if (BackupRegistered[i] == worker) return; // Already registered.
-    }
-    if (BackupRegisteredCount < 16) {
-        BackupRegistered[BackupRegisteredCount++] = worker;
-    }
-}
-
 void housesprinkler_state_changed (void) {
     if (!StateDataHasChanged) {
         DEBUG("State data has changed.\n");
@@ -222,59 +314,55 @@ void housesprinkler_state_changed (void) {
     }
 }
 
-static int housesprinkler_state_save (void) {
+static int housesprinkler_state_format (void) {
 
-    static char *buffer = 0;
-    static int size = 0;
-
-    int status = 1;
     int cursor = 0;
     int i;
-    if (!buffer) {
-       size = 1024;
-       buffer = malloc(size);
+    if (!BackupOutBuffer) {
+       BackupOutBufferSize = 1024;
+       BackupOutBuffer = malloc(BackupOutBufferSize);
     }
     DEBUG("Saving backup data to %s\n", BackupFile);
-    cursor = snprintf (buffer, size, "{\"host\":\"%s\"", sprinkler_host());
-    for (i = 0; i < BackupRegisteredCount; ++i) {
-        cursor += snprintf (buffer+cursor, size-cursor, ",");
-        if (cursor >= size) goto retry;
-        cursor += BackupRegistered[i] (buffer+cursor, size-cursor);
-        if (cursor >= size) goto retry;
+    cursor = snprintf (BackupOutBuffer, BackupOutBufferSize,
+                       "{\"host\":\"%s\"", sprinkler_host());
+    for (i = 0; i < BackupWorkerCount; ++i) {
+        cursor += snprintf (BackupOutBuffer+cursor, BackupOutBufferSize-cursor, ",");
+        if (cursor >= BackupOutBufferSize) goto retry;
+        cursor += BackupRegisteredWorker[i] (BackupOutBuffer+cursor, BackupOutBufferSize-cursor);
+        if (cursor >= BackupOutBufferSize) goto retry;
     }
-    cursor += snprintf (buffer+cursor, size-cursor, "}");
-    if (cursor >= size) goto retry;
+    cursor += snprintf (BackupOutBuffer+cursor, BackupOutBufferSize-cursor, "}");
+    if (cursor >= BackupOutBufferSize) goto retry;
 
-    int fd = open (BackupFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
-    if (fd < 0) {
-        DEBUG ("Cannot open %s\n", BackupFile);
-        return 0; // Failure.
-    }
-    int written = write (fd, buffer, cursor);
-    if (written < 0) {
-        DEBUG ("Cannot write to %s\n", BackupFile);
-        status = 0; // failure.
-    } else {
-        DEBUG ("Wrote %d characters to %s\n", written, BackupFile);
-    }
-    close(fd);
-    housedepositor_put ("state", "sprinkler.json", buffer, cursor);
-    return status;
+    return cursor;
 
 retry:
     DEBUG ("Backup failed: buffer too small\n");
-    houselog_trace (HOUSE_FAILURE, "BACKUP",
+    houselog_trace (HOUSE_WARNING, "BACKUP",
                     "BUFFER TOO SMALL (NEED %d bytes)", cursor);
-    size += 1024;
-    free (buffer);
-    buffer = malloc(size);
-    return housesprinkler_state_save ();
+    BackupOutBufferSize += 1024;
+    free (BackupOutBuffer);
+    BackupOutBuffer = malloc(BackupOutBufferSize);
+    return housesprinkler_state_format ();
 }
 
 void housesprinkler_state_periodic (time_t now) {
+
+    static time_t LastCall = 0;
+    if (now == LastCall) return; // Run the logic once per second.
+    LastCall = now;
+
     if (StateDataHasChanged) {
+        if (StateDataHasChanged < now - 10) {
+            StateDataHasChanged = 0;
+            return; // We tried 10 times, no point to try again.
+        }
         if (StateDataHasChanged < now) {
-            if (housesprinkler_state_save()) StateDataHasChanged = 0;
+            int size = housesprinkler_state_format();
+            if (ShareStateData)
+                housedepositor_put ("state", "sprinkler.json", BackupOutBuffer, size);
+            if (housesprinkler_state_save (size) == size)
+                StateDataHasChanged = 0;
         }
     }
 }

@@ -345,6 +345,7 @@ int main (int argc, const char **argv) {
         houselog_trace
             (HOUSE_FAILURE, housesprinkler_config_name(), "%s", error);
     }
+    housesprinkler_schedule_initialize (argc, argv);
     sprinkler_refresh ();
 
     echttp_cors_allow_method("GET");

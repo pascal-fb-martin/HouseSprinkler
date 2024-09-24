@@ -21,6 +21,11 @@
 
 const char *housesprinkler_state_load (int argc, const char **argv);
 
+void housesprinkler_state_share (int on);
+
+typedef void BackupListener (void);
+void housesprinkler_state_listen (BackupListener *listener);
+
 typedef int BackupWorker (char *buffer, int size);
 void housesprinkler_state_register (BackupWorker *worker);
 

@@ -28,3 +28,5 @@ void housesprinkler_schedule_set_rain (int delay);
 void housesprinkler_schedule_periodic (time_t now);
 int  housesprinkler_schedule_status (char *buffer, int size);
 
+void housesprinkler_schedule_initialize (int argc, const char **argv);
+

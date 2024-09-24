@@ -25,6 +25,10 @@
  *
  * SYNOPSYS:
  *
+ * void housesprinkler_schedule_initialize (int argc, const char **argv);
+ *
+ *    Initialize the scheduler. Must be called only once.
+ *
  * void housesprinkler_schedule_refresh (void);
  *
  *    This function must be called each time the sprinkler configuration
@@ -129,6 +133,41 @@ static time_t housesprinkler_schedule_time (int index, const char *path) {
     return 0;
 }
 
+static void housesprinkler_schedule_restore (void) {
+
+    // Only one sprinkler controller can be active at a time.
+    SprinklerOn = housesprinkler_state_get (".on");
+    if (SprinklerOn) {
+        const char *active = housesprinkler_state_get_string (".host");
+        if (active && strcmp (active, sprinkler_host())) SprinklerOn = 0;
+    }
+    housesprinkler_state_share (SprinklerOn);
+
+    RainDelay = (time_t)housesprinkler_state_get (".raindelay");
+    if (RainDelay < time(0)) RainDelay = 0; // Expired.
+
+    if (!Schedules) return; // To early for restoring.
+
+    int i = 0;
+    for (;;) {
+        uuid_t uuid;
+        char path[128];
+        snprintf (path, sizeof(path), ".schedule[%d].id", i);
+        const char *id = housesprinkler_state_get_string (path);
+        if (!id) break;
+        uuid_parse (id, uuid);
+        int j;
+        for (j = 0; j < SchedulesCount; ++j) {
+            if (uuid_compare (uuid, Schedules[j].id)) continue;
+            snprintf (path, sizeof(path), ".schedule[%d].launched", i);
+            Schedules[j].lastlaunch = housesprinkler_state_get (path);
+            DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from backup: lastlaunch = %ld\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, (long)(Schedules[j].lastlaunch));
+            break;
+        }
+        i += 1;
+    }
+}
+
 void housesprinkler_schedule_refresh (void) {
 
     int i, j;
@@ -136,8 +175,6 @@ void housesprinkler_schedule_refresh (void) {
     int content;
     char path[128];
     const char *programname = ".program";
-
-    housesprinkler_state_register (housesprinkler_schedule_status);
 
     // Keep the old schedule set on the side, to recover some live data.
     SprinklerSchedule *oldschedules = Schedules;
@@ -216,13 +253,10 @@ void housesprinkler_schedule_refresh (void) {
                Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute);
     }
 
-    SprinklerOn = housesprinkler_state_get (".on");
-    RainDelay = (time_t)housesprinkler_state_get (".raindelay");
-    if (RainDelay < time(0)) RainDelay = 0; // Expired.
-
-    // Last step: recover the last launch time of already existing schedules.
-    //
     if (oldschedules) {
+        // This is a configuration change, not a program start.
+        // recover the schedule start times from the old configuration.
+        //
         for (i = 0; i < oldschedulescount; ++i) {
             if (oldschedules[i].disabled) continue; // Nothing to recover.
             for (j = 0; j < SchedulesCount; ++j) {
@@ -238,31 +272,20 @@ void housesprinkler_schedule_refresh (void) {
         return;
     }
 
-    // Program start (this is the first time the configuration is loaded):
-    // recover the last launch times from the backup.
-    //
-    i = 0;
-    for (;;) {
-        uuid_t uuid;
-        snprintf (path, sizeof(path), ".schedule[%d].id", i);
-        const char *id = housesprinkler_state_get_string (path);
-        if (!id) break;
-        uuid_parse (id, uuid);
-        for (j = 0; j < SchedulesCount; ++j) {
-            if (uuid_compare (uuid, Schedules[j].id)) continue;
-            snprintf (path, sizeof(path), ".schedule[%d].launched", i);
-            Schedules[j].lastlaunch = housesprinkler_state_get (path);
-            DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from backup: lastlaunch = %ld\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, (long)(Schedules[j].lastlaunch));
-            break;
-        }
-        i += 1;
-    }
+    // Program start (this is the first time the configuration is loaded),
+    // restore the last known state:
+    // - on/off state,
+    // - rain delay,
+    // - launch time of already existing schedules.
+
+    housesprinkler_schedule_restore ();
 }
 
 void housesprinkler_schedule_switch (void) {
-    time_t now = time(0);
+
     SprinklerOn = !SprinklerOn;
     houselog_event ("PROGRAM", "SWITCH", SprinklerOn?"ON":"OFF", "");
+    housesprinkler_state_share (SprinklerOn);
     housesprinkler_state_changed();
 }
 
@@ -412,5 +435,11 @@ overflow:
                     "BUFFER TOO SMALL (NEED %d bytes)", cursor);
     buffer[0] = 0;
     return 0;
+}
+
+void housesprinkler_schedule_initialize (int argc, const char **argv) {
+
+    housesprinkler_state_listen (housesprinkler_schedule_restore);
+    housesprinkler_state_register (housesprinkler_schedule_status);
 }
 
