@@ -201,6 +201,7 @@ static const char *housesprinkler_state_new (int origin, char *data) {
     } else {
         DEBUG ("Planned %d, read %d items of backup config\n", BackupTokenAllocated, BackupTokenCount);
     }
+    return error;
 }
 
 static int housesprinkler_state_save (int size) {
