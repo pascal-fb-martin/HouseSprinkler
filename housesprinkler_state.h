@@ -19,7 +19,7 @@
  *
  */
 
-const char *housesprinkler_state_load (int argc, const char **argv);
+void housesprinkler_state_load (int argc, const char **argv);
 
 void housesprinkler_state_share (int on);
 

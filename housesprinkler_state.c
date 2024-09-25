@@ -248,7 +248,7 @@ static void housesprinkler_state_listener (const char *name, time_t timestamp,
     }
 }
 
-const char *housesprinkler_state_load (int argc, const char **argv) {
+const void housesprinkler_state_load (int argc, const char **argv) {
 
     char *newconfig;
 
