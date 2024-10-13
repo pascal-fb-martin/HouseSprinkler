@@ -123,11 +123,28 @@ static const char *housesprinkler_config_parse (char *text) {
     }
     if (ConfigTextLatest) free (ConfigTextLatest);
     ConfigTextLatest = strdup (text);
+
     ConfigTokenCount = ConfigTokenAllocated;
     const char *error = echttp_json_parse (text, ConfigParsed, &ConfigTokenCount);
     DEBUG ("Planned config for %d JSON tokens, got %d\n", ConfigTokenAllocated, ConfigTokenCount);
     if (error) houselog_event ("SYSTEM", "CONFIG", "FAILED", "%s", error);
     return error;
+}
+
+static const char *housesprinkler_config_write (const char *text, int length) {
+
+    DEBUG("Saving to %s: %s\n", ConfigFile, text);
+    int fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
+    if (fd < 0) {
+        char *desc = strdup(strerror(errno));
+        houselog_trace (HOUSE_FAILURE, "CONFIG",
+                        "Cannot save to %s: %s", ConfigFile, desc);
+        free (desc);
+        return "cannot save to file";
+    }
+    write (fd, text, length);
+    close (fd);
+    return 0;
 }
 
 static void housesprinkler_config_listener (const char *name, time_t timestamp,
@@ -139,14 +156,14 @@ static void housesprinkler_config_listener (const char *name, time_t timestamp,
     ConfigText = strdup (data);
     ConfigTextOrigin = CONFIG_ORIGIN_DEPOT;
 
+    housesprinkler_config_write (data, length);
     housesprinkler_config_parse (ConfigText);
+    UseFactoryDefaults = 0;
     sprinkler_refresh ();
 }
 
 const char *housesprinkler_config_load (int argc, const char **argv) {
 
-    struct stat filestat;
-    int fd;
     char *newconfig;
 
     int i;
@@ -182,7 +199,6 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
 
 const char *housesprinkler_config_save (const char *text) {
 
-    int fd;
     int length = strlen(text);
     char *newconfig;
     const char *error;
@@ -213,17 +229,8 @@ const char *housesprinkler_config_save (const char *text) {
     houselog_event ("SYSTEM", "CONFIG", "SAVE", "TO DEPOT sprinkler.json");
     housedepositor_put ("config", "sprinkler.json", text, length);
 
-    DEBUG("Saving to %s: %s\n", ConfigFile, text);
-    fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
-    if (fd < 0) {
-        char *desc = strdup(strerror(errno));
-        houselog_trace (HOUSE_FAILURE, "CONFIG",
-                        "Cannot save to %s: %s", ConfigFile, desc);
-        free (desc);
-        return "cannot save to file";
-    }
-    write (fd, text, length);
-    close (fd);
+    error = housesprinkler_config_write (text, length);
+    if (error) return error;
 
     UseFactoryDefaults = 0;
     houselog_event ("SYSTEM", "CONFIG", "UPDATED", "FILE %s", ConfigFile);
