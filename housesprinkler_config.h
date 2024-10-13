@@ -21,8 +21,7 @@
 
 const char *housesprinkler_config_load (int argc, const char **argv);
 
-int housesprinkler_config_file (void);
-int housesprinkler_config_size (void);
+const char *housesprinkler_config_latest (void);
 
 const char *housesprinkler_config_save (const char *text);
 

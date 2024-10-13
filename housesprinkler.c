@@ -101,10 +101,9 @@ static const char *sprinkler_config (const char *method, const char *uri,
        sprinkler_refresh ();
        sprinkler_reset();
     } else if (strcmp(method, "GET") == 0) {
-       int fd = housesprinkler_config_file();
-       echttp_transfer (fd, housesprinkler_config_size());
+       echttp_content_type_json ();
+       return housesprinkler_config_latest ();
     }
-    echttp_content_type_json ();
     return "";
 }
 

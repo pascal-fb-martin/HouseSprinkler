@@ -27,11 +27,10 @@
  *    Load the configuration from the specified config option, or else
  *    from the default config file.
  *
- * int housesprinkler_config_file (void);
- * int housesprinkler_config_size (void);
+ * const char *housesprinkler_config_latest (void);
  *
- *    Return a file descriptor (and the size) of the configuration file
- *    being used.
+ *    Return the JSON text corresponding to the latest config that was loaded,
+ *    even if that config failed parsing..
  *
  * const char *housesprinkler_config_save (const char *text);
  *
@@ -91,7 +90,7 @@ static ParserToken *ConfigParsed = 0;
 static int   ConfigTokenAllocated = 0;
 static int   ConfigTokenCount = 0;
 static char *ConfigText = 0;
-static int   ConfigTextLength = 0;
+static char *ConfigTextLatest = 0;
 
 static int   ConfigTextOrigin = 0;
 #define CONFIG_ORIGIN_PARSER  1
@@ -122,6 +121,8 @@ static const char *housesprinkler_config_parse (char *text) {
         ConfigTokenAllocated = count;
         ConfigParsed = calloc (ConfigTokenAllocated, sizeof(ParserToken));
     }
+    if (ConfigTextLatest) free (ConfigTextLatest);
+    ConfigTextLatest = strdup (text);
     ConfigTokenCount = ConfigTokenAllocated;
     const char *error = echttp_json_parse (text, ConfigParsed, &ConfigTokenCount);
     DEBUG ("Planned config for %d JSON tokens, got %d\n", ConfigTokenAllocated, ConfigTokenCount);
@@ -136,7 +137,6 @@ static void housesprinkler_config_listener (const char *name, time_t timestamp,
 
     housesprinkler_config_clear ();
     ConfigText = strdup (data);
-    ConfigTextLength = length;
     ConfigTextOrigin = CONFIG_ORIGIN_DEPOT;
 
     housesprinkler_config_parse (ConfigText);
@@ -175,7 +175,6 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
 
     housesprinkler_config_clear ();
     ConfigText = newconfig;
-    ConfigTextLength = strlen(ConfigText);
     ConfigTextOrigin = CONFIG_ORIGIN_PARSER;
 
     return housesprinkler_config_parse (ConfigText);
@@ -209,7 +208,6 @@ const char *housesprinkler_config_save (const char *text) {
 
     housesprinkler_config_clear ();
     ConfigText = newconfig;
-    ConfigTextLength = length;
     ConfigTextOrigin = CONFIG_ORIGIN_PARSER;
 
     houselog_event ("SYSTEM", "CONFIG", "SAVE", "TO DEPOT sprinkler.json");
@@ -232,14 +230,8 @@ const char *housesprinkler_config_save (const char *text) {
     return 0;
 }
 
-int housesprinkler_config_file (void) {
-    if (UseFactoryDefaults)
-        return open(FactoryDefaultsConfigFile, O_RDONLY);
-    return open(ConfigFile, O_RDONLY);
-}
-
-int housesprinkler_config_size (void) {
-    return ConfigTextLength;
+const char *housesprinkler_config_latest (void) {
+    return ConfigTextLatest;
 }
 
 int housesprinkler_config_find (int parent, const char *path, int type) {
