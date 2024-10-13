@@ -119,9 +119,9 @@ static time_t StateDataHasChanged = 0;
 
 static int ShareStateData = 1;
 
-static int BackupOrigin = 0;
-#define BACKUP_ORIGIN_FILE  1
-#define BACKUP_ORIGIN_DEPOT 2
+static int StateOrigin = 0;
+#define STATE_ORIGIN_FILE  1
+#define STATE_ORIGIN_DEPOT 2
 
 static char *BackupOutBuffer = 0;
 static int BackupOutBufferSize = 0;
@@ -172,13 +172,13 @@ void housesprinkler_state_register (BackupWorker *worker) {
 
 static void housesprinkler_state_clear (void) {
     if (BackupInText) {
-        switch (BackupOrigin) {
-            case BACKUP_ORIGIN_FILE: echttp_parser_free (BackupInText); break;
-            case BACKUP_ORIGIN_DEPOT: free (BackupInText); break;
+        switch (StateOrigin) {
+            case STATE_ORIGIN_FILE: echttp_parser_free (BackupInText); break;
+            case STATE_ORIGIN_DEPOT: free (BackupInText); break;
         }
         BackupInText = 0;
     }
-    BackupOrigin = 0;
+    StateOrigin = 0;
     BackupTokenCount = 0;
 }
 
@@ -187,7 +187,7 @@ static const char *housesprinkler_state_new (int origin, char *data) {
     const char *error;
 
     BackupInText = data;
-    BackupOrigin = origin;
+    StateOrigin = origin;
     BackupTokenCount = echttp_json_estimate(BackupInText);
     if (BackupTokenCount > BackupTokenAllocated) {
         BackupTokenAllocated = BackupTokenCount+64;
@@ -224,10 +224,10 @@ static int housesprinkler_state_save (int size) {
 static void housesprinkler_state_listener (const char *name, time_t timestamp,
                                            const char *data, int length) {
 
-    houselog_event ("SYSTEM", "BACKUP", "LOAD", "FROM DEPOT %s", name);
-    const char *error = housesprinkler_state_new (BACKUP_ORIGIN_DEPOT, strdup(data));
+    houselog_event ("SYSTEM", "STATE", "LOAD", "FROM DEPOT %s", name);
+    const char *error = housesprinkler_state_new (STATE_ORIGIN_DEPOT, strdup(data));
     if (error) {
-        houselog_event ("SYSTEM", "BACKUP", "ERROR", "%s", error);
+        houselog_event ("SYSTEM", "STATE", "ERROR", "%s", error);
         return;
     }
     // We need to make a copy because we do not control the lifetime of
@@ -271,8 +271,8 @@ const void housesprinkler_state_load (int argc, const char **argv) {
 
     if (newconfig) {
         const char *error;
-        houselog_event ("SYSTEM", "BACKUP", "LOAD", "FILE %s", name);
-        housesprinkler_state_new (BACKUP_ORIGIN_FILE, newconfig);
+        houselog_event ("SYSTEM", "STATE", "LOAD", "FILE %s", name);
+        housesprinkler_state_new (STATE_ORIGIN_FILE, newconfig);
     }
 
     housedepositor_subscribe ("state", "sprinkler.json",
@@ -339,7 +339,7 @@ static int housesprinkler_state_format (void) {
 
 retry:
     DEBUG ("Backup failed: buffer too small\n");
-    houselog_trace (HOUSE_WARNING, "BACKUP",
+    houselog_trace (HOUSE_WARNING, "STATE",
                     "BUFFER TOO SMALL (NEED %d bytes)", cursor);
     BackupOutBufferSize += 1024;
     free (BackupOutBuffer);
@@ -361,7 +361,7 @@ void housesprinkler_state_periodic (time_t now) {
         if (StateDataHasChanged < now) {
             int size = housesprinkler_state_format();
             if (ShareStateData) {
-                houselog_event ("SYSTEM", "BACKUP", "SAVE", "TO DEPOT /state/sprinkler.json");
+                houselog_event ("SYSTEM", "STATE", "SAVE", "TO DEPOT sprinkler.json");
                 housedepositor_put ("state", "sprinkler.json", BackupOutBuffer, size);
             }
             if (housesprinkler_state_save (size) == size)

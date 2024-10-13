@@ -79,7 +79,7 @@ static void sprinkler_reset (void) {
     housediscover (0);
 }
 
-static void sprinkler_refresh (void) {
+void sprinkler_refresh (void) {
     housesprinkler_control_reset ();
     housesprinkler_zone_refresh ();
     housesprinkler_index_refresh ();

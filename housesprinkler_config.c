@@ -80,6 +80,7 @@
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "housedepositor.h"
 
 #include "housesprinkler.h"
 #include "housesprinkler_config.h"
@@ -90,8 +91,11 @@ static ParserToken *ConfigParsed = 0;
 static int   ConfigTokenAllocated = 0;
 static int   ConfigTokenCount = 0;
 static char *ConfigText = 0;
-static int   ConfigTextSize = 0;
 static int   ConfigTextLength = 0;
+
+static int   ConfigTextOrigin = 0;
+#define CONFIG_ORIGIN_PARSER  1
+#define CONFIG_ORIGIN_DEPOT 2
 
 static const char *ConfigFile = "/etc/house/sprinkler.json";
 
@@ -99,6 +103,17 @@ static const char FactoryDefaultsConfigFile[] =
                       "/usr/local/share/house/public/sprinkler/defaults.json";
 static int UseFactoryDefaults = 0;
 
+static void housesprinkler_config_clear (void) {
+
+    if (ConfigText) {
+        switch (ConfigTextOrigin) {
+            case CONFIG_ORIGIN_PARSER: echttp_parser_free (ConfigText); break;
+            case CONFIG_ORIGIN_DEPOT: free (ConfigText); break;
+        }
+        ConfigText = 0;
+        ConfigTextOrigin = 0;
+    }
+}
 
 static const char *housesprinkler_config_parse (char *text) {
     int count = echttp_json_estimate(text);
@@ -110,7 +125,22 @@ static const char *housesprinkler_config_parse (char *text) {
     ConfigTokenCount = ConfigTokenAllocated;
     const char *error = echttp_json_parse (text, ConfigParsed, &ConfigTokenCount);
     DEBUG ("Planned config for %d JSON tokens, got %d\n", ConfigTokenAllocated, ConfigTokenCount);
+    if (error) houselog_event ("SYSTEM", "CONFIG", "FAILED", "%s", error);
     return error;
+}
+
+static void housesprinkler_config_listener (const char *name, time_t timestamp,
+                                            const char *data, int length) {
+
+    houselog_event ("SYSTEM", "CONFIG", "LOAD", "FROM DEPOT %s", name);
+
+    housesprinkler_config_clear ();
+    ConfigText = strdup (data);
+    ConfigTextLength = length;
+    ConfigTextOrigin = CONFIG_ORIGIN_DEPOT;
+
+    housesprinkler_config_parse (ConfigText);
+    sprinkler_refresh ();
 }
 
 const char *housesprinkler_config_load (int argc, const char **argv) {
@@ -123,6 +153,9 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
     for (i = 1; i < argc; ++i) {
         if (echttp_option_match ("-config=", argv[i], &ConfigFile)) continue;
     }
+
+    housedepositor_subscribe ("config", "sprinkler.json",
+                              housesprinkler_config_listener);
 
     DEBUG ("Loading config from %s\n", ConfigFile);
 
@@ -140,9 +173,10 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
         houselog_event ("SYSTEM", "CONFIG", "LOAD", "FILE %s", ConfigFile);
     }
 
-    if (ConfigText) echttp_parser_free (ConfigText);
+    housesprinkler_config_clear ();
     ConfigText = newconfig;
     ConfigTextLength = strlen(ConfigText);
+    ConfigTextOrigin = CONFIG_ORIGIN_PARSER;
 
     return housesprinkler_config_parse (ConfigText);
 }
@@ -173,9 +207,13 @@ const char *housesprinkler_config_save (const char *text) {
         return error;
     }
 
-    if (ConfigText) echttp_parser_free (ConfigText);
+    housesprinkler_config_clear ();
     ConfigText = newconfig;
     ConfigTextLength = length;
+    ConfigTextOrigin = CONFIG_ORIGIN_PARSER;
+
+    houselog_event ("SYSTEM", "CONFIG", "SAVE", "TO DEPOT sprinkler.json");
+    housedepositor_put ("config", "sprinkler.json", text, length);
 
     DEBUG("Saving to %s: %s\n", ConfigFile, text);
     fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
