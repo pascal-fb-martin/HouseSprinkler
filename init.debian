@@ -19,9 +19,14 @@ PIDFILE=/var/run/housesprinkler.pid
 
 test -x $DAEMON || exit 0
 
-HTTP_OPTS=
-OTHER_OPTS=
+OPTS=
+HTTPOPTS=
+OTHEROPTS=
+HOUSEOPTS=
 
+if [ -r /etc/default/housegeneric ]; then
+    . /etc/default/housegeneric
+fi
 if [ -r /etc/default/housesprinkler ]; then
 	. /etc/default/housesprinkler
 fi
@@ -30,7 +35,7 @@ fi
 case $1 in
 	start)
 		log_daemon_msg "Starting HouseSprinkler server" "housesprinkler"
-		start-stop-daemon --start --quiet --oknodo --background --pidfile $PIDFILE --make-pidfile --startas $DAEMON -- $HTTP_OPTS $OTHER_OPTS
+		start-stop-daemon --start --quiet --oknodo --background --pidfile $PIDFILE --make-pidfile --startas $DAEMON -- $HTTPOPTS $HOUSEOPTS $OTHEROPTS $OPTS
 		log_end_msg $?
   		;;
 	stop)

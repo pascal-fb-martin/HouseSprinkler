@@ -3,10 +3,12 @@ Description=the house irrigation controller
 After=network-online.target houseportal.service houseclock.service
 
 [Service]
-Environment="HTTPOPTS=" "OTHEROPTS="
+Environment="HTTPOPTS=" "HOUSEOPTS=" "OTHEROPTS=" "OPTS="
+EnvironmentFile=-/etc/default/housegeneric
 EnvironmentFile=-/etc/default/housesprinkler
+EnvironmentFile=-/etc/sysconfig/housegeneric
 EnvironmentFile=-/etc/sysconfig/housesprinkler
-ExecStart=/usr/local/bin/housesprinkler $HTTPOPTS $OTHEROPTS
+ExecStart=/usr/local/bin/housesprinkler $HTTPOPTS $HOUSEOPTS $OTHEROPTS $OPTS
 
 [Install]
 WantedBy=multi-user.target

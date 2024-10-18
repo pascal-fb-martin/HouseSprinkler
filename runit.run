@@ -1,7 +1,10 @@
 #!/bin/sh
+OPTS=
 HTTPOPTS=
+HOUSEOPTS=
 OTHEROPTS=
+if [ -e /etc/default/housegeneric ] ; then . /etc/default/housegeneric ; fi
 if [ -e /etc/default/housesprinkler ] ; then . /etc/default/housesprinkler ; fi
 sv start houseportal || exit 1
-exec /usr/local/bin/housesprinkler $HTTPOPTS $OTHEROPTS
+exec /usr/local/bin/housesprinkler $HTTPOPTS $HOUSEOPTS $OTHEROPTS $OPTS
 
