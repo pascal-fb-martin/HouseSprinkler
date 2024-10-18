@@ -118,10 +118,7 @@ static const char FactoryBackupFile[] =
 static time_t StateDataHasChanged = 0;
 
 static int ShareStateData = 1;
-
-static int StateOrigin = 0;
-#define STATE_ORIGIN_FILE  1
-#define STATE_ORIGIN_DEPOT 2
+static int StateFileEnabled = 1;
 
 static char *BackupOutBuffer = 0;
 static int BackupOutBufferSize = 0;
@@ -172,22 +169,17 @@ void housesprinkler_state_register (BackupWorker *worker) {
 
 static void housesprinkler_state_clear (void) {
     if (BackupInText) {
-        switch (StateOrigin) {
-            case STATE_ORIGIN_FILE: echttp_parser_free (BackupInText); break;
-            case STATE_ORIGIN_DEPOT: free (BackupInText); break;
-        }
+        echttp_parser_free (BackupInText);
         BackupInText = 0;
     }
-    StateOrigin = 0;
     BackupTokenCount = 0;
 }
 
-static const char *housesprinkler_state_new (int origin, char *data) {
+static const char *housesprinkler_state_new (char *data) {
 
     const char *error;
 
     BackupInText = data;
-    StateOrigin = origin;
     BackupTokenCount = echttp_json_estimate(BackupInText);
     if (BackupTokenCount > BackupTokenAllocated) {
         BackupTokenAllocated = BackupTokenCount+64;
@@ -205,6 +197,8 @@ static const char *housesprinkler_state_new (int origin, char *data) {
 }
 
 static int housesprinkler_state_save (int size) {
+
+    if (!StateFileEnabled) return size; // No error.
 
     int fd = open (BackupFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
     if (fd < 0) {
@@ -225,7 +219,7 @@ static void housesprinkler_state_listener (const char *name, time_t timestamp,
                                            const char *data, int length) {
 
     houselog_event ("SYSTEM", "STATE", "LOAD", "FROM DEPOT %s", name);
-    const char *error = housesprinkler_state_new (STATE_ORIGIN_DEPOT, strdup(data));
+    const char *error = housesprinkler_state_new (echttp_parser_string(data));
     if (error) {
         houselog_event ("SYSTEM", "STATE", "ERROR", "%s", error);
         return;
@@ -255,9 +249,18 @@ const void housesprinkler_state_load (int argc, const char **argv) {
     int i;
     for (i = 1; i < argc; ++i) {
         if (echttp_option_match ("-backup=", argv[i], &BackupFile)) continue;
+        if (echttp_option_present ("-no-local-storage", argv[i])) {
+            StateFileEnabled = 0;
+            continue;
+        }
     }
 
     housesprinkler_state_clear ();
+
+    housedepositor_subscribe ("state", "sprinkler.json",
+                              housesprinkler_state_listener);
+
+    if (!StateFileEnabled) return;
 
     const char *name = BackupFile;
     DEBUG ("Loading backup from %s\n", name);
@@ -272,11 +275,8 @@ const void housesprinkler_state_load (int argc, const char **argv) {
     if (newconfig) {
         const char *error;
         houselog_event ("SYSTEM", "STATE", "LOAD", "FILE %s", name);
-        housesprinkler_state_new (STATE_ORIGIN_FILE, newconfig);
+        housesprinkler_state_new (newconfig);
     }
-
-    housedepositor_subscribe ("state", "sprinkler.json",
-                              housesprinkler_state_listener);
 }
 
 void housesprinkler_state_share (int on) {
@@ -284,6 +284,8 @@ void housesprinkler_state_share (int on) {
 }
 
 const char *housesprinkler_state_get_string (const char *path) {
+
+    if (BackupTokenCount <= 0) return 0;
 
     int i = echttp_json_search(BackupParsed, path);
     if (i < 0) return 0;
@@ -294,6 +296,8 @@ const char *housesprinkler_state_get_string (const char *path) {
 }
 
 long housesprinkler_state_get (const char *path) {
+
+    if (BackupTokenCount <= 0) return 0;
 
     // Support boolean and integer, all converted to integer.
     // Anything else: return 0

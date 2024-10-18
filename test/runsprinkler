@@ -1,4 +1,4 @@
 #!/bin/bash
 cd `dirname $0`
-../housesprinkler --config=sprinkler.test.json --backup=backup.json
+../housesprinkler --config=sprinkler.test.json --backup=backup.json $*
 
