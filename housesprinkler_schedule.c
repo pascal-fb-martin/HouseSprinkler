@@ -148,6 +148,7 @@ static void housesprinkler_schedule_restore (void) {
 
     if (!Schedules) return; // To early for restoring.
 
+    DEBUG ("Restore from state backup\n");
     int i = 0;
     for (;;) {
         uuid_t uuid;
@@ -257,6 +258,7 @@ void housesprinkler_schedule_refresh (void) {
         // This is a configuration change, not a program start.
         // recover the schedule start times from the old configuration.
         //
+        DEBUG ("Restore from old schedule\n");
         for (i = 0; i < oldschedulescount; ++i) {
             if (oldschedules[i].disabled) continue; // Nothing to recover.
             for (j = 0; j < SchedulesCount; ++j) {

@@ -100,13 +100,14 @@ static const char FactoryDefaultsConfigFile[] =
                       "/usr/local/share/house/public/sprinkler/defaults.json";
 static int UseFactoryDefaults = 0;
 
-static void housesprinkler_config_clear (void) {
+static void housesprinkler_config_clear (const char *reason) {
 
     if (ConfigText) {
         echttp_parser_free (ConfigText);
         ConfigText = 0;
     }
     ConfigTokenCount = 0;
+    DEBUG ("Config cleared (%s).\n", reason);
 }
 
 static const char *housesprinkler_config_parse (char *text) {
@@ -118,11 +119,15 @@ static const char *housesprinkler_config_parse (char *text) {
     }
     if (ConfigTextLatest) free (ConfigTextLatest);
     ConfigTextLatest = strdup (text);
+    DEBUG ("New configuration: %s\n", ConfigTextLatest);
 
     ConfigTokenCount = ConfigTokenAllocated;
     const char *error = echttp_json_parse (text, ConfigParsed, &ConfigTokenCount);
     DEBUG ("Planned config for %d JSON tokens, got %d\n", ConfigTokenAllocated, ConfigTokenCount);
-    if (error) houselog_event ("SYSTEM", "CONFIG", "FAILED", "%s", error);
+    if (error) {
+        houselog_event ("SYSTEM", "CONFIG", "FAILED", "%s", error);
+        DEBUG ("Config error: %s\n", error);
+    }
     return error;
 }
 
@@ -149,7 +154,7 @@ static void housesprinkler_config_listener (const char *name, time_t timestamp,
 
     houselog_event ("SYSTEM", "CONFIG", "LOAD", "FROM DEPOT %s", name);
 
-    housesprinkler_config_clear ();
+    housesprinkler_config_clear ("new depot config detected");
     ConfigText = echttp_parser_string (data);
 
     housesprinkler_config_write (data, length);
@@ -178,7 +183,7 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
 
     DEBUG ("Loading config from %s\n", ConfigFile);
 
-    housesprinkler_config_clear ();
+    housesprinkler_config_clear ("loading..");
 
     UseFactoryDefaults = 0;
     newconfig = echttp_parser_load (ConfigFile);
@@ -214,6 +219,7 @@ const char *housesprinkler_config_save (const char *text) {
         return "invalid string";
     }
 
+    housesprinkler_config_clear ("new configuration");
     newconfig = echttp_parser_string(text);
 
     error = housesprinkler_config_parse (newconfig);
@@ -223,8 +229,6 @@ const char *housesprinkler_config_save (const char *text) {
         free (newconfig);
         return error;
     }
-
-    housesprinkler_config_clear ();
     ConfigText = newconfig;
 
     houselog_event ("SYSTEM", "CONFIG", "SAVE", "TO DEPOT sprinkler.json");
