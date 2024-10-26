@@ -119,7 +119,10 @@ function sprinklerApplyUpdate (text) {
    var program;
 
    sprinklerSetContent ('hostname', response.host);
-   document.getElementById('portal').href = 'http://'+response.proxy+'/index.html';
+   var portal = document.getElementById('portal');
+   if (portal) {
+       portal.href = 'http://'+response.proxy+'/index.html';
+   }
 
    if (response.sprinkler.program.active) {
       program = response.sprinkler.program.active.join(', ');
@@ -179,8 +182,9 @@ function sprinklerApplyUpdate (text) {
        }
    }
 
-   for (var i = 0; i < response.sprinkler.schedule.schedule.length; ++i) {
-       var schedule = response.sprinkler.schedule.schedule[i];
+   for (var i = 0; i < response.sprinkler.schedule.schedules.length; ++i) {
+       var schedule = response.sprinkler.schedule.schedules[i];
+       if (! schedule.launched) continue;
        var latest = document.getElementById (schedule.id+'_latest');
        if (latest) {
            var now = new Date(schedule.launched * 1000);

@@ -6,18 +6,6 @@
 <script src="/sprinkler/sprinklerlib.js"></script>
 <script>
 
-function getInput (name, default_value) {
-   var elements = document.getElementsByName (name);
-   for (var i = 0; i < elements.length; i++) {
-      if (elements[i].value) return elements[i].value;
-   }
-   return default_value;
-}
-
-function zoneClick () {
-   sprinklerZoneOn(this.zonename, getInput ("zoneruntime", 15));
-}
-
 function controlRefresh () {
 
    sprinklerStatus (function (status) {
@@ -77,12 +65,12 @@ window.onload = function() {
    <tr><td>
    <table class="sprkrtop">
    <tr>
-   <td><a class="sprkrtopitem" id="portal" href="/index.html">Portal</a></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/index.html">Sprinkler</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/events.html">Events</A></td>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/schedules.html">Schedules</A></td>
    <td><span class="sprkrtopcurrent">Controls</span></td>
+   <td><A class="sprkrtopitem" HREF="/sprinkler/events.html">Events</A></td>
    <td><A class="sprkrtopitem" HREF="/sprinkler/config.html">Config</A></td>
    </tr>
    </table> 

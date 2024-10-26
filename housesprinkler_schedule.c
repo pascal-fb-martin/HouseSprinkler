@@ -419,12 +419,12 @@ int housesprinkler_schedule_status (char *buffer, int size) {
 
     int i;
     char ascii[40];
-    const char *sep = ",\"schedule\":[";
+    const char *sep = ",\"schedules\":[";
     for (i = 0; i < SchedulesCount; ++i) {
-        if (!Schedules[i].lastlaunch) continue;
         uuid_unparse (Schedules[i].id, ascii);
-        cursor += snprintf (buffer+cursor, size-cursor, "%s{\"id\":\"%s\",\"launched\":%ld}",
-                            sep, ascii, (long)(Schedules[i].lastlaunch));
+        cursor += snprintf (buffer+cursor, size-cursor,
+                            "%s{\"id\":\"%s\",\"program\":\"%s\",\"start\":\"%02d:%02d\",\"launched\":%ld}",
+                            sep, ascii, Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute, (long)(Schedules[i].lastlaunch));
         if (cursor >= size) return cursor;
         sep = ",";
     }
