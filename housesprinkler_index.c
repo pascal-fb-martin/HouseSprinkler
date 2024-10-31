@@ -29,19 +29,16 @@
  *    This function must be called each time the configuration changes.
  *
  * const char *housesprinkler_index_origin (void);
+ * int         housesprinkler_index_priority (void);
  * time_t      housesprinkler_index_timestamp (void);
  *
- *    Return the origin or timestamp corresponding to the current index value.
+ *    Return the origin, priority  or timestamp corresponding to the current
+ *    index value. If no valid index is available (or the latest index has
+ *    expired), return origin "default", priority and timestamp 0.
  *
  * int housesprinkler_index_get (void);
  *
- *    Get the current index value.
- *
- * void housesprinkler_index_register
- *          (housesprinkler_index_listener *listener);
- *
- *    Register a new listener. A listener is called when a new index value
- *    is made available.
+ *    Get the current index value. Return 100 if no valid index is available.
  *
  * void housesprinkler_index_periodic (time_t now);
  *
@@ -90,37 +87,41 @@ static time_t      SprinklerIndexTimestamp = 0;
 static char       *SprinklerIndexOrigin = 0;
 static int         SprinklerIndexOriginSize = 0;
 
-#define INDEX_MAX_LISTENER  16
-static housesprinkler_index_listener *SprinklerIndexListener[INDEX_MAX_LISTENER];
+static int housesprinkler_index_isvalid (void) {
+
+    if (SprinklerIndexTimestamp <= 0) return 0; // No index.
+
+    // Ignore the index if more than 3 days old.
+    int isvalid = (SprinklerIndexTimestamp > (time(0) - (3 * 86400)));
+    if (!isvalid) SprinklerIndexTimestamp = 0; // Do no repeat the same test.
+
+    return isvalid;
+}
 
 void housesprinkler_index_refresh (void) {
     // No static configuration at this time: based on service discovery.
 }
 
 const char *housesprinkler_index_origin (void) {
+    if (!housesprinkler_index_isvalid()) return "default";
     if (! SprinklerIndexOrigin ||
         SprinklerIndexTimestamp + ONEDAY < time(0)) return "default";
     return SprinklerIndexOrigin;
 }
 
+int housesprinkler_index_priority (void) {
+    if (!housesprinkler_index_isvalid()) return 0;
+    return SprinklerIndexPriority;
+}
+
 time_t housesprinkler_index_timestamp (void) {
+    if (!housesprinkler_index_isvalid()) return 0;
     return SprinklerIndexTimestamp;
 }
 
 int housesprinkler_index_get (void) {
-    if (SprinklerIndexTimestamp + ONEDAY < time(0)) return DEFAULTINDEX;
+    if (!housesprinkler_index_isvalid()) return DEFAULTINDEX;
     return SprinklerIndex;
-}
-
-void housesprinkler_index_register (housesprinkler_index_listener *listener) {
-
-    int i;
-    for (i = 0; i < INDEX_MAX_LISTENER; ++i) {
-        if (SprinklerIndexListener[i] == 0) {
-            SprinklerIndexListener[i] = listener;
-            break;
-        }
-    }
 }
 
 static void housesprinkler_index_response
@@ -209,19 +210,11 @@ static void housesprinkler_index_response
    snprintf (SprinklerIndexOrigin, SprinklerIndexOriginSize, "%s@%s",
              tokens[name].value.string, tokens[server].value.string);
 
-   // Now that we do got a brand new index, it is time to let everyone
-   // know about it.
+   // Record this brand new index.
    //
    houselog_event ("INDEX", SprinklerIndexOrigin, "APPLY",
                    "%d%% FROM %s (PRIORITY %d)",
                    SprinklerIndex, urlsource, ipriority);
-
-   int i;
-   for (i = 0; i < INDEX_MAX_LISTENER; ++i) {
-       if (SprinklerIndexListener[i])
-           SprinklerIndexListener[i]
-               (SprinklerIndexOrigin, SprinklerIndex, SprinklerIndexTimestamp);
-   }
 }
 
 static void housesprinkler_index_query
@@ -274,6 +267,9 @@ void housesprinkler_index_periodic (time_t now) {
 
 int housesprinkler_index_status (char *buffer, int size) {
 
+    if (!housesprinkler_index_isvalid()) {
+        return snprintf (buffer, size, "\"origin\":\"default\",\"value\":100");
+    }
     return snprintf (buffer, size, "\"origin\":\"%s\",\"value\":%d",
                      SprinklerIndexOrigin?SprinklerIndexOrigin:"default",
                      SprinklerIndex);

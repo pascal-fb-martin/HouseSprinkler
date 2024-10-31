@@ -69,6 +69,7 @@
 #include "housesprinkler_config.h"
 #include "housesprinkler_zone.h"
 #include "housesprinkler_season.h"
+#include "housesprinkler_index.h"
 
 #define DEBUG if (sprinkler_isdebug()) printf
 
@@ -89,10 +90,6 @@ static SprinklerProgram *Programs = 0;
 static int ProgramsCount = 0;
 
 static int WateringIndexEnabled = 1;
-
-static int         WateringIndex = 100;
-static const char *WateringIndexOrigin = 0;
-static int         WateringIndexTimestamp = 0;
 
 static void housesprinkler_program_restore (void) {
     WateringIndexEnabled = housesprinkler_state_get (".useindex");
@@ -176,20 +173,13 @@ void housesprinkler_program_index (int state) {
     housesprinkler_state_changed ();
 }
 
-void housesprinkler_program_set_index 
-         (const char *origin, int value, time_t timestamp) {
-
-    WateringIndex = value;
-    WateringIndexOrigin = origin;
-    WateringIndexTimestamp = timestamp;
-}
-
 static void housesprinkler_program_activate
                 (SprinklerProgram *program, int manual) {
 
     // The first task during activation is to calculate the watering index
     // that applies at this time.
 
+    int priority = 0;
     int index = 100;
     const char *indexname = 0;
     char context[256];
@@ -200,8 +190,9 @@ static void housesprinkler_program_activate
     }
     DEBUG ("Activate program %s\n", program->name);
 
-    // Use an online index only if it has been updated recently.
-    // Otherwise use the season static schedule, if any.
+    // First consider the season index. Use an online index only if it has
+    // a higher priority and it has been updated recently.
+    // TBD: manual index value will take precedence.
     // As an added condition, do not automatically activate if the season
     // index is 0: this means that the program is disabled for that period
     // of the year. Manual activation is fine: the user is always right.
@@ -221,12 +212,13 @@ static void housesprinkler_program_activate
                 index = 100; // The user did override the season index.
             }
             indexname = program->season;
+            priority = housesprinkler_season_priority (program->season);
         }
 
-        // A recent external index takes priority over the static season.
-        if (WateringIndexTimestamp > now - (3 * 86400)) {
-            index = WateringIndex;
-            indexname = WateringIndexOrigin;
+        // Uses the external index only if valid and of a higher priority.
+        if (housesprinkler_index_priority () > priority) {
+            index = housesprinkler_index_get ();
+            indexname = housesprinkler_index_origin ();
         }
     }
 

@@ -22,5 +22,6 @@
  */
  
 void housesprinkler_season_refresh (void);
+int  housesprinkler_season_priority (const char *name);
 int  housesprinkler_season_index (const char *name);
 

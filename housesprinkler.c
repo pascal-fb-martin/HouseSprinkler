@@ -369,7 +369,6 @@ int main (int argc, const char **argv) {
     echttp_static_route ("/", "/usr/local/share/house/public");
     echttp_background (&hs_background);
 
-    housesprinkler_index_register (housesprinkler_program_set_index);
     housediscover_initialize (argc, argv);
 
     houselog_event ("SERVICE", "sprinkler", "STARTED", "ON %s", houselog_host());

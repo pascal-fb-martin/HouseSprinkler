@@ -24,15 +24,11 @@
 void housesprinkler_index_refresh (void);
 
 const char *housesprinkler_index_origin (void);
+int    housesprinkler_index_priority (void);
 time_t housesprinkler_index_timestamp (void);
-int housesprinkler_index_get (void);
+int    housesprinkler_index_get (void);
 
 void housesprinkler_index_periodic (time_t now);
-
-typedef void housesprinkler_index_listener
-                 (const char *origin, int value, time_t timestamp);
-
-void housesprinkler_index_register (housesprinkler_index_listener *listener);
 
 int housesprinkler_index_status (char *buffer, int size);
 

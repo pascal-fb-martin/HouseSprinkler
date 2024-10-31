@@ -28,10 +28,15 @@
  *    has been changed. It converts the configured seasons into activable
  *    ones.
  *
+ * int housesprinkler_season_priority (const char *name);
+ *
+ *    Return the priority of the specified season. or 0 if the season does
+ *    not exist.
+ *
  * int housesprinkler_season_index (const char *name);
  *
  *    Return the current watering index given the specific season setting,
- *    or -1 if the season does not exist.
+ *    or 100 (full watering) if the season does not exist.
  */
 
 #include <string.h>
@@ -50,6 +55,7 @@
 
 typedef struct {
     const char *name;
+    int priority;
     int unit;
     int index[52];
 } SprinklerSeason;
@@ -63,6 +69,7 @@ static int SeasonsCount = 0;
 
 static int housesprinkler_season_find (const char *name) {
     int i;
+    if (!name) return -1;
     for (i = 0; i < SeasonsCount; ++i) {
         if (strcmp (Seasons[i].name, name) == 0) return i;
     }
@@ -98,6 +105,9 @@ void housesprinkler_season_refresh (void) {
             Seasons[i].name = housesprinkler_config_string (season, ".name");
             if (!Seasons[i].name) continue; // Bad entry.
 
+            int priority = housesprinkler_config_integer (season, ".priority");
+            Seasons[i].priority = (priority <= 0) ? 0 : priority;
+
             count = 0;
             int index = housesprinkler_config_array (season, ".weekly");
             if (index <= 0) {
@@ -123,6 +133,14 @@ void housesprinkler_season_refresh (void) {
                    (Seasons[i].unit==SPRINKLER_SEASON_WEEKLY)?"week":"month");
         }
     }
+}
+
+int housesprinkler_season_priority (const char *name) {
+
+    int season = housesprinkler_season_find (name);
+    if (season < 0) return 0; // No season, lowest priority.
+
+    return Seasons[season].priority;
 }
 
 int housesprinkler_season_index (const char *name) {
