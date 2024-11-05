@@ -323,8 +323,8 @@ static void housesprinkler_control_discovered
        if (strcmp (control->url, provider)) {
            snprintf (control->url, sizeof(control->url), provider);
            control->status = 'i';
-           houselog_event (control->type, control->name, "ROUTE",
-                           "TO %s", control->url);
+           houselog_event_local
+               (control->type, control->name, "ROUTE", "TO %s", control->url);
        }
    }
 }
