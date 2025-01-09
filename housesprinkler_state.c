@@ -81,9 +81,13 @@
  *    at around the same time, but we do not want to save each time: it is
  *    better to delay and do the save only once.
  *
+ * const void housesprinkler_state_load (int argc, const char **argv);
+ *
+ *    Initial state load when the software starts.
+ *
  * void housesprinkler_state_periodic (time_t now);
  *
- *    Background state activity (mostly: save data when changed).
+ *    Background state activity (mostly: save or reload data when changed).
  */
 
 #include <string.h>
