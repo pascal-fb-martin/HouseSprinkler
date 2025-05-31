@@ -54,7 +54,6 @@
 // Rain delay in 1 day increment:
 #define RAINDELAYINTERVAL 86400
 
-static int use_houseportal = 0;
 static char hostname[128];
 
 static int SprinklerDebug = 0;
@@ -237,22 +236,13 @@ static void hs_background (int fd, int mode) {
 
     static time_t DelayConfigDiscovery = 0;
     static time_t LastCall = 0;
-    static time_t LastRenewal = 0;
     time_t now = time(0);
 
     if (now == LastCall) return;
     LastCall = now;
 
-    if (use_houseportal) {
-        static const char *path[] = {"sprinkler:/sprinkler"};
-        if (now >= LastRenewal + 60) {
-            if (LastRenewal > 0)
-                houseportal_renew();
-            else
-                houseportal_register (echttp_port(4), path, 1);
-            LastRenewal = now;
-        }
-    }
+    houseportal_background (now);
+
     // Do not try to discover other service immediately: wait for two seconds
     // after the first request to the portal. No need to schedule any watering
     // until then, either.
@@ -331,8 +321,9 @@ int main (int argc, const char **argv) {
 
     argc = echttp_open (argc, argv);
     if (echttp_dynamic_port()) {
+        static const char *path[] = {"sprinkler:/sprinkler"};
         houseportal_initialize (argc, argv);
-        use_houseportal = 1;
+        houseportal_declare (echttp_port(4), path, 1);
     }
     sprinkler_initialize (argc, argv);
     houselog_initialize ("sprinkler", argc, argv);
