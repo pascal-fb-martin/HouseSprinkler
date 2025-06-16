@@ -25,9 +25,11 @@ void housesprinkler_program_index (int state);
 void housesprinkler_program_set_index
          (const char *origin, int value, time_t timestamp);
 
-void housesprinkler_program_start_manual    (const char *name);
-void housesprinkler_program_start_scheduled (const char *name);
-int  housesprinkler_program_running         (const char *name);
+void   housesprinkler_program_start_manual    (const char *name);
+time_t housesprinkler_program_start_scheduled (const char *name);
+int    housesprinkler_program_running         (const char *name);
+
+time_t housesprinkler_program_scheduled (const char *name, time_t scheduled);
 
 void housesprinkler_program_periodic (time_t now);
 int  housesprinkler_program_status (char *buffer, int size);

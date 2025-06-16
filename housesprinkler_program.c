@@ -37,14 +37,27 @@
  *
  *    Set the current watering index for all upcoming programs.
  *
- * void housesprinkler_program_start_manual (const char *name);
- * void housesprinkler_program_start_scheduled (const char *name);
+ * void   housesprinkler_program_start_manual (const char *name);
+ * time_t housesprinkler_program_start_scheduled (const char *name);
  *
  *    The two methods for running a watering program: manual or automatic.
+ *    The second method indicates if the program was effectively started:
+ *    it returns the start time, or 0 if the program was not started.
  *
  * int housesprinkler_program_running (const char *name);
  *
  *    Indicate is the named program is currently running.
+ *
+ * time_t housesprinkler_program_scheduled (const char *name, time_t scheduled);
+ *
+ *    Update when a program was last scheduled. The update takes effect only
+ *    if the scheduled time provided is more recent than the last time know.
+ *    In other words, this can only moves the last scheduled time forward.
+ *    This is used to restore the last known scheduled time after a
+ *    configuration refresh.
+ *
+ *    This also returns the last known scheduled time. A way to query the
+ *    current state without side effect is to call with scheduled set to 0.
  *
  * void housesprinkler_program_periodic (time_t now);
  *
@@ -83,6 +96,7 @@ typedef struct {
     const char *season;
     char running;
     short count;
+    time_t scheduled;
     SprinklerProgramZone *zones;
 } SprinklerProgram;
 
@@ -138,6 +152,7 @@ void housesprinkler_program_refresh (void) {
         Programs[i].count = 0;
         Programs[i].season = 0;
         Programs[i].running = 0;
+        Programs[i].scheduled = 0;
 
         snprintf (path, sizeof(path), "[%d]", i);
         int program = housesprinkler_config_object (content, path);
@@ -173,8 +188,8 @@ void housesprinkler_program_index (int state) {
     housesprinkler_state_changed ();
 }
 
-static void housesprinkler_program_activate
-                (SprinklerProgram *program, int manual) {
+static time_t housesprinkler_program_activate
+                  (SprinklerProgram *program, int manual) {
 
     // The first task during activation is to calculate the watering index
     // that applies at this time.
@@ -184,9 +199,9 @@ static void housesprinkler_program_activate
     const char *indexname = 0;
     char context[256];
 
-    if (program-> running) {
+    if (program->running) {
         houselog_event ("PROGRAM", program->name, "IGNORED", "ALREADY RUNNING");
-        return;
+        return 0;
     }
     DEBUG ("Activate program %s\n", program->name);
 
@@ -207,7 +222,7 @@ static void housesprinkler_program_activate
                 if (!manual) {
                     houselog_event ("PROGRAM", program->name,
                                     "IGNORED", "NOT IN SEASON");
-                    return; // Disabled at this time of the year.
+                    return 0; // Disabled at this time of the year.
                 }
                 index = 100; // The user did override the season index.
             }
@@ -242,9 +257,11 @@ static void housesprinkler_program_activate
     }
 
     program->running = 1;
+    return now;
 }
 
 static int housesprinkler_program_find (const char *name) {
+    if (!name) return -1;
     int i;
     for (i = 0; i < ProgramsCount; ++i) {
         if (strcmp (name, Programs[i].name) == 0) return i;
@@ -258,10 +275,14 @@ void housesprinkler_program_start_manual (const char *name) {
     if (i >= 0) housesprinkler_program_activate (Programs+i, 1);
 }
 
-void housesprinkler_program_start_scheduled (const char *name) {
+time_t housesprinkler_program_start_scheduled (const char *name) {
 
     int i = housesprinkler_program_find(name);
-    if (i >= 0) housesprinkler_program_activate (Programs+i, 0);
+    if (i < 0) return 0; // Cannot start an unknow program.
+
+    time_t started = housesprinkler_program_activate (Programs+i, 0);
+    if (started) Programs[i].scheduled = started;
+    return started;
 }
 
 int housesprinkler_program_running (const char *name) {
@@ -269,6 +290,16 @@ int housesprinkler_program_running (const char *name) {
     int i = housesprinkler_program_find(name);
     if (i >= 0) return Programs[i].running;
     return 1; // If it does not exist, it should not be activated.
+}
+
+time_t housesprinkler_program_scheduled (const char *name, time_t scheduled) {
+
+    int i = housesprinkler_program_find(name);
+    if (i < 0) return 0; // Unknown.
+    if (scheduled > Programs[i].scheduled) { // Only move forward.
+        Programs[i].scheduled = scheduled;
+    }
+    return Programs[i].scheduled;
 }
 
 void housesprinkler_program_periodic (time_t now) {

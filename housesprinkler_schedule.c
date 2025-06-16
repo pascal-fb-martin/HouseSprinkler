@@ -163,6 +163,16 @@ static void housesprinkler_schedule_restore (void) {
             snprintf (path, sizeof(path), ".schedule[%d].launched", i);
             Schedules[j].lastlaunch = housesprinkler_state_get (path);
             DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from backup: lastlaunch = %ld\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, (long)(Schedules[j].lastlaunch));
+            housesprinkler_program_scheduled (Schedules[j].program,
+                                              Schedules[j].lastlaunch);
+            // If the name of the program launched has changed, also update
+            // the program that was used at the time of the launch.
+            snprintf (path, sizeof(path), ".schedule[%d].program", i);
+            const char *pgrm = housesprinkler_state_get_string (path);
+            if (pgrm && strcmp(pgrm, Schedules[j].program)) {
+                housesprinkler_program_scheduled (pgrm,
+                                                  Schedules[j].lastlaunch);
+            }
             break;
         }
         i += 1;
@@ -390,16 +400,28 @@ void housesprinkler_schedule_periodic (time_t now) {
         // We use a 6 hours (21600 sec) leniency to account for changes
         // to the schedule start time, for example when the start time is
         // changed to be a few hours early.
+        // The last launch time used is the highest of two informations:
+        // - The last launch time for this schedule.
+        // - The last launch time for the program referenced by the schedule.
+        // Doing it this way handles the cases when multiple schedules refer
+        // to the same program, and when the program name referenced in
+        // the schedule has changed (a corner case if there is one).
         //
         if (schedule->interval > 1) {
-            if (((now - schedule->lastlaunch + 21600) / 86400) < schedule->interval) continue;
+            time_t t0 = housesprinkler_program_scheduled (schedule->program, 0);
+            if (schedule->lastlaunch > t0)
+                t0 = schedule->lastlaunch;
+            if (((now - t0 + 21600) / 86400) < schedule->interval) continue;
         }
-        DEBUG ("== Program %s: interval  %d has passed\n", schedule->program, schedule->interval);
+        DEBUG ("== Program %s: interval %d has passed\n", schedule->program, schedule->interval);
 
-        DEBUG ("== Program %s activated at %ld\n", schedule->program, (long)now);
-        housesprinkler_program_start_scheduled (schedule->program);
-        schedule->lastlaunch = now;
-        housesprinkler_state_changed();
+        time_t started =
+            housesprinkler_program_start_scheduled (schedule->program);
+        if (started) {
+            DEBUG ("== Program %s activated at %ld\n", schedule->program, (long)started);
+            schedule->lastlaunch = started;
+            housesprinkler_state_changed();
+        }
     }
 }
 
