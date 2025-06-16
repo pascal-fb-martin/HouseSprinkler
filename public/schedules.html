@@ -20,15 +20,15 @@ function scheduleRefresh () {
          inner.innerHTML = schedule.program;
          outer.appendChild(inner);
          inner = document.createElement("td");
+         inner.innerHTML = schedule.start;
+         outer.appendChild(inner);
+         inner = document.createElement("td");
          if (schedule.launched) {
             var latest = new Date(schedule.launched * 1000);
             inner.innerHTML = latest.toDateString();
          } else {
             inner.innerHTML = '';
          }
-         outer.appendChild(inner);
-         inner = document.createElement("td");
-         inner.innerHTML = schedule.start;
          outer.appendChild(inner);
          tabular.appendChild(outer);
       }
@@ -81,8 +81,8 @@ window.onload = function() {
    <table class="sprkrside">
       <tr>
          <th width="40%">PROGRAM</th>
-         <th width="40%">LAST ACTIVE</th>
          <th width="20%">TIME</th>
+         <th width="40%">LAST ACTIVE</th>
       </tr>
    </table>
 </body>
