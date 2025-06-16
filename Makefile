@@ -56,7 +56,15 @@ housesprinkler: $(OBJS)
 
 dev:
 
-install-app:
+install-ui:
+	mkdir -p $(SHARE)/public/sprinkler
+	chmod 755 $(SHARE) $(SHARE)/public $(SHARE)/public/sprinkler
+	cp public/* $(SHARE)/public/sprinkler
+	chown root:root $(SHARE)/public/sprinkler/*
+	chmod 644 $(SHARE)/public/sprinkler/*
+	rm -f $(SHARE)/public/sprinkler/valves.html
+
+install-app: install-ui
 	mkdir -p $(HROOT)/bin
 	rm -f $(HROOT)/bin/housesprinkler
 	cp housesprinkler $(HROOT)/bin
@@ -66,12 +74,6 @@ install-app:
 	mkdir -p /etc/house
 	touch /etc/house/sprinkler.json
 	mkdir -p /var/lib/house
-	mkdir -p $(SHARE)/public/sprinkler
-	chmod 755 $(SHARE) $(SHARE)/public $(SHARE)/public/sprinkler
-	cp public/* $(SHARE)/public/sprinkler
-	chown root:root $(SHARE)/public/sprinkler/*
-	chmod 644 $(SHARE)/public/sprinkler/*
-	rm -f $(SHARE)/public/sprinkler/valves.html
 	if [ -e /etc/house/sprinklerbkp.json ] ; then if grep -q useindex /etc/house/sprinklerbkp.json ; then echo yes > /dev/null ; else rm -f /tmp/sprinklerbkp.json ; sed -e 's/}/, "useindex":1}/' < /etc/house/sprinklerbkp.json > /tmp/sprinklerbkp.json ; mv /tmp/sprinklerbkp.json /etc/house/sprinklerbkp.json ; fi ; fi
 
 uninstall-app:
