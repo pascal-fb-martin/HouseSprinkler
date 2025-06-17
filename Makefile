@@ -47,10 +47,10 @@ clean:
 rebuild: clean all
 
 %.o: %.c
-	gcc -c -Os -o $@ $<
+	gcc -c -g -Os -o $@ $<
 
 housesprinkler: $(OBJS)
-	gcc -Os -o housesprinkler $(OBJS) -lhouseportal -lechttp -luuid -lssl -lcrypto -lrt
+	gcc -g -Os -o housesprinkler $(OBJS) -lhouseportal -lechttp -luuid -lssl -lcrypto -lrt
 
 # Distribution agnostic file installation -----------------------
 
