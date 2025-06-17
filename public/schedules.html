@@ -6,33 +6,88 @@
 <script src="/sprinkler/sprinklerlib.js"></script>
 <script>
 
-function scheduleRefresh () {
+function newScheduleAction (text, command, id) {
+    var button = document.createElement("button");
+    button.innerHTML = text;
+    button.disabled = false;
+    button.scheduleId = id;
+    button.onclick = command;
+    return button;
+}
 
-   sprinklerStatus (function (status) {
-      var tabular = document.getElementsByClassName ('sprkrside')[0];
-      for (var i = tabular.childNodes.length - 1; i > 1; i--) {
-         tabular.removeChild(tabular.childNodes[i]);
+function scheduleRearm () {
+    var command = new XMLHttpRequest();
+    command.open("GET", '/sprinkler/rearm?id='+this.scheduleId);
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            scheduleShow (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+function scheduleCancel () {
+    var command = new XMLHttpRequest();
+    command.open("DELETE", '/sprinkler/cancel?id='+this.scheduleId);
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            scheduleShow (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+function scheduleShow (status) {
+   var tabular = document.getElementById ('started');
+   for (var i = tabular.childNodes.length - 1; i > 1; i--) {
+      tabular.removeChild(tabular.childNodes[i]);
+   }
+   for (var i = 0; i < status.sprinkler.schedule.schedules.length; i++) {
+      var schedule = status.sprinkler.schedule.schedules[i];
+      var outer = document.createElement("tr");
+      var inner = document.createElement("td");
+      inner.innerHTML = schedule.program;
+      outer.appendChild(inner);
+      inner = document.createElement("td");
+      inner.innerHTML = schedule.start;
+      outer.appendChild(inner);
+      inner = document.createElement("td");
+      if (schedule.launched) {
+         var latest = new Date(schedule.launched * 1000);
+         inner.innerHTML = latest.toDateString();
+      } else {
+         inner.innerHTML = '';
       }
-      for (var i = 0; i < status.sprinkler.schedule.schedules.length; i++) {
-         var schedule = status.sprinkler.schedule.schedules[i];
-         var outer = document.createElement("tr");
-         var inner = document.createElement("td");
-         inner.innerHTML = schedule.program;
-         outer.appendChild(inner);
-         inner = document.createElement("td");
-         inner.innerHTML = schedule.start;
-         outer.appendChild(inner);
-         inner = document.createElement("td");
-         if (schedule.launched) {
-            var latest = new Date(schedule.launched * 1000);
-            inner.innerHTML = latest.toDateString();
-         } else {
-            inner.innerHTML = '';
-         }
-         outer.appendChild(inner);
-         tabular.appendChild(outer);
-      }
-   });
+      outer.appendChild(inner);
+      inner = document.createElement("td");
+      inner.appendChild (newScheduleAction ("Rearm", scheduleRearm, schedule.id));
+      outer.appendChild(inner);
+      tabular.appendChild(outer);
+   }
+
+   tabular = document.getElementById ('once');
+   for (var i = tabular.childNodes.length - 1; i > 1; i--) {
+      tabular.removeChild(tabular.childNodes[i]);
+   }
+   for (var i = 0; i < status.sprinkler.schedule.once.length; i++) {
+      var schedule = status.sprinkler.schedule.once[i];
+      var outer = document.createElement("tr");
+      var inner = document.createElement("td");
+      inner.innerHTML = schedule.program;
+      outer.appendChild(inner);
+      inner = document.createElement("td");
+      var start = new Date(schedule.start * 1000);
+      inner.innerHTML = start.toLocaleString();
+      outer.appendChild(inner);
+      inner = document.createElement("td");
+      inner.appendChild (newScheduleAction ("Cancel", scheduleCancel, schedule.program));
+      outer.appendChild(inner);
+      tabular.appendChild(outer);
+   }
+}
+
+function scheduleRefresh () {
+   sprinklerStatus (scheduleShow);
 }
 
 window.onload = function() {
@@ -78,11 +133,20 @@ window.onload = function() {
    </table>
    </td></tr>
    </table> 
-   <table class="sprkrside">
+   <table id="started" class="sprkrside">
       <tr>
          <th width="40%">PROGRAM</th>
          <th width="20%">TIME</th>
-         <th width="40%">LAST ACTIVE</th>
+         <th width="20%">LAST ACTIVE</th>
+         <th width="20%">ACTIONS</th>
+      </tr>
+   </table>
+   <br>
+   <table id="once" class="sprkrside">
+      <tr>
+         <th width="40%">PROGRAM</th>
+         <th width="20%">TIME</th>
+         <th width="40%">ACTIONS</th>
       </tr>
    </table>
 </body>

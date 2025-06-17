@@ -168,9 +168,31 @@ static const char *sprinkler_index (const char *method, const char *uri,
 }
 
 static const char *sprinkler_rescan (const char *method, const char *uri,
-                                      const char *data, int length) {
+                                     const char *data, int length) {
 
     sprinkler_reset ();
+    return sprinkler_status (method, uri, data, length);;
+}
+
+static const char *sprinkler_rearm (const char *method, const char *uri,
+                                    const char *data, int length) {
+
+    const char *id = echttp_parameter_get ("id");
+    if (id) {
+        if (sprinkler_isdebug()) printf ("Rearming schedule %s\n", id);
+        housesprinkler_schedule_rearm (id);
+    }
+    return sprinkler_status (method, uri, data, length);;
+}
+
+static const char *sprinkler_cancel (const char *method, const char *uri,
+                                    const char *data, int length) {
+
+    sprinkler_reset ();
+    const char *id = echttp_parameter_get ("id");
+    if (id) {
+        housesprinkler_schedule_cancel (id);
+    }
     return sprinkler_status (method, uri, data, length);;
 }
 
@@ -186,7 +208,12 @@ static const char *sprinkler_program_on (const char *method, const char *uri,
 
     const char *program = echttp_parameter_get ("name");
     if (program) {
-        housesprinkler_program_start_manual (program);
+        const char *at = echttp_parameter_get ("at");
+        if (at) {
+            housesprinkler_schedule_once (program, (time_t)atoll(at));
+        } else {
+            housesprinkler_program_start_manual (program);
+        }
     }
     return sprinkler_status (method, uri, data, length);
 }
@@ -347,6 +374,9 @@ int main (int argc, const char **argv) {
     echttp_route_uri ("/sprinkler/rain", sprinkler_rain);
     echttp_route_uri ("/sprinkler/index", sprinkler_index);
     echttp_route_uri ("/sprinkler/refresh", sprinkler_rescan);
+
+    echttp_route_uri ("/sprinkler/rearm", sprinkler_rearm);
+    echttp_route_uri ("/sprinkler/cancel", sprinkler_cancel);
 
     echttp_route_uri ("/sprinkler/program/on", sprinkler_program_on);
     echttp_route_uri ("/sprinkler/zone/on",    sprinkler_zone_on);

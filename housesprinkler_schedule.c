@@ -49,6 +49,23 @@
  *    Add to the rain delay used to cancel scheduled programs during rain
  *    periods.
  *
+ * void housesprinkler_schedule_once (const char *program, time_t start);
+ *
+ *    Add a new one-time schedule entry based on the specified program
+ *    and time specified.
+ *
+ * void housesprinkler_schedule_rearm (const char *uid);
+ *
+ *    Add a new one-time schedule entry based on the specified schedule.
+ *    The new one-time entry will get its program name from the regular
+ *    schedule entry. The one-time entry will start at the next time of
+ *    day specified for the normal schedule entry, either this same day
+ *    or the next day if this is too late.
+ *
+ * void housesprinkler_schedule_cancel (const char *program);
+ *
+ *    Cancel the one-time schedule for the specified program.
+ *
  * void housesprinkler_schedule_periodic (time_t now);
  *
  *    This is the heart of the sprinkler function: activate watering
@@ -97,6 +114,14 @@ typedef struct {
 static SprinklerSchedule *Schedules = 0;
 static int SchedulesCount = 0;
 
+typedef struct {
+    char *program;
+    time_t start;
+} SprinklerOneTimeSchedule;
+
+static SprinklerOneTimeSchedule *OneTimeSchedules = 0;
+static int OneTimeSchedulesCount = 0;
+
 static int         WateringIndexState = 1;
 static int         WateringIndex = 100;
 static const char *WateringIndexOrigin = 0;
@@ -133,6 +158,32 @@ static time_t housesprinkler_schedule_time (int index, const char *path) {
     return 0;
 }
 
+static int housesprinkler_schedule_new_onetime (void) {
+
+    int i;
+    for (i = 0; i < OneTimeSchedulesCount; ++i) {
+        if (!OneTimeSchedules[i].start) {
+            if (OneTimeSchedules[i].program) {
+                free (OneTimeSchedules[i].program);
+                OneTimeSchedules[i].program = 0;
+            }
+            DEBUG ("Reusing one-time schedule entry %d\n", i);
+            return i;
+        }
+    }
+    // No room left: add more entries.
+    int newentry = OneTimeSchedulesCount;
+    OneTimeSchedulesCount += 8;
+    OneTimeSchedules = realloc (OneTimeSchedules,
+                                sizeof(SprinklerOneTimeSchedule) * OneTimeSchedulesCount);
+    for (i = newentry; i < OneTimeSchedulesCount; ++i) {
+        OneTimeSchedules[i].program = 0;
+        OneTimeSchedules[i].start = 0;
+    }
+    DEBUG ("Using new one-time schedule entry %d\n", newentry);
+    return newentry;
+}
+
 static void housesprinkler_schedule_restore (void) {
 
     // Only one sprinkler controller can be active at a time.
@@ -148,8 +199,36 @@ static void housesprinkler_schedule_restore (void) {
 
     if (!Schedules) return; // To early for restoring.
 
-    DEBUG ("Restore from state backup\n");
-    int i = 0;
+    // Restore latest one-time schedules. Two steps: cancel whatever exist
+    // and then reload the whole list.
+    //
+    DEBUG ("Restore all one-time schedules from state backup\n");
+    int i;
+    time_t now = time(0);
+    for (i = 0; i < OneTimeSchedulesCount; ++i) {
+        if (OneTimeSchedules[i].program) {
+            free (OneTimeSchedules[i].program);
+            OneTimeSchedules[i].program = 0;
+        }
+        OneTimeSchedules[i].start = 0;
+    }
+    i = 0;
+    for (;;) {
+        char path[128];
+        snprintf (path, sizeof(path), ".once[%d].program", i);
+        const char *pgm = housesprinkler_state_get_string (path);
+        if (!pgm) break;
+        snprintf (path, sizeof(path), ".once[%d].start", i);
+        time_t start = (time_t)housesprinkler_state_get (path);
+        if (start < now - (3 * 24 * 60 * 60)) continue; // Too old.
+        int j = housesprinkler_schedule_new_onetime ();
+        OneTimeSchedules[j].program = strdup (pgm);
+        OneTimeSchedules[j].start = start;
+        i += 1;
+    }
+
+    DEBUG ("Restore schedules live info from state backup\n");
+    i = 0;
     for (;;) {
         uuid_t uuid;
         char path[128];
@@ -340,6 +419,66 @@ void housesprinkler_schedule_set_rain (int delay) {
     housesprinkler_state_changed();
 }
 
+void housesprinkler_schedule_once (const char *program, time_t start) {
+
+    if (!SprinklerOn) return;
+
+    time_t now = time(0);
+    if (start < now) return; // Past start is invalid.
+    if (start > now + (3 * 24 * 60 * 60)) return; // Too far in the future.
+
+    int i = housesprinkler_schedule_new_onetime ();
+    OneTimeSchedules[i].program = strdup(program);
+    if (start < now - 70) start += (24 * 60 * 60); // Too close: next day.
+    OneTimeSchedules[i].start = start;
+    housesprinkler_state_changed();
+}
+
+void housesprinkler_schedule_rearm (const char *id) {
+
+    if (!SprinklerOn) return;
+
+    uuid_t uuid;
+    uuid_parse (id, uuid);
+    int j;
+    for (j = 0; j < SchedulesCount; ++j) {
+        if (!uuid_compare (uuid, Schedules[j].id)) break;
+    }
+    if (j >= SchedulesCount) {
+        DEBUG ("Cannot rearm non-existent schedule %s\n", id);
+        return; // This schedule does not exist.
+    }
+
+    int i = housesprinkler_schedule_new_onetime ();
+    OneTimeSchedules[i].program = strdup (Schedules[j].program);
+
+    time_t now = time(0);
+    struct tm local = *localtime (&now);
+    local.tm_sec = 0;
+    local.tm_min = Schedules[j].start.minute;
+    local.tm_hour = Schedules[j].start.hour;
+    time_t start = mktime (&local);
+    if (start < now - 70) start += (24 * 60 * 60); // Past or close: next day.
+    OneTimeSchedules[i].start = start;
+    housesprinkler_state_changed();
+}
+
+void housesprinkler_schedule_cancel (const char *program) {
+
+    if (!SprinklerOn) return;
+
+    int i;
+    for (i = 0; i < OneTimeSchedulesCount; ++i) {
+        if (!OneTimeSchedules[i].start) continue; // Inactive entry.
+        if (!OneTimeSchedules[i].program) continue; // Better safe than sorry.
+        if (!strcmp (OneTimeSchedules[i].program, program)) {
+            OneTimeSchedules[i].start = 0;
+            housesprinkler_state_changed();
+            return;
+        }
+    }
+}
+
 void housesprinkler_schedule_periodic (time_t now) {
 
     static char lasthour = -1;
@@ -358,9 +497,24 @@ void housesprinkler_schedule_periodic (time_t now) {
     }
     if (RainDelay > 0) return;
 
-    DEBUG ("== Checking schedule at %02d:%02d\n", local.tm_hour, local.tm_min);
-
+    DEBUG ("== Checking one time schedules at %02d:%02d\n", local.tm_hour, local.tm_min);
     int i;
+    for (i = 0; i < OneTimeSchedulesCount; ++i) {
+        time_t start = OneTimeSchedules[i].start;
+        if (!start) continue; // Not an active entry.
+        if (start > now) continue; // Not yet..
+
+        const char *program = OneTimeSchedules[i].program;
+        time_t started = housesprinkler_program_start_scheduled (program);
+        if (!started) continue; // Something prevented it from starting now.
+
+        DEBUG ("== Program %s activated once at %lld\n", program, (long long)started);
+        // TBD: this new "started" time is not saved?
+        OneTimeSchedules[i].start = 0; // Don't do it again.
+        housesprinkler_state_changed();
+    }
+
+    DEBUG ("== Checking schedules at %02d:%02d\n", local.tm_hour, local.tm_min);
 
     for (i = 0; i < SchedulesCount; ++i) {
 
@@ -427,10 +581,8 @@ void housesprinkler_schedule_periodic (time_t now) {
 
 int housesprinkler_schedule_status (char *buffer, int size) {
 
-    int cursor = 0;
-
-    cursor = snprintf (buffer, size,
-                       "\"on\":%s", SprinklerOn?"true":"false");
+    int cursor = snprintf (buffer, size,
+                           "\"on\":%s", SprinklerOn?"true":"false");
     if (cursor >= size) goto overflow;
 
     if (RainDelayEnabled) {
@@ -441,13 +593,28 @@ int housesprinkler_schedule_status (char *buffer, int size) {
 
     int i;
     char ascii[40];
-    const char *sep = ",\"schedules\":[";
+
+    const char *sep = ",\"once\":[";
+    for (i = 0; i < OneTimeSchedulesCount; ++i) {
+        if (!OneTimeSchedules[i].start) continue; // Not an active entry.
+        cursor += snprintf (buffer+cursor, size-cursor,
+                            "%s{\"program\":\"%s\",\"start\":%lld}",
+                            sep,
+                            OneTimeSchedules[i].program,
+                            OneTimeSchedules[i].start);
+        if (cursor >= size) goto overflow;
+        sep = ",";
+    }
+    if (sep[1] == 0)
+        cursor += snprintf (buffer+cursor,size-cursor,"]");
+
+    sep = ",\"schedules\":[";
     for (i = 0; i < SchedulesCount; ++i) {
         uuid_unparse (Schedules[i].id, ascii);
         cursor += snprintf (buffer+cursor, size-cursor,
                             "%s{\"id\":\"%s\",\"program\":\"%s\",\"start\":\"%02d:%02d\",\"launched\":%ld}",
                             sep, ascii, Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute, (long)(Schedules[i].lastlaunch));
-        if (cursor >= size) return cursor;
+        if (cursor >= size) goto overflow;
         sep = ",";
     }
     if (sep[1] == 0)

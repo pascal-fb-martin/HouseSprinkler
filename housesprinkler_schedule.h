@@ -25,6 +25,11 @@ void housesprinkler_schedule_refresh (void);
 void housesprinkler_schedule_switch (void);
 void housesprinkler_schedule_rain (int enabled);
 void housesprinkler_schedule_set_rain (int delay);
+
+void housesprinkler_schedule_once (const char *program, time_t start);
+void housesprinkler_schedule_rearm (const char *uid);
+void housesprinkler_schedule_cancel (const char *program);
+
 void housesprinkler_schedule_periodic (time_t now);
 int  housesprinkler_schedule_status (char *buffer, int size);
 
