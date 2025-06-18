@@ -188,7 +188,6 @@ static const char *sprinkler_rearm (const char *method, const char *uri,
 static const char *sprinkler_cancel (const char *method, const char *uri,
                                     const char *data, int length) {
 
-    sprinkler_reset ();
     const char *id = echttp_parameter_get ("id");
     if (id) {
         housesprinkler_schedule_cancel (id);

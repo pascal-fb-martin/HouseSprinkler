@@ -9,7 +9,7 @@
 function controlRefresh () {
 
    sprinklerStatus (function (status) {
-      var tabular = document.getElementsByClassName ('sprkrside')[0];
+      var tabular = document.getElementById ('controls');
       for (var i = tabular.childNodes.length - 1; i > 1; i--) {
          tabular.removeChild(tabular.childNodes[i]);
       }
@@ -94,7 +94,7 @@ window.onload = function() {
    </table>
    </td></tr>
    </table> 
-   <table class="sprkrside">
+   <table id="controls" class="sprkrlargeside">
       <tr>
          <th width="17%">TYPE</th>
          <th width="17%">NAME</th>

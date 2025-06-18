@@ -63,6 +63,14 @@
    float: right;
 }
 
+.sprkrlargeside {
+   font-family:'Metrophobic', sans-serif;
+   text-align: left;
+   width: 54%;
+   display: inline-table;
+   float: right;
+}
+
 .sprkrmenu {
    font-family:'Metrophobic', sans-serif;
    text-align: right;
