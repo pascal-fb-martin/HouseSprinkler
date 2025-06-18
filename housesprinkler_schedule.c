@@ -601,7 +601,7 @@ int housesprinkler_schedule_status (char *buffer, int size) {
                             "%s{\"program\":\"%s\",\"start\":%lld}",
                             sep,
                             OneTimeSchedules[i].program,
-                            OneTimeSchedules[i].start);
+                            (long long)(OneTimeSchedules[i].start));
         if (cursor >= size) goto overflow;
         sep = ",";
     }
