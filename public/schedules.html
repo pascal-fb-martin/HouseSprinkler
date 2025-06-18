@@ -15,9 +15,9 @@ function newScheduleAction (text, command, id) {
     return button;
 }
 
-function scheduleRearm () {
+function scheduleAgain () {
     var command = new XMLHttpRequest();
-    command.open("GET", '/sprinkler/rearm?id='+this.scheduleId);
+    command.open("GET", '/sprinkler/again?id='+this.scheduleId);
     command.onreadystatechange = function () {
         if (command.readyState === 4 && command.status === 200) {
             scheduleShow (JSON.parse(command.responseText));
@@ -60,7 +60,7 @@ function scheduleShow (status) {
       }
       outer.appendChild(inner);
       inner = document.createElement("td");
-      inner.appendChild (newScheduleAction ("Rearm", scheduleRearm, schedule.id));
+      inner.appendChild (newScheduleAction ("Again", scheduleAgain, schedule.id));
       outer.appendChild(inner);
       tabular.appendChild(outer);
    }

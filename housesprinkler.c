@@ -174,13 +174,13 @@ static const char *sprinkler_rescan (const char *method, const char *uri,
     return sprinkler_status (method, uri, data, length);;
 }
 
-static const char *sprinkler_rearm (const char *method, const char *uri,
+static const char *sprinkler_again (const char *method, const char *uri,
                                     const char *data, int length) {
 
     const char *id = echttp_parameter_get ("id");
     if (id) {
-        if (sprinkler_isdebug()) printf ("Rearming schedule %s\n", id);
-        housesprinkler_schedule_rearm (id);
+        if (sprinkler_isdebug()) printf ("Running schedule %s again\n", id);
+        housesprinkler_schedule_again (id);
     }
     return sprinkler_status (method, uri, data, length);;
 }
@@ -374,7 +374,7 @@ int main (int argc, const char **argv) {
     echttp_route_uri ("/sprinkler/index", sprinkler_index);
     echttp_route_uri ("/sprinkler/refresh", sprinkler_rescan);
 
-    echttp_route_uri ("/sprinkler/rearm", sprinkler_rearm);
+    echttp_route_uri ("/sprinkler/again", sprinkler_again);
     echttp_route_uri ("/sprinkler/cancel", sprinkler_cancel);
 
     echttp_route_uri ("/sprinkler/program/on", sprinkler_program_on);

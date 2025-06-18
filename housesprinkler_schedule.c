@@ -54,7 +54,7 @@
  *    Add a new one-time schedule entry based on the specified program
  *    and time specified.
  *
- * void housesprinkler_schedule_rearm (const char *uid);
+ * void housesprinkler_schedule_again (const char *uid);
  *
  *    Add a new one-time schedule entry based on the specified schedule.
  *    The new one-time entry will get its program name from the regular
@@ -434,7 +434,7 @@ void housesprinkler_schedule_once (const char *program, time_t start) {
     housesprinkler_state_changed();
 }
 
-void housesprinkler_schedule_rearm (const char *id) {
+void housesprinkler_schedule_again (const char *id) {
 
     if (!SprinklerOn) return;
 
@@ -445,7 +445,7 @@ void housesprinkler_schedule_rearm (const char *id) {
         if (!uuid_compare (uuid, Schedules[j].id)) break;
     }
     if (j >= SchedulesCount) {
-        DEBUG ("Cannot rearm non-existent schedule %s\n", id);
+        DEBUG ("Cannot run again non-existent schedule %s\n", id);
         return; // This schedule does not exist.
     }
 
