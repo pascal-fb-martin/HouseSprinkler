@@ -8,32 +8,31 @@ See the [gallery](https://github.com/pascal-fb-martin/housesprinkler/blob/master
 
 This project is one piece of a complete system that also includes the following:
 * [echttp](https://github.com/pascal-fb-martin/echttp),
-* [houseportal](https://github.com/pascal-fb-martin/houseportal),
-* [waterwise](https://github.com/pascal-fb-martin/waterwise) and
+* [houseportal](https://github.com/pascal-fb-martin/houseportal) and
 * [houserelays](https://github.com/pascal-fb-martin/houserelays).
 
-The primary intend is to create a sprinkler controller that:
+The following dependencies are optional, but highly recommended:
+* [housedepot](https://github.com/pascal-fb-martin/housedepot) (A centralized configuration management service.)
+* [housesaga](https://github.com/pascal-fb-martin/housesaga) (A log consolidation and archival service.)
+* [housecimis](https://github.com/pascal-fb-martin/housecimis) (A water index service using data from the state of California CIMIS web site.),
+* [waterwise](https://github.com/pascal-fb-martin/waterwise) (A water index service using the bewaterwise.com service of the Metropolitan Water District of Southern California.)
+
+(If housedepot was not installed, you must add the --use-local-storage command line option when launching HouseSprinkler.)
+
+The primary intent of this project is to create a sprinkler controller that:
 * Is accessible from a computer or phone using a web interface, including manual controls for sprinkler test and maintenance.
 * Controls the sprinkler valves through the network, to offer access to a distributed network of control computers. Valve can be controlled from multiple points on the network: the valve wiring does not have to be all run to a single point.
 * Adjusts watering automatically, based on an online index (Southern California for now) or on a season-based index table (monthly or weekly).
-* Splits the watering periods into short pulse separated by pauses, to avoid water poodles and run-off.
+* Splits the watering periods into short pulse separated by pauses, to avoid water poodles and run-off, facilitating water absorbtion.
 * Support control of pumps and power supply (feeds) when a program or zone runs.
-* Records a log of activity, so that one may monitor what happened the previous days.
+* Records a log of activity, so that one may monitor what happened on the previous days.
 * Can be integrated as part of a suite of applications managed from a central point.
 
-This project replaces and obsoletes the [Sprinkler](https://github.com/pascal-fb-martin/sprinkler) project. This project is a complete rewrite in the spirit of micro-services: it relies on other web services to implement some interfaces. This makes it a more decentralized and flexible setup.
+Instead of installing drivers for different types of relay/triac interfaces, the design relies on a generic control web API, and the specific interfaces themselves are implemented as web services. The [houserelays](https://github.com/pascal-fb-martin/houserelays) web service is the first implementation that follows this new design. A benefit is that a new interface can be developped, maintained and deployed independently of the HouseSprinkler code base, which is the essence of the microservice philosophy. This also makes it possible to support multiple interfaces simultaneously, both geographically distributed and possibly using different hardware interfaces.
 
-Instead of installing drivers for different types of relay/triac interfaces, the design relies on a generic web API, and the specific interface itself is implemented as a web service. The [houserelays](https://github.com/pascal-fb-martin/houserelays) web service is the first implementation that follows this new design. A benefit is that a new interface can be developped and maintained independently of the HouseSprinkler code base, which is the essence of the web service philosophy. This also makes it possible to support multiple interfaces simultaneously, both geographically distributed and possibly using different hardware interfaces.
+The House family of projects provides other implementations of the control web API, typically intended for other types of devices, like TP-Link Kasa or Philips Wiz. These interfaces can be used to control feeds. For example a Kasa plug can be used to control the solenoid's 24 vold power supply, or to turn on and off a water pump.
 
-The House family of projects provides other control interfaces, typically intended for other types of devices, like TP-Link Kasa or Philips Wiz. These interfaces can be used to control feeds. For example a Kasa plug can be used to control the solenoid's 24 vold power supply, or to turn on and off a water pump.
-
-Instead of implementing multiple weather and watering index interfaces, this project relies on a generic web API, and the specific weather/index interface itself is implemented as a web service. The [waterwise](https://github.com/pascal-fb-martin/waterwise) web service is a minimal implementation that relies on the bewaterwise.com web site maintained by the Metropolitan Water District of Southern California (and is therefore of interest only for those living in the Los Angeles and San Diego areas).
-
-Future plans are:
-* Create other web services for weather information and index calculation, starting with an interface to the state of California's CIMIS web site and data.
-* Create a separate web service for log storage and archival.
-* Create a separate web service for configuration storage.
-* Create a modular whole-house dashboard page, to give an overview of all the services on one page.
+Instead of implementing multiple weather and watering index interfaces, this project relies on a generic waterindex web API, and the specific weather/index interfaces themselves are implemented as web services. The [waterwise](https://github.com/pascal-fb-martin/waterwise) web service is a minimal implementation that relies on the bewaterwise.com web site maintained by the Metropolitan Water District of Southern California (and is therefore of interest only for those living in the Los Angeles and San Diego areas).
 
 ## Installation
 
@@ -41,6 +40,8 @@ The simplest case is that the sprinkler valves are all controlled from one singl
 * Install git, openssl (libssl-dev), gpiod (libgpiod-dev).
 * Install [echttp](https://github.com/pascal-fb-martin/echttp)
 * Install [houseportal](https://github.com/pascal-fb-martin/houseportal)
+* Install [housesaga](https://github.com/pascal-fb-martin/housesaga)
+* Install [housedepot](https://github.com/pascal-fb-martin/housedepot)
 * Install [waterwise](https://github.com/pascal-fb-martin/waterwise)
 * Install [houserelays](https://github.com/pascal-fb-martin/houserelays)
 * Clone this repository.
@@ -53,6 +54,8 @@ Sprinkler control computer:
 * Install git, icoutils, openssl (libssl-dev), gpiod (libgpiod-dev).
 * Install [echttp](https://github.com/pascal-fb-martin/echttp)
 * Install [houseportal](https://github.com/pascal-fb-martin/houseportal)
+* Install [housesaga](https://github.com/pascal-fb-martin/housesaga)
+* Install [housedepot](https://github.com/pascal-fb-martin/housedepot)
 * Install [waterwise](https://github.com/pascal-fb-martin/waterwise)
 * Clone this repository.
 * make rebuild
@@ -79,7 +82,7 @@ The HouseSprinkler configuration is mainly organized in layers:
 
 Note that zones can be activated manually from the web UI, bypassing any program configuration, and programs can be activated manually from the web UI, bypassing any schedule rules.
 
-## Program Execution
+## Watering Program Execution
 
 When a program starts, either based on schedule or manually, zones are activated in an order calculated to maximize the soak time and minimize the elapsed program execution time:
 * All zones are activable when the program starts.

@@ -92,7 +92,7 @@ static int   ConfigTokenCount = 0;
 static char *ConfigText = 0;
 static char *ConfigTextLatest = 0;
 
-static int ConfigFileEnabled = 1;
+static int ConfigFileEnabled = 0; // Default: rely on the HouseDepot service.
 
 static const char *ConfigFile = "/etc/house/sprinkler.json";
 
@@ -170,6 +170,10 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
     int i;
     for (i = 1; i < argc; ++i) {
         if (echttp_option_match ("-config=", argv[i], &ConfigFile)) continue;
+        if (echttp_option_present ("-use-local-storage", argv[i])) {
+            ConfigFileEnabled = 1;
+            continue;
+        }
         if (echttp_option_present ("-no-local-storage", argv[i])) {
             ConfigFileEnabled = 0;
             continue;

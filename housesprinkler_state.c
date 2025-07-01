@@ -122,7 +122,7 @@ static const char FactoryBackupFile[] =
 static time_t StateDataHasChanged = 0;
 
 static int ShareStateData = 1;
-static int StateFileEnabled = 1;
+static int StateFileEnabled = 0; // Default: rely on the HouseDepot service.
 
 static char *BackupOutBuffer = 0;
 static int BackupOutBufferSize = 0;
@@ -253,6 +253,10 @@ const void housesprinkler_state_load (int argc, const char **argv) {
     int i;
     for (i = 1; i < argc; ++i) {
         if (echttp_option_match ("-backup=", argv[i], &BackupFile)) continue;
+        if (echttp_option_present ("-use-local-storage", argv[i])) {
+            StateFileEnabled = 1;
+            continue;
+        }
         if (echttp_option_present ("-no-local-storage", argv[i])) {
             StateFileEnabled = 0;
             continue;
