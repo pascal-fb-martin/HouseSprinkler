@@ -16,10 +16,17 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA  02110-1301, USA.
+#
+# WARNING
+# 
+# This Makefile depends on echttp and houseportal (dev) being installed.
+
+prefix=/usr/local
+SHARE=$(prefix)/share/house
+        
+INSTALL=/usr/bin/install
 
 HAPP=housesprinkler
-HROOT=/usr/local
-SHARE=$(HROOT)/share/house
 
 # Local build ---------------------------------------------------
 
@@ -50,40 +57,29 @@ rebuild: clean all
 	gcc -c -g -Os -o $@ $<
 
 housesprinkler: $(OBJS)
-	gcc -g -Os -o housesprinkler $(OBJS) -lhouseportal -lechttp -luuid -lssl -lcrypto -lrt
+	gcc -g -Os -o housesprinkler $(OBJS) -lhouseportal -lechttp -luuid -lssl -lcrypto -lmagic -lrt
 
 # Distribution agnostic file installation -----------------------
 
 dev:
 
-install-ui:
-	mkdir -p $(SHARE)/public/sprinkler
-	chmod 755 $(SHARE) $(SHARE)/public $(SHARE)/public/sprinkler
-	cp public/* $(SHARE)/public/sprinkler
-	chown root:root $(SHARE)/public/sprinkler/*
-	chmod 644 $(SHARE)/public/sprinkler/*
-	rm -f $(SHARE)/public/sprinkler/valves.html
+install-ui: install-preamble
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public/sprinkler
+	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public/sprinkler
 
 install-app: install-ui
-	mkdir -p $(HROOT)/bin
-	rm -f $(HROOT)/bin/housesprinkler
-	cp housesprinkler $(HROOT)/bin
-	chown root:root $(HROOT)/bin/housesprinkler
-	chmod 755 $(HROOT)/bin/housesprinkler
-	touch /etc/default/housesprinkler
-	mkdir -p /etc/house
-	touch /etc/house/sprinkler.json
-	mkdir -p /var/lib/house
-	if [ -e /etc/house/sprinklerbkp.json ] ; then if grep -q useindex /etc/house/sprinklerbkp.json ; then echo yes > /dev/null ; else rm -f /tmp/sprinklerbkp.json ; sed -e 's/}/, "useindex":1}/' < /etc/house/sprinklerbkp.json > /tmp/sprinklerbkp.json ; mv /tmp/sprinklerbkp.json /etc/house/sprinklerbkp.json ; fi ; fi
+	$(INSTALL) -m 0755 -s housesprinkler $(DESTDIR)$(prefix)/bin
+	touch $(DESTDIR)/etc/default/housesprinkler
 
 uninstall-app:
-	rm -rf $(SHARE)/public/sprinkler
-	rm -f $(HROOT)/bin/housesprinkler
+	rm -rf $(DESTDIR)$(SHARE)/public/sprinkler
+	rm -f $(DESTDIR)$(prefix)/bin/housesprinkler
 
 purge-app:
 
 purge-config:
-	rm -rf /etc/house/sprinkler.json /etc/default/housesprinkler
+	rm -f $(DESTDIR)/etc/house/sprinkler.json
+	rm -f $(DESTDIR)/etc/default/housesprinkler
 
 # System installation. ------------------------------------------
 
@@ -93,10 +89,10 @@ include $(SHARE)/install.mak
 
 docker: all
 	rm -rf build
-	mkdir -p build$(HROOT)/bin
+	mkdir -p build$(prefix)/bin
 	mkdir -p build/var/lib/house
-	cp housesprinkler build$(HROOT)/bin
-	chmod 755 build$(HROOT)/bin/housesprinkler
+	cp housesprinkler build$(prefix)/bin
+	chmod 755 build$(prefix)/bin/housesprinkler
 	mkdir -p build/etc/house
 	touch build/etc/house/sprinkler.json
 	mkdir -p build$(SHARE)/public/sprinkler
