@@ -1,0 +1,19 @@
+Source: housesprinkler
+Version: 1.0
+Section: Web servers
+Maintainer: Pascal Martin <pascal.fb.martin@gmail.com>
+Priority: optional
+Homepage: https://github.com/pascal-fb-martin/housesprinkler
+Standard-Version: 4.7.0
+Package: housesprinkler
+Architecture: {{arch}}
+Depends: 
+Description: A House service to collect and report OS metrics.
+ HouseSprinkler is part of the House suite of web services.
+ .
+ HouseSprinkler is an irrigation controller. His main purpose is to
+ schedule watering based on a weather-based index that it retrieves
+ from external sites. Irrigation valve controls are typically operated
+ through the HouseRelays service, but any other control service could
+ be used as well.
+

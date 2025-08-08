@@ -67,9 +67,11 @@ install-ui: install-preamble
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public/sprinkler
 	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public/sprinkler
 
-install-app: install-ui
+install-runtime: install-preamble
 	$(INSTALL) -m 0755 -s housesprinkler $(DESTDIR)$(prefix)/bin
 	touch $(DESTDIR)/etc/default/housesprinkler
+
+install-app: install-ui install-runtime
 
 uninstall-app:
 	rm -rf $(DESTDIR)$(SHARE)/public/sprinkler
@@ -80,6 +82,22 @@ purge-app:
 purge-config:
 	rm -f $(DESTDIR)/etc/house/sprinkler.json
 	rm -f $(DESTDIR)/etc/default/housesprinkler
+
+# Build a private Debian package. -------------------------------
+
+install-package: install-ui install-runtime install-systemd
+
+debian-package:
+	rm -rf build
+	install -m 0755 -d build/$(HAPP)/DEBIAN
+	cat debian/control | sed "s/{{arch}}/`dpkg --print-architecture`/" > build/$(HAPP)/DEBIAN/control
+	install -m 0644 debian/copyright build/$(HAPP)/DEBIAN
+	install -m 0644 debian/changelog build/$(HAPP)/DEBIAN
+	install -m 0755 debian/postinst build/$(HAPP)/DEBIAN
+	install -m 0755 debian/prerm build/$(HAPP)/DEBIAN
+	install -m 0755 debian/postrm build/$(HAPP)/DEBIAN
+	make DESTDIR=build/$(HAPP) install-package
+	cd build ; fakeroot dpkg-deb -b $(HAPP) .
 
 # System installation. ------------------------------------------
 
