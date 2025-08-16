@@ -1,7 +1,9 @@
 # HouseSprinkler
+
 A sprinkler controller in C with a web interface
 
 ## Overview
+
 This project is a small sprinkler controller with a web interface.
 
 See the [gallery](https://github.com/pascal-fb-martin/housesprinkler/blob/master/gallery/README.md) for a view of the HouseSprinkler web UI.
@@ -160,6 +162,7 @@ The provided Makefile supports building private Debian packages. These are _not_
   no source package.
 
 To build a Debian package, use the `debian-package` target:
+
 ```
 make debian-package
 ```
