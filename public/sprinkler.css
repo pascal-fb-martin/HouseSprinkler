@@ -1,27 +1,3 @@
-@import url(http://fonts.googleapis.com/css?family=Metrophobic);
-@import url(http://fonts.googleapis.com/css?family=Delius);
-
-.sprkrpanel {
-   float: left;
-   width: 40%;
-}
-
-.sprkrpane {
-   border-top-right-radius: 11px;
-   border-bottom-right-radius: 11px;
-   border-top-left-radius: 0px;
-   border-bottom-left-radius: 0px;
-   -webkit-border-top-right-radius: 11px;
-   -webkit-border-bottom-right-radius: 11px;
-   -webkit-border-top-left-radius: 0px;
-   -webkit-border-bottom-left-radius: 0px;
-   -moz-border-top-right-radius: 11px;
-   -moz-border-bottom-right-radius: 11px;
-   -moz-border-top-left-radius: 0px;
-   -moz-border-bottom-left-radius: 0px;
-   background-color: darkgreen;
-   width: 100%;
-}
 
 .sprkrbuttons {
    font-family:'Metrophobic', sans-serif;
@@ -29,38 +5,6 @@
    width: 50%;
    display: inline-table;
    float: right
-}
-
-.sprkrtopcontainer {
-   position: sticky;
-   top: 0;
-   width: 100%;
-}
-.sprkrtop {
-   text-align: center;
-   width: 100%;
-   background-color: #2f2f2f;
-}
-.sprkrtopitem {
-   font-family:'Metrophobic', sans-serif;
-   font-size: 30px;
-   color: #f5f5f5;
-   text-decoration: none;
-}
-
-.sprkrtopcurrent {
-   font-family:'Metrophobic', sans-serif;
-   font-size: 30px;
-   color: #858585;
-   text-decoration: none;
-}
-
-.sprkrside {
-   font-family:'Metrophobic', sans-serif;
-   text-align: left;
-   width: 45%;
-   display: inline-table;
-   float: right;
 }
 
 .sprkrlargeside {
@@ -78,42 +22,6 @@
    width: 45%;
    display: inline-table;
    float: right;
-}
-.sprkrmenucell {text-align: right}
-.sprkrmenuitem {
-   font-family:'Metrophobic', sans-serif;
-   font-size: 30px;
-   color: mediumblue;
-   text-decoration: none;
-}
-.sprkrstatus {
-   font-family: 'Metrophobic', sans-serif;
-   font-size: 20px;
-   text-align: left;
-   display: inline-table;
-   color: white;
-}
-.sprkrtitle {
-   font-family: 'Metrophobic', sans-serif;
-   font-size: 25px;
-   text-align: left;
-}
-.sprkrdata {
-   font-family: 'Delius', sans-serif;
-   font-size: 20px;
-   color: white;
-}
-.sprkrevent {
-   font-family: 'Metrophobic', sans-serif;
-   text-align: left;
-   width: 100%;
-}
-
-body {background-color: #F5F5F5}
-h1 {
-   font-family:'Metrophobic', sans-serif;
-   font-weight: 700;
-   text-align: center;
 }
 
 .addbutton {
@@ -168,57 +76,6 @@ h1 {
    float: right;
 }
 
-.configbutton {
-   font-family:'Metrophobic', sans-serif;
-   font-weight: 700;
-   font-size: 20px;
-   text-align: right;
-   text-decoration: none;
-   width: 100%;
-   height: 50px;
-   border-top-left-radius: 0px;
-   border-bottom-left-radius: 0px;
-   border-top-right-radius: 0px;
-   border-bottom-right-radius: 0px;
-   -webkit-border-top-left-radius: 0px;
-   -webkit-border-bottom-left-radius: 0px;
-   -webkit-border-top-right-radius: 0px;
-   -webkit-border-bottom-right-radius: 0px;
-   -moz-border-top-left-radius: 0px;
-   -moz-border-bottom-left-radius: 0px;
-   -moz-border-top-right-radius: 0px;
-   -moz-border-bottom-right-radius: 0px;
-   background-color: #3673ad;
-   color: #f5f5f5;
-   border: 5px solid #F6F6F6;
-   float: right;
-}
-
-.panelbutton {
-   font-family:'Metrophobic', sans-serif;
-   font-weight: 700;
-   font-size: 20px;
-   text-align: right;
-   text-decoration: none;
-   width: 100%;
-   height: 40px;
-   border-top-left-radius: 11px;
-   border-bottom-left-radius: 11px;
-   border-top-right-radius: 0px;
-   border-bottom-right-radius: 0px;
-   -webkit-border-top-left-radius: 11px;
-   -webkit-border-bottom-left-radius: 11px;
-   -webkit-border-top-right-radius: 0px;
-   -webkit-border-bottom-right-radius: 0px;
-   -moz-border-top-left-radius: 11px;
-   -moz-border-bottom-left-radius: 11px;
-   -moz-border-top-right-radius: 0px;
-   -moz-border-bottom-right-radius: 0px;
-   background-color: #3673ad;
-   color: #f5f5f5;
-   border: 0px;
-}
-
 .configactionbutton {
    font-family:'Metrophobic', sans-serif;
    font-weight: 700;
@@ -243,26 +100,10 @@ h1 {
    color: #f5f5f5;
    border: 3px solid #F6F6F6;
 }
-.sprkrtext {
-   font-family:'Metrophobic', sans-serif;
-   font-weight: 600;
-   font-size: 16px;
-}
 
-.programdata {
-   width: 100%;
-   border: 4px solid #3673ad;
-   border-radius: 5px
-   -webkit-border-radius: 5px;
-   -moz-border-radius: 5px;
-}
 .zonetable {width: 100%; text-align: left}
 .zoneindex {width: 10%; text-align: right}
 .zonename {width: 90%; text-align: right}
-table {border: 0}
-tr {border: 0}
-th {text-align: center; border-bottom: 3px solid #3673ad}
-td {border: 0}
 
 input[type=text], input[type=number] {
    font-family:'Metrophobic', sans-serif;

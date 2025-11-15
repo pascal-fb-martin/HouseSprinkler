@@ -1,8 +1,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<link rel=stylesheet type="text/css"
-      href="/sprinkler/sprinkler.css" title="Sprinkler">
+<link rel="stylesheet" href="/house.css">
+<link rel="stylesheet" href="/sprinkler/sprinkler.css">
 <script src="/sprinkler/sprinklerlib.js"></script>
 <script>
 window.onload = function() {
@@ -13,47 +13,47 @@ window.onload = function() {
 <title></title>
 </head>
 <body>
-   <table class="sprkrtopcontainer">
-   <tr><td>
-   <table class="sprkrtop">
+   <header>
+   <table>
    <tr>
-   <td><span class="sprkrtopcurrent">Sprinkler</span></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/schedules.html">Schedules</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/controls.html">Controls</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/events.html">Events</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/config.html">Config</A></td>
+   <td><span>Sprinkler</span></td>
+   <td><a href="/sprinkler/zones.html">Zones</A></td>
+   <td><a href="/sprinkler/programs.html">Programs</A></td>
+   <td><a href="/sprinkler/schedules.html">Schedules</A></td>
+   <td><a href="/sprinkler/controls.html">Controls</A></td>
+   <td><a href="/sprinkler/events.html">Events</A></td>
+   <td><a href="/sprinkler/config.html">Config</A></td>
    </tr>
    </table> 
-   </td></tr>
-   </table> 
-   <table class="sprkrpanel">
+   </header> 
+   <section>
+   <table class="housepanel">
    <tr><td>
-   <div class="sprkrpane">
-   <table class="sprkrstatus">
-   <tr><td colspan="2"><span class="sprkrtitle">Main Menu</span></td></tr>
+   <div class="housepane">
+   <table class="housestatus">
+   <tr><td colspan="2"><span class="housetitle">Main Menu</span></td></tr>
    <tr><td>Controler:</td>
-   <td><span class="sprkrdata hostname"></span></td></tr>
+   <td><span class="housedata hostname"></span></td></tr>
    <tr><td>Program:</td>
-   <td><span class="sprkrdata activeprogram"></span></td></tr>
+   <td><span class="housedata activeprogram"></span></td></tr>
    <tr><td>Zones:</td>
-   <td><span class="sprkrdata activezone"></span></td></tr>
+   <td><span class="housedata activezone"></span></td></tr>
    <tr><td>Rain Delay:</td>
-   <td><span class="sprkrdata raindelay"></span></td></tr>
+   <td><span class="housedata raindelay"></span></td></tr>
    <tr><td>Watering Index:</td>
-   <td><span class="sprkrdata adjustment"></span></td></tr>
+   <td><span class="housedata adjustment"></span></td></tr>
    </table>
    </div>
    </td></tr>
    </table> 
    <table class="sprkrmenu">
-   <tr><td><button class="panelbutton" onclick="sprinklerOnOff()"><span class="zonename">On/Off</span></button></td></tr>
-   <tr><td><button class="panelbutton" onclick="sprinklerRainDelay()"><span class=zonename">Add Rain Delay</span></button></td></tr>
-   <tr><td><button class="panelbutton" onclick="sprinklerCancelRainDelay()"><span class=zonename">Cancel Rain Delay</span></button></td></tr>
-   <tr><td><button class="panelbutton" onclick="sprinklerIndexToggle()"><span class=zonename">Enable/Disable Index</span></button></td></tr>
-   <tr><td><button class="panelbutton" onclick="sprinklerRefresh()"><span class=zonename">Refresh</span></button></td></tr>
+   <tr><td><button class="housepanelbutton" onclick="sprinklerOnOff()"><span class="zonename">On/Off</span></button></td></tr>
+   <tr><td><button class="housepanelbutton" onclick="sprinklerRainDelay()"><span class=zonename">Add Rain Delay</span></button></td></tr>
+   <tr><td><button class="housepanelbutton" onclick="sprinklerCancelRainDelay()"><span class=zonename">Cancel Rain Delay</span></button></td></tr>
+   <tr><td><button class="housepanelbutton" onclick="sprinklerIndexToggle()"><span class=zonename">Enable/Disable Index</span></button></td></tr>
+   <tr><td><button class="housepanelbutton" onclick="sprinklerRefresh()"><span class=zonename">Refresh</span></button></td></tr>
    </table> 
+   </section>
 </body>
 </html>
 

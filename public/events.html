@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel=stylesheet type="text/css" href="/house.css" title="House">
+<link rel="stylesheet" href="/house.css">
 <script src="/events.js"></script>
 <script>
 window.onload = function() {
@@ -12,9 +12,9 @@ window.onload = function() {
    <title></title>
 </head>
 <body>
-   <table class="housetopcontainer">
+   <header>
    <tr><td>
-   <table class="housetop">
+   <table>
    <tr>
    <td><A HREF="/sprinkler/index.html">Sprinkler</A></td>
    <td><A HREF="/sprinkler/zones.html">Zones</A></td>
@@ -25,8 +25,8 @@ window.onload = function() {
    <td><A HREF="/sprinkler/config.html">Config</A></td>
    </tr>
    </table> 
-   </td></tr>
-   </table> 
+   </header> 
+   <section>
    <table class="housewidetable eventlist" border="0">
       <tr>
          <th width="15%">TIME</th>
@@ -36,6 +36,7 @@ window.onload = function() {
          <th width="45%">DESCRIPTION</th>
       </tr>
    </table>
+   </section>
 </body>
 </html>
 

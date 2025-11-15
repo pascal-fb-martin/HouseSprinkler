@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel=stylesheet type="text/css"
-      href="/sprinkler/sprinkler.css" title="Sprinkler">
+<link rel="stylesheet" href="/house.css">
+<link rel="stylesheet" href="/sprinkler/sprinkler.css">
 <script src="/sprinkler/sprinklerlib.js"></script>
 <script>
 
@@ -779,21 +779,20 @@ window.onload = function() {
    <title></title>
 </head>
 <body>
-   <table class="sprkrtopcontainer">
-   <tr><td>
-   <table class="sprkrtop">
+   <header>
+   <table>
    <tr>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/index.html">Sprinkler</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/schedules.html">Schedules</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/controls.html">Controls</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/events.html">Events</A></td>
-   <td><span class="sprkrtopcurrent">Config</span></td>
+   <td><a href="/sprinkler/index.html">Sprinkler</A></td>
+   <td><a href="/sprinkler/zones.html">Zones</A></td>
+   <td><a href="/sprinkler/programs.html">Programs</A></td>
+   <td><a href="/sprinkler/schedules.html">Schedules</A></td>
+   <td><a href="/sprinkler/controls.html">Controls</A></td>
+   <td><a href="/sprinkler/events.html">Events</A></td>
+   <td><span>Config</span></td>
    </tr>
    </table> 
-   </td></tr>
-   </table> 
+   </header> 
+   <section>
    <div class="sprkrbuttons"><button class="configactionbutton" onclick="saveConfig()">Save</button></div>
    <table width="100%"><tr>
    <td width="10%"><button class="addbutton" onclick="addZone()">Add</button></td>
@@ -850,6 +849,7 @@ window.onload = function() {
      <button class="configactionbutton" onclick="resetConfig()">Reset</button>
      <button class="configactionbutton" onclick="defaultConfig()">Factory defaults</button>
    </div>
+   </section>
 </body>
 </html>
 

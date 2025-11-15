@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel=stylesheet type="text/css"
-      href="/sprinkler/sprinkler.css" title="Sprinkler">
+<link rel="stylesheet" href="/house.css">
+<link rel="stylesheet" href="/sprinkler/sprinkler.css">
 <script src="/sprinkler/sprinklerlib.js"></script>
 <script>
 
@@ -61,36 +61,35 @@ window.onload = function() {
    <title></title>
 </head>
 <body>
-   <table class="sprkrtopcontainer">
-   <tr><td>
-   <table class="sprkrtop">
+   <header>
+   <table>
    <tr>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/index.html">Sprinkler</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/zones.html">Zones</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/programs.html">Programs</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/schedules.html">Schedules</A></td>
-   <td><span class="sprkrtopcurrent">Controls</span></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/events.html">Events</A></td>
-   <td><A class="sprkrtopitem" HREF="/sprinkler/config.html">Config</A></td>
+   <td><a href="/sprinkler/index.html">Sprinkler</A></td>
+   <td><a href="/sprinkler/zones.html">Zones</A></td>
+   <td><a href="/sprinkler/programs.html">Programs</A></td>
+   <td><a href="/sprinkler/schedules.html">Schedules</A></td>
+   <td><span>Controls</span></td>
+   <td><a href="/sprinkler/events.html">Events</A></td>
+   <td><a href="/sprinkler/config.html">Config</A></td>
    </tr>
    </table> 
-   </td></tr>
-   </table> 
-   <table class="sprkrpanel">
+   </header> 
+   <section>
+   <table class="housepanel">
    <tr><td>
-   <div class="sprkrpane">
-   <table class="sprkrstatus">
-   <tr><td colspan="2"><span class="sprkrtitle">Valve Control Servers</span></td></tr>
+   <div class="housepane">
+   <table class="housestatus">
+   <tr><td colspan="2"><span class="housetitle">Valve Control Servers</span></td></tr>
    <tr><td>Controler:</td>
-   <td><span class="sprkrdata hostname"></span></td></tr>
+   <td><span class="housedata hostname"></span></td></tr>
    <tr><td>Program:</td>
-   <td><span class="sprkrdata activeprogram"></span></td></tr>
+   <td><span class="housedata activeprogram"></span></td></tr>
    <tr><td>Zone:</td>
-   <td><span class="sprkrdata activezone"></span></td></tr>
+   <td><span class="housedata activezone"></span></td></tr>
    <tr><td>Rain Delay:</td>
-   <td><span class="sprkrdata raindelay"></span></td></tr>
+   <td><span class="housedata raindelay"></span></td></tr>
    <tr><td>Watering Index:</td>
-   <td><span class="sprkrdata adjustment"></span></td></tr>
+   <td><span class="housedata adjustment"></span></td></tr>
    </table>
    </td></tr>
    </table> 
@@ -103,6 +102,7 @@ window.onload = function() {
          <th width="10%">TIME</th>
       </tr>
    </table>
+   </section>
 </body>
 </html>
 
