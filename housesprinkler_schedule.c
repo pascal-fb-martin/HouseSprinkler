@@ -325,7 +325,8 @@ void housesprinkler_schedule_refresh (void) {
         }
         for (; j < 8; ++j) Schedules[i].days[j] = 0;
 
-        Schedules[i].interval = housesprinkler_config_integer (schedule, ".interval");
+        Schedules[i].interval =
+            housesprinkler_config_positive (schedule, ".interval");
         Schedules[i].begin = housesprinkler_schedule_time (schedule, ".begin");
         Schedules[i].until = housesprinkler_schedule_time (schedule, ".until");
         const char *s = housesprinkler_config_string (schedule, ".start");

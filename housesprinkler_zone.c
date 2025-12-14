@@ -157,9 +157,9 @@ void housesprinkler_zone_refresh (void) {
         if (zone > 0) {
             Zones[i].name = housesprinkler_config_string (zone, ".name");
             Zones[i].feed = housesprinkler_config_string (zone, ".feed");
-            Zones[i].hydrate = housesprinkler_config_integer (zone, ".hydrate");
-            Zones[i].pulse = housesprinkler_config_integer (zone, ".pulse");
-            Zones[i].pause = housesprinkler_config_integer (zone, ".pause");
+            Zones[i].hydrate = housesprinkler_config_positive (zone, ".hydrate");
+            Zones[i].pulse = housesprinkler_config_positive (zone, ".pulse");
+            Zones[i].pause = housesprinkler_config_positive (zone, ".pause");
             Zones[i].manual = housesprinkler_config_boolean (zone, ".manual");
             Zones[i].status = 'i';
             housesprinkler_control_declare (Zones[i].name, "ZONE");
@@ -246,10 +246,22 @@ void housesprinkler_zone_stop (void) {
     PulseEnd = 0;
 }
 
+// This is a rough estimate of how long it would take to complete
+// an ongoing activation, not an exact elapsed time. An exact value
+// would depend on which other zones are being activated in the same
+// run anyway. That elapsed time is typically used to define priority:
+// the longer elapsed time is the higher priority.
+//
 static int housesprinkler_zone_elapsed (int queued) {
     int zone = Queue[queued].zone;
-    int soaks = Queue[queued].runtime / Zones[zone].pulse;
-    if (Queue[queued].runtime % Zones[zone].pulse == 0) soaks -= 1;
+    int pulse = Zones[zone].pulse;
+    int soaks = 0;
+    if (pulse > 0) {
+        soaks = (Queue[queued].runtime - Queue[queued].hydrate) / pulse;
+        if ((Queue[queued].runtime) % pulse == 0) soaks -= 1;
+    }
+    if (Queue[queued].hydrate > 0) soaks += 1;
+
     return Queue[queued].runtime + (Zones[zone].pause * soaks);
 }
 

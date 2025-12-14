@@ -40,6 +40,7 @@
  * int         housesprinkler_config_exists  (int parent, const char *path);
  * const char *housesprinkler_config_string  (int parent, const char *path);
  * int         housesprinkler_config_integer (int parent, const char *path);
+ * int         housesprinkler_config_positive (int parent, const char *path);
  * int         housesprinkler_config_boolean (int parent, const char *path);
  *
  *    Access individual items starting from the specified parent
@@ -271,6 +272,13 @@ const char *housesprinkler_config_string (int parent, const char *path) {
 int housesprinkler_config_integer (int parent, const char *path) {
     int i = housesprinkler_config_find(parent, path, PARSER_INTEGER);
     return (i >= 0) ? ConfigParsed[i].value.integer : 0;
+}
+
+int housesprinkler_config_positive (int parent, const char *path) {
+    int i = housesprinkler_config_find(parent, path, PARSER_INTEGER);
+    if (i < 0) return 0;
+    if (ConfigParsed[i].value.integer < 0) return 0;
+    return ConfigParsed[i].value.integer;
 }
 
 int housesprinkler_config_boolean (int parent, const char *path) {

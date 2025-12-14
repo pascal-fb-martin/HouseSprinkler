@@ -105,7 +105,7 @@ void housesprinkler_feed_refresh (void) {
         if (item > 0) {
             Feed[i].name = housesprinkler_config_string (item, ".name");
             Feed[i].next = housesprinkler_config_string (item, ".next");
-            Feed[i].linger = housesprinkler_config_integer (item, ".linger");
+            Feed[i].linger = housesprinkler_config_positive (item, ".linger");
             Feed[i].manual = housesprinkler_config_boolean (item, ".manual");
         }
         housesprinkler_control_declare (Feed[i].name, "FEED");

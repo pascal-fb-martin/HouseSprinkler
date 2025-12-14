@@ -105,8 +105,8 @@ void housesprinkler_season_refresh (void) {
             Seasons[i].name = housesprinkler_config_string (season, ".name");
             if (!Seasons[i].name) continue; // Bad entry.
 
-            int priority = housesprinkler_config_integer (season, ".priority");
-            Seasons[i].priority = (priority <= 0) ? 0 : priority;
+            Seasons[i].priority =
+                housesprinkler_config_positive (season, ".priority");
 
             count = 0;
             int index = housesprinkler_config_array (season, ".weekly");
@@ -126,7 +126,7 @@ void housesprinkler_season_refresh (void) {
             for (j = 0; j < count; ++j) {
                 snprintf (path, sizeof(path), "[%d]", j);
                 Seasons[i].index[j] =
-                    housesprinkler_config_integer(index, path);
+                    housesprinkler_config_positive (index, path);
             }
             DEBUG ("\tSeason %s (%sly)\n",
                    Seasons[i].name,

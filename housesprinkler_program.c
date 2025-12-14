@@ -174,7 +174,7 @@ void housesprinkler_program_refresh (void) {
                     Programs[i].zones[j].name =
                         housesprinkler_config_string (zone, ".name");
                     Programs[i].zones[j].runtime =
-                        housesprinkler_config_integer (zone, ".time");
+                        housesprinkler_config_positive (zone, ".time");
                 }
             }
             Programs[i].count = count;
