@@ -37,7 +37,6 @@
  *    Update both the live configuration and the configuration file with
  *    the provided text.
  *
- * int         housesprinkler_config_exists  (int parent, const char *path);
  * const char *housesprinkler_config_string  (int parent, const char *path);
  * int         housesprinkler_config_integer (int parent, const char *path);
  * int         housesprinkler_config_positive (int parent, const char *path);
@@ -93,7 +92,8 @@ static int   ConfigTokenCount = 0;
 static char *ConfigText = 0;
 static char *ConfigTextLatest = 0;
 
-static int ConfigFileEnabled = 0; // Default: rely on the HouseDepot service.
+static int ConfigFileEnabled = 0; // Default: no local configuration file.
+static int ConfigDepotEnabled = 1; // Default: use the HouseDepot service.
 
 static const char *ConfigFile = "/etc/house/sprinkler.json";
 
@@ -147,6 +147,7 @@ static const char *housesprinkler_config_write (const char *text, int length) {
     }
     write (fd, text, length);
     close (fd);
+    houselog_event ("SYSTEM", "CONFIG", "UPDATED", "FILE %s", ConfigFile);
     return 0;
 }
 
@@ -170,19 +171,25 @@ const char *housesprinkler_config_load (int argc, const char **argv) {
 
     int i;
     for (i = 1; i < argc; ++i) {
-        if (echttp_option_match ("-config=", argv[i], &ConfigFile)) continue;
+        if (echttp_option_match ("-config=", argv[i], &ConfigFile)) {
+            ConfigFileEnabled = 1;
+            ConfigDepotEnabled = 0;
+            continue;
+        }
         if (echttp_option_present ("-use-local-storage", argv[i])) {
             ConfigFileEnabled = 1;
             continue;
         }
         if (echttp_option_present ("-no-local-storage", argv[i])) {
             ConfigFileEnabled = 0;
+            ConfigDepotEnabled = 1;
             continue;
         }
     }
 
-    housedepositor_subscribe ("config", "sprinkler.json",
-                              housesprinkler_config_listener);
+    if (ConfigDepotEnabled)
+        housedepositor_subscribe ("config", "sprinkler.json",
+                                  housesprinkler_config_listener);
 
     if (!ConfigFileEnabled) return 0; // No error.
 
@@ -237,13 +244,13 @@ const char *housesprinkler_config_save (const char *text) {
     ConfigText = newconfig;
 
     houselog_event ("SYSTEM", "CONFIG", "SAVE", "TO DEPOT sprinkler.json");
-    housedepositor_put ("config", "sprinkler.json", text, length);
+    if (ConfigDepotEnabled)
+        housedepositor_put ("config", "sprinkler.json", text, length);
 
     error = housesprinkler_config_write (text, length);
     if (error) return error;
 
     UseFactoryDefaults = 0;
-    houselog_event ("SYSTEM", "CONFIG", "UPDATED", "FILE %s", ConfigFile);
     return 0;
 }
 
@@ -257,11 +264,6 @@ int housesprinkler_config_find (int parent, const char *path, int type) {
     i = echttp_json_search(ConfigParsed+parent, path);
     if (i >= 0 && ConfigParsed[parent+i].type == type) return parent+i;
     return -1;
-}
-
-int housesprinkler_config_exists  (int parent, const char *path) {
-    if (parent < 0 || parent >= ConfigTokenCount) return 0;
-    return (echttp_json_search(ConfigParsed+parent, path) >= 0);
 }
 
 const char *housesprinkler_config_string (int parent, const char *path) {

@@ -110,7 +110,7 @@ All these computers must be on the same subnet (UDP broadcast is involved for di
 
 ## Configuration
 
-The HouseSprinkler configuration is defined in a JSON file, by default /etc/house/sprinkler.json. However the proper way to configure is to access the Config page on the sprinkler's web UI. Do not forget to configure [houserelays](https://github.com/pascal-fb-martin/houserelays) first.
+The proper way to configure HouseSprinkler is to access the Config page on the web UI. Do not forget to configure [houserelays](https://github.com/pascal-fb-martin/houserelays) first.
 
 The HouseSprinkler configuration is mainly organized in layers:
 
@@ -124,6 +124,12 @@ The HouseSprinkler configuration is mainly organized in layers:
 
 Note that zones can be activated manually from the web UI, bypassing any program configuration, and programs can be activated manually from the web UI, bypassing any schedule rules.
 
+The HouseSprinkler configuration is defined in a JSON file, stored by default as home/sprinkler.json on the HouseDepot service. If local storage is enabled, the file is also locally available in /etc/house/sprinkler.json.
+
+If the `-group=<name>` option is used, the name of the group is used as the path in HouseDepot, replacing the default `home`.
+
+It is possible to specify an alternate HouseSprinkler configuration file using the `-config=<file>` option. When this is used, the HouseDepot interface is disabled and HouseSprinkler will only use the specified config file. This is mostly used for testing, or when HouseDepot was not installed.
+
 ## Watering Program Execution
 
 When a program starts, either based on schedule or manually, zones are activated in an order calculated to maximize the soak time and minimize the elapsed program execution time:
@@ -136,7 +142,7 @@ When a program starts, either based on schedule or manually, zones are activated
 
 - Zone activation is based on which zone was activable the earliest. This typically represents the zone that waited the most after its soak period.
 
-- If multiple zones were activable at the same time (like happens when the program starts), the zone with the longest remaining runtime is activated.
+- If multiple zones were activable at the same time (for example when the program starts), the zones are activated in an order based on their remaining runtimes, where the zone with the longest remaining runtime is activated first.
 
 The rationale here is that the zones with the longest runtime will likely execute the highest number of run/soak cycles. These are on the critical path when it comes to the program complete execution, and starting them first will likely reduce the program's elapsed execution time. This criteria is of a lower priority for subsequent activations because increasing the soak time was deemed more important.
 
