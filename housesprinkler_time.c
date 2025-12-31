@@ -68,8 +68,10 @@ static const char *housesprinkler_time_print (int h, const char *hlabel,
 const char *housesprinkler_time_period_printable (int period) {
     if (period <= 0) return "NOW";
     if (period > 86400) {
+        period += 1800; // Rounding.
         return housesprinkler_time_print (period / 86400, "DAY", (period % 86400) / 3600, "HOUR");
     } else if (period > 3600) {
+        period += 30; // Rounding.
         return housesprinkler_time_print (period / 3600, "HOUR", (period % 3600) / 60, "MINUTE");
     } else if (period > 60) {
         return housesprinkler_time_print (period / 60, "MINUTE", period % 60, "SECOND");
