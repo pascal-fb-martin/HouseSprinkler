@@ -34,6 +34,7 @@ HCAT=automation
 OBJS= housesprinkler.o \
       housesprinkler_index.o \
       housesprinkler_season.o \
+      housesprinkler_interval.o \
       housesprinkler_program.o \
       housesprinkler_schedule.o \
       housesprinkler_control.o \

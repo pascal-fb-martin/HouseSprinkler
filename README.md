@@ -74,7 +74,7 @@ The simplest case is that the sprinkler valves are all controlled from one singl
 
 - sudo make install
 
-However this software was designed to support irrigation valves controlled from several locations, i.e. computers. In that case there are two roles: one computer runs the sprinkler software and two or more computers run the valve control software. Thus there are two installation profiles:
+However this software was designed to support irrigation valves controlled from several locations, i.e. several computers. In that case there are two roles: one computer runs the sprinkler software and two or more computers run the valve control software. Thus there are two installation profiles:
 
 Sprinkler control computer:
 
@@ -88,7 +88,9 @@ Sprinkler control computer:
 
 - Install [housedepot](https://github.com/pascal-fb-martin/housedepot)
 
-- Install [waterwise](https://github.com/pascal-fb-martin/waterwise)
+- Install [waterwise](https://github.com/pascal-fb-martin/waterwise) when in the Los Angeles area.
+
+- Install [HouseCIMIS](https://github.com/pascal-fb-martin/housecimis) when located almost anywhere in California.
 
 - Clone this repository.
 
@@ -114,13 +116,21 @@ The proper way to configure HouseSprinkler is to access the Config page on the w
 
 The HouseSprinkler configuration is mainly organized in layers:
 
-- Seasons provides a fixed way of managing watering indexes, independent of weather information or availability of watering index provider sites.
+- Seasons provides a fixed way of managing watering indexes, independent of weather information or availability of watering index provider sites. Which watering index is used depend on their priorities (higher is better).
+
+> [!NOTE]
+> The default configuration includes a high priority season named `Full` than can be used to force a fully static watering schedule, independent of the online watering indexes. This allows static schedules to coexist with others that are automatically adjusted.
+
+- Intervals provides a way to adjust schedule intervals based on the current watering index value (regardless of its origin). See each schedule's Interval field.
+
+> [!WARNING]
+> When a program is launched by a schedule using an interval that varies based on the watering index value, then the watering durations are run at 100% regardless of the watering index. This is because you cannot apply the watering index twice: either it is used to modulate the interval or the durations, not both.
 
 - Zones define how long are the pulses and pauses for each zone.
 
 - Programs defines a list of zones to activate, and for how long. It also indicate an (optional) season index table to conform to.
 
-- Schedules define when programs should be activated.
+- Schedules define which and when programs should be activated: time of day, days of the week and interval.
 
 Note that zones can be activated manually from the web UI, bypassing any program configuration, and programs can be activated manually from the web UI, bypassing any schedule rules.
 
@@ -129,6 +139,39 @@ The HouseSprinkler configuration is defined in a JSON file, stored by default as
 If the `-group=<name>` option is used, the name of the group is used as the path in HouseDepot, replacing the default `home`.
 
 It is possible to specify an alternate HouseSprinkler configuration file using the `-config=<file>` option. When this is used, the HouseDepot interface is disabled and HouseSprinkler will only use the specified config file. This is mostly used for testing, or when HouseDepot was not installed.
+
+Note that this service can receive online watering index from watering index services. Thoses services are automatically detected: to configure the system for a specific Internet watering index provider only involves installing the service for that provider. It is possible to run different watering index services simultaneously provided that they use different index priorities. A low priority index service can be useful as a backup when the higher priority index service fails. It is also possible to run the same watering index service on multiple machines, providing redundancy to protect against a computer failure.
+
+## Watering Index Concepts
+
+The goal of irrigation is to replace the water lost because of the plant's evapotranspiration, i.e. water lost due to ground evaporation and the plant's own transpiration. There are multiple formula used to estimate how much water is lost every hour, based on the Sun radiations, temperature, humidity, etc. That calculation depends on the type of plants (some plants transpirate more than others). To simplify calculations, the evapotranspiration is calculated for grass (named `et0`), and then relative coefficients are used for other plants.
+
+Professionals use the estimated evapotranspiration value to determine the exact amount of water to provide through irrigation. That system is quite complicated for us city dwellers who have backyards populated with different types of plants. This is where the watering index comes in.
+
+> [!NOTE]
+> Some high end controllers do use the evapotranspiration value directly. The user must indicate a type of plant for each zone, and the controller does the rest. This irrigation controller does not work that way.
+
+A watering index provider selects a summer et0 value as a reference, and calculates a watering index value as a ratio compared to this reference. For example, if the reference et0 is 10 and the current et0 is 3, then the watering index is 30%, i.e. the plants needs 30% of the amount of water compared to the summer reference. A daily, weekly or monthly average of the index can then be calculated. A watering index value can be above 100 if a summer is hotter or drier than the reference.
+
+All it takes now is to program watering times on the irrigation controller that keep the plants healthy during summer, and then apply the watering index. Many cheap controllers support setting the watering index manually, while intelligent controllers can fetch the index automatically from Internet sites.
+
+The HouseSprinkler program is an irrigation controller that can fetch a watering index from various Internet sites, or else uses a static seasonal adjustment from its local configuration. The goal is to apply a watering index without requiring the end user to manually enter an index value every day or week.
+
+This controller does not implement any Internet watering index provider API itself. This job is outsourced to separate services, like `Waterwise` or `HouseCIMIS`, which implement the API for their respective provider and provide the result in an uniform format. Adding a new watering index provider is simply to implement and run a new watering index service.
+
+There are two ways to adjust the amount of water provided:
+
+- Adjust the duration of each watering.
+- Adjust how frequently the watering is activated.
+
+The first type of adjustment is the most common. Some gardeners do not recommend it: their point is that a short watering does not allow the water to penetrate deep in the soil, plants roots do not grow deep and more water is lost to evaporation. They recommend adjusting the watering interval instead, for example twice a week in summer, once a week in the fall and every other week in winter. Larger intervals also starve new weed growths of the shallow moisture they need.
+
+This irrigation controller allows selecting either mode on a per schedule basis:
+
+- If the schedule references an interval table, the schedule's interval will be estimated based on the current watering index for the launched program and that named interval table.
+- Otherwise the program will uses its current watering index to adjust the watering durations.
+
+Note that which watering index is used for each program is the highest priority index among the online indexes available and the static seasonal index referenced by the program.
 
 ## Watering Program Execution
 

@@ -12,6 +12,7 @@ var ShownFeedCount = 0;
 var ShownProgramCount = 0;
 var ShownScheduleCount = 0;
 var ShownSeasonCount = 0;
+var ShownIntervalCount = 0;
 
 var ScheduleDictionary = new Array();
 
@@ -169,8 +170,13 @@ function saveConfig () {
           newconfig.schedules[count].program = form.schedule[prefix+'program'].value;
           newconfig.schedules[count].start = form.schedule[prefix+'start'].value;
           if (form.schedule[prefix+'interval']) {
-              if (form.schedule[prefix+'interval'].value.length > 0) {
-                  newconfig.schedules[count].interval = parseInt (form.schedule[prefix+'interval'].value);
+              var value = form.schedule[prefix+'interval'].value;
+              if (value.length > 0) {
+                  var numericvalue = parseInt (value);
+                  if (isNaN(numericvalue))
+                      newconfig.schedules[count].interval = value;
+                  else
+                      newconfig.schedules[count].interval = numericvalue;
               }
           }
           if (form.schedule[prefix+'begin'].value)
@@ -213,6 +219,30 @@ function saveConfig () {
                      parseInt(form.seasonmonthly[prefix+j].value);
              else
                  newconfig.seasons[count].monthly[j] = 0;
+          }
+          count += 1;
+       }
+    }
+
+    if (editing.intervals) {
+       newconfig.intervals = new Array();
+
+       var count = 0;
+       for (var i = 0; i < ShownIntervalCount; i++) {
+          var prefix = 'intervals_'+i+'_';
+          if (!form.intervals[prefix+'name']) continue;
+          if (form.intervals[prefix+'name'].value.length == 0) continue;
+
+          newconfig.intervals[count] = new Object();
+          newconfig.intervals[count].name = form.intervals[prefix+'name'].value;
+
+          newconfig.intervals[count].byindex = new Array();
+          for (var j = 0; j <= 10; j++) {
+             if (form.intervals[prefix+j].value)
+                 newconfig.intervals[count].byindex[j] =
+                     parseInt(form.intervals[prefix+j].value);
+             else
+                 newconfig.intervals[count].byindex[j] = 0;
           }
           count += 1;
        }
@@ -425,8 +455,8 @@ function showOneSchedule (schedules, i, elements, count) {
 
       showCheckboxColumn (outer, prefix+'enabled', (schedule.disabled == false));
       showTextInputColumn (outer, prefix+'program', schedule.program, 'Program name');
-      showTextInputColumn (outer, prefix+'start', schedule.start, 'hh:mm (24)', 10);
-      showTextInputColumn (outer, prefix+'interval', schedule.interval, 'days', 3);
+      showTextInputColumn (outer, prefix+'start', schedule.start, 'hh:mm (24)', 6);
+      showTextInputColumn (outer, prefix+'interval', schedule.interval, 'name or days', 10);
       showTextInputColumn (outer, prefix+'begin', schedule.begin, 'yyyymmdd', 8);
       showTextInputColumn (outer, prefix+'end', schedule.end, 'yyyymmdd', 8);
 
@@ -506,6 +536,38 @@ function showOneSeasonMonthly (seasons, i, elements, count) {
    }
 }
 
+function showOneInterval (intervals, i, elements, count) {
+   for (var k = 0; k < elements.length; k++) {
+      var prefix = 'intervals_'+count+'_';
+      var outer = document.createElement("tr");
+
+      var column = document.createElement("td");
+      var input = document.createElement("input");
+      input.type = 'text';
+      input.name = prefix+'name';
+      input.value = intervals[i].name;
+      input.placeholder = 'Name';
+      column.appendChild(input);
+      outer.appendChild(column);
+
+      for (var j = 0; j <= 10; j++) {
+         column = document.createElement("td");
+         input = document.createElement("input");
+         input.size = 4;
+         input.type = 'number';
+         input.min = 0;
+         input.max = 150;
+         input.name = prefix+j;
+         input.inputmode = 'numeric';
+         input.placeholder = 'Days';
+         input.value = intervals[i].byindex[j];
+         column.appendChild(input);
+         outer.appendChild(column);
+      }
+      elements[k].appendChild(outer);
+   }
+}
+
 function addSeasonMonthly () {
 
    var name = 'Unnamed';
@@ -528,6 +590,28 @@ function addSeasonMonthly () {
    forceVisible('configseasonmonthly');
 }
 
+function addInterval () {
+
+   var name = 'Unnamed';
+
+   if (! editing.intervals) {
+      editing.intervals = new Array();
+   }
+
+   var i = editing.intervals.length;
+   editing.intervals[i] = new Object();
+   editing.intervals[i].name = '';
+   editing.intervals[i].byindex = new Array();
+   for (var j = 0; j <= 10; j++) {
+      editing.intervals[i].byindex[j] = null;
+   }
+
+   var elements = document.getElementsByName('intervalstable');
+   showOneInterval (editing.intervals, i, elements, ShownIntervalCount);
+   ShownIntervalCount += 1;
+   forceVisible('configintervals');
+}
+
 function resetSection (elements) {
 
    for (var i = 0; i < elements.length; ++i) {
@@ -538,18 +622,15 @@ function resetSection (elements) {
 
 function resetConfig () {
 
-    editing = new Object();
-    editing.zones = new Array();
-    editing.feed = new Array();
-    editing.programs = new Array();
-    editing.schedules = new Array();
-    editing.seasons = new Array();
+    var empty = new Object();
+    empty.zones = new Array();
+    empty.feed = new Array();
+    empty.programs = new Array();
+    empty.schedules = new Array();
+    empty.seasons = new Array();
+    empty.intervals = new Array();
 
-    resetSection (document.getElementsByName('zonetable'));
-    resetSection (document.getElementsByName('feedtable'));
-    resetSection (document.getElementsByName('programtable'));
-    resetSection (document.getElementsByName('scheduletable'));
-    resetSection (document.getElementsByName('seasonmonthlytable'));
+    sprinklerRefresh (empty);
 }
 
 function defaultConfig () {
@@ -587,6 +668,10 @@ function sprinklerConvert (config) {
 
 function sprinklerRefresh (config) {
 
+    if (!config) {
+        defaultConfig ();
+        return;
+    }
     if (!config.schedules) {
         config.schedules = sprinklerConvert (config);
     }
@@ -596,6 +681,7 @@ function sprinklerRefresh (config) {
     showExistingPrograms (config.programs);
     showExistingSchedules (config.schedules);
     showExistingSeasons (config.seasons);
+    showExistingIntervals (config.intervals);
     hideAll();
 }
 
@@ -768,6 +854,25 @@ function showExistingSeasons (seasons) {
    }
 }
 
+function showExistingIntervals (intervals) {
+
+   var elements = document.getElementsByName('intervalstable');
+
+   resetSection (elements);
+   ShownIntervalCount = 0;
+
+   showTitle (elements, ["NAME", "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"]);
+   if (!intervals) return;
+   for (var i = 0; i < intervals.length; i++) {
+      if (intervals[i]) {
+         if (intervals[i].byindex) {
+             showOneInterval (intervals, i, elements, ShownIntervalCount);
+             ShownIntervalCount += 1;
+         }
+      }
+   }
+}
+
 window.onload = function() {
 
    sprinklerConfig (sprinklerRefresh);
@@ -841,6 +946,16 @@ window.onload = function() {
    <form name="seasonmonthly">
    <div name="configseasonmonthly" class="hidable" display="none">
      <table name="seasonmonthlytable">
+     </table>
+   </div>
+   </form>
+   <table width="100%"><tr>
+   <td width="10%"><button class="addbutton" onclick="addInterval()">Add</button></td>
+   <td width="90%"><button class="configbuttonwithadd" onclick="visible('configintervals')">Intervals</button></td>
+   </tr></table>
+   <form name="intervals">
+   <div name="configintervals" class="hidable" display="none">
+     <table name="intervalstable">
      </table>
    </div>
    </form>

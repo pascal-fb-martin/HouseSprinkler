@@ -48,6 +48,7 @@
 #include "housesprinkler_zone.h"
 #include "housesprinkler_control.h"
 #include "housesprinkler_season.h"
+#include "housesprinkler_interval.h"
 #include "housesprinkler_program.h"
 #include "housesprinkler_schedule.h"
 
@@ -84,6 +85,7 @@ void sprinkler_refresh (void) {
     housesprinkler_index_refresh ();
     housesprinkler_feed_refresh ();
     housesprinkler_season_refresh ();
+    housesprinkler_interval_refresh ();
     housesprinkler_program_refresh ();
     housesprinkler_schedule_refresh ();
 }

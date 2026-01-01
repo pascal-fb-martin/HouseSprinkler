@@ -22,6 +22,12 @@
  *
  * SYNOPSYS:
  *
+ * int housesprinkler_program_exists (const char *name);
+ *
+ *    Return 1 if the named program exists, 0 otherwise. This is used
+ *    to validate any part of the HouseSprinkler's configuration that
+ *    references a program.
+ *
  * void housesprinkler_program_refresh (void);
  *
  *    This function must be called each time the sprinkler configuration
@@ -32,13 +38,12 @@
  *
  *    Enable/disable the index mechanism (independently of the index value).
  *
- * void housesprinkler_program_set_index
- *          (const char *origin, int value, time_t timestamp);
+ * int housesprinkler_program_get_index (const char *name);
  *
- *    Set the current watering index for all upcoming programs.
+ *    Get the current watering index value to apply to the specified program.
  *
  * void   housesprinkler_program_start_manual (const char *name);
- * time_t housesprinkler_program_start_scheduled (const char *name);
+ * time_t housesprinkler_program_start_scheduled (const char *name, int full);
  *
  *    The two methods for running a watering program: manual or automatic.
  *    The second method indicates if the program was effectively started:
@@ -184,12 +189,52 @@ void housesprinkler_program_refresh (void) {
 }
 
 void housesprinkler_program_index (int state) {
-    WateringIndexEnabled = state;
-    housesprinkler_state_changed ();
+    if (state != WateringIndexEnabled) {
+        WateringIndexEnabled = state;
+        housesprinkler_state_changed ();
+    }
+}
+
+// Search which watering index to use for the specified program at this time.
+// First consider the season index. Use an online index only if it has
+// a higher priority and it has been updated recently.
+// As an added condition, a season index of 0 overrides any online index:
+// value 0 means that the program is disabled for that period of the year.
+// The exception is manual mode: the user action takes precedence.
+//
+static int housesprinkler_program_currentindex (SprinklerProgram *program,
+                                                int manual,
+                                                const char **origin) {
+
+    if (!WateringIndexEnabled) return 100;
+
+    int priority = 0;
+    int index = 100;
+
+    *origin = 0;
+
+    if (program->season) {
+        index = housesprinkler_season_index (program->season);
+        if ((index <= 0) && (!manual)) return 0; // Disabled at this time.
+
+        *origin = program->season;
+        priority = housesprinkler_season_priority (program->season);
+    }
+
+    // Uses the external index only if valid and of a higher priority.
+    if (housesprinkler_index_priority () > priority) {
+        index = housesprinkler_index_get ();
+        *origin = housesprinkler_index_origin ();
+    }
+    if ((index <= 0) && manual) {
+        *origin = 0;
+        return 100; // The user action takes precedence.
+    }
+    return index;
 }
 
 static time_t housesprinkler_program_activate
-                  (SprinklerProgram *program, int manual) {
+                  (SprinklerProgram *program, int manual, int full) {
 
     // The first task during activation is to calculate the watering index
     // that applies at this time.
@@ -207,33 +252,24 @@ static time_t housesprinkler_program_activate
 
     // First consider the season index. Use an online index only if it has
     // a higher priority and it has been updated recently.
-    // TBD: manual index value will take precedence.
-    // As an added condition, do not automatically activate if the season
-    // index is 0: this means that the program is disabled for that period
-    // of the year. Manual activation is fine: the user is always right.
+    // Do not activate the program is the index is 0, as this means that
+    // the program is disabled for that period of the year.
+    // Manual activation is the exception: the user is always right.
     //
     time_t now = time(0);
 
-    if (WateringIndexEnabled) {
-
-        if (program->season) {
-            index = housesprinkler_season_index (program->season);
-            if (!index) {
-                if (!manual) {
-                    houselog_event ("PROGRAM", program->name,
-                                    "IGNORED", "NOT IN SEASON");
-                    return 0; // Disabled at this time of the year.
-                }
-                index = 100; // The user did override the season index.
+    if (!full) {
+        index = housesprinkler_program_currentindex (program, manual, &indexname);
+        if (!index) {
+            if (manual) {
+                // The user has requested this program to be run now,
+                // so we can ignore the disabling feature of index value 0.
+                index = 100;
+            } else {
+                houselog_event ("PROGRAM", program->name,
+                                "IGNORED", "NOT IN SEASON");
+                return 0; // Disabled at this time of the year.
             }
-            indexname = program->season;
-            priority = housesprinkler_season_priority (program->season);
-        }
-
-        // Uses the external index only if valid and of a higher priority.
-        if (housesprinkler_index_priority () > priority) {
-            index = housesprinkler_index_get ();
-            indexname = housesprinkler_index_origin ();
         }
     }
 
@@ -269,18 +305,30 @@ static int housesprinkler_program_find (const char *name) {
     return -1;
 }
 
+int housesprinkler_program_exists (const char *name) {
+    return housesprinkler_program_find (name) >= 0;
+}
+
+int housesprinkler_program_get_index (const char *name) {
+
+    const char *origin; // Dummy, not used.
+    int i = housesprinkler_program_find (name);
+    if (i < 0) return 0;
+    return housesprinkler_program_currentindex (Programs+i, 0, &origin);
+}
+
 void housesprinkler_program_start_manual (const char *name) {
 
     int i = housesprinkler_program_find(name);
-    if (i >= 0) housesprinkler_program_activate (Programs+i, 1);
+    if (i >= 0) housesprinkler_program_activate (Programs+i, 1, 0);
 }
 
-time_t housesprinkler_program_start_scheduled (const char *name) {
+time_t housesprinkler_program_start_scheduled (const char *name, int full) {
 
     int i = housesprinkler_program_find(name);
     if (i < 0) return 0; // Cannot start an unknow program.
 
-    time_t started = housesprinkler_program_activate (Programs+i, 0);
+    time_t started = housesprinkler_program_activate (Programs+i, 0, full);
     if (started) Programs[i].scheduled = started;
     return started;
 }

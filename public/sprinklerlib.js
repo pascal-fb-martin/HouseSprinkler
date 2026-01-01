@@ -174,25 +174,29 @@ function sprinklerApplyUpdate (text) {
    var title = response.host + ' - Sprinkler Controler';
    document.getElementsByTagName ('title')[0].innerHTML = title;
 
-   for (var i = 0; i < response.sprinkler.zone.zones.length; ++i) {
-       var zone = response.sprinkler.zone.zones[i];
-       var label = document.getElementById ('zone_'+i+'_label');
-       if (label) {
-           if (zone[2]) {
-               label.innerHTML = zone[0]+' @'+zone[2];
-           } else {
-               label.innerHTML = zone[0];
+   if (response.sprinkler.zone.zones) {
+       for (var i = 0; i < response.sprinkler.zone.zones.length; ++i) {
+           var zone = response.sprinkler.zone.zones[i];
+           var label = document.getElementById ('zone_'+i+'_label');
+           if (label) {
+               if (zone[2]) {
+                   label.innerHTML = zone[0]+' @'+zone[2];
+               } else {
+                   label.innerHTML = zone[0];
+               }
            }
        }
    }
 
-   for (var i = 0; i < response.sprinkler.schedule.schedules.length; ++i) {
-       var schedule = response.sprinkler.schedule.schedules[i];
-       if (! schedule.launched) continue;
-       var latest = document.getElementById (schedule.id+'_latest');
-       if (latest) {
-           var now = new Date(schedule.launched * 1000);
-           latest.innerHTML = now.toDateString();
+   if (response.sprinkler.schedule.schedules) {
+       for (var i = 0; i < response.sprinkler.schedule.schedules.length; ++i) {
+           var schedule = response.sprinkler.schedule.schedules[i];
+           if (! schedule.launched) continue;
+           var latest = document.getElementById (schedule.id+'_latest');
+           if (latest) {
+               var now = new Date(schedule.launched * 1000);
+               latest.innerHTML = now.toDateString();
+           }
        }
    }
 }
@@ -222,8 +226,12 @@ function sprinklerConfig (callback) {
    command.open("GET", "/sprinkler/config");
    command.onreadystatechange = function () {
       if (command.readyState === 4 && command.status === 200) {
-         var config = JSON.parse(command.responseText);
-         callback(config);
+         if (command.responseText && (command.responseText.length > 0)) {
+            var config = JSON.parse(command.responseText);
+            callback(config);
+         } else {
+            callback (null);
+         }
       }
    }
    command.send(null);

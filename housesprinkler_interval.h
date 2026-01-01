@@ -17,23 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301, USA.
  *
+ *
+ * housesprinkler_interval.h - Manage variable schedule intervals.
  */
-
-void housesprinkler_program_refresh (void);
-
-int housesprinkler_program_exists (const char *name);
-
-void housesprinkler_program_index (int state);
-int  housesprinkler_program_get_index (const char *name);
-
-void   housesprinkler_program_start_manual    (const char *name);
-time_t housesprinkler_program_start_scheduled (const char *name, int full);
-int    housesprinkler_program_running         (const char *name);
-
-time_t housesprinkler_program_scheduled (const char *name, time_t scheduled);
-
-void housesprinkler_program_periodic (time_t now);
-int  housesprinkler_program_status (char *buffer, int size);
-
-void housesprinkler_program_switch (void);
+void housesprinkler_interval_refresh (void);
+int  housesprinkler_interval_exists (const char *name);
+int  housesprinkler_interval_get (const char *name, int index);
 

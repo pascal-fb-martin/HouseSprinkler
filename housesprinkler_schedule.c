@@ -90,6 +90,7 @@
 #include "housesprinkler_state.h"
 #include "housesprinkler_config.h"
 #include "housesprinkler_program.h"
+#include "housesprinkler_interval.h"
 #include "housesprinkler_schedule.h"
 
 #define DEBUG if (sprinkler_isdebug()) printf
@@ -107,7 +108,10 @@ typedef struct {
         short minute;
     } start;
     char days[7];
-    char interval;
+    struct {
+       const char *name;
+       int days;
+    } interval;
     time_t lastlaunch;
 } SprinklerSchedule;
 
@@ -300,6 +304,10 @@ void housesprinkler_schedule_refresh (void) {
             DEBUG ("\tSchedule with no name at index %d\n", i);
             continue;
         }
+        if (! housesprinkler_program_exists (Schedules[i].program)) {
+            houselog_event ("CONFIG", "SCHEDULE", "INVALID",
+                            "UNKNOWN PROGRAM %s", Schedules[i].program);
+        }
 
         // Retrieve the schedule's ID. If none can be recovered, just
         // generate a new ID so that there is always one.
@@ -325,8 +333,22 @@ void housesprinkler_schedule_refresh (void) {
         }
         for (; j < 8; ++j) Schedules[i].days[j] = 0;
 
-        Schedules[i].interval =
-            housesprinkler_config_positive (schedule, ".interval");
+        // The interval may be a fixed number of days, or the name of
+        // an interval table (a variable number of days depending on
+        // the current watering index range).
+        //
+        Schedules[i].interval.name =
+            housesprinkler_config_string (schedule, ".interval");
+        if (!Schedules[i].interval.name) {
+            Schedules[i].interval.days = 
+                housesprinkler_config_positive (schedule, ".interval");
+        } else {
+            if (!housesprinkler_interval_exists (Schedules[i].interval.name)) {
+                houselog_event ("CONFIG", "SCHEDULE", "INVALID",
+                                "UNKNOWN INTERVAL %s", Schedules[i].interval.name);
+            }
+            Schedules[i].interval.days = 0;
+        }
         Schedules[i].begin = housesprinkler_schedule_time (schedule, ".begin");
         Schedules[i].until = housesprinkler_schedule_time (schedule, ".until");
         const char *s = housesprinkler_config_string (schedule, ".start");
@@ -376,7 +398,7 @@ void housesprinkler_schedule_refresh (void) {
 void housesprinkler_schedule_switch (void) {
 
     SprinklerOn = !SprinklerOn;
-    houselog_event ("PROGRAM", "SWITCH", SprinklerOn?"ON":"OFF", "");
+    houselog_event ("SCHEDULE", "SWITCH", SprinklerOn?"ON":"OFF", "");
     housesprinkler_state_share (SprinklerOn);
     housesprinkler_state_changed();
 }
@@ -506,7 +528,7 @@ void housesprinkler_schedule_periodic (time_t now) {
         if (start > now) continue; // Not yet..
 
         const char *program = OneTimeSchedules[i].program;
-        time_t started = housesprinkler_program_start_scheduled (program);
+        time_t started = housesprinkler_program_start_scheduled (program, 0);
         if (!started) continue; // Something prevented it from starting now.
 
         DEBUG ("== Program %s activated once at %lld\n", program, (long long)started);
@@ -555,23 +577,34 @@ void housesprinkler_schedule_periodic (time_t now) {
         // We use a 6 hours (21600 sec) leniency to account for changes
         // to the schedule start time, for example when the start time is
         // changed to be a few hours early.
-        // The last launch time used is the highest of two informations:
+        // The last launch time used is the highest of two timestamps:
         // - The last launch time for this schedule.
         // - The last launch time for the program referenced by the schedule.
         // Doing it this way handles the cases when multiple schedules refer
         // to the same program, and when the program name referenced in
         // the schedule has changed (a corner case if there is one).
         //
-        if (schedule->interval > 1) {
+        int interval = 0;
+        int full = 0;
+        if (schedule->interval.name) {
+            int index = housesprinkler_program_get_index (schedule->program);
+            interval =
+                housesprinkler_interval_get (schedule->interval.name, index);
+            full = 1;
+        } else {
+            interval = schedule->interval.days;
+        }
+
+        if (interval > 1) {
             time_t t0 = housesprinkler_program_scheduled (schedule->program, 0);
             if (schedule->lastlaunch > t0)
                 t0 = schedule->lastlaunch;
-            if (((now - t0 + 21600) / 86400) < schedule->interval) continue;
+            if (((now - t0 + 21600) / 86400) < interval) continue;
+            DEBUG ("== Program %s: interval %d has passed\n", schedule->program, interval);
         }
-        DEBUG ("== Program %s: interval %d has passed\n", schedule->program, schedule->interval);
 
         time_t started =
-            housesprinkler_program_start_scheduled (schedule->program);
+            housesprinkler_program_start_scheduled (schedule->program, full);
         if (started) {
             DEBUG ("== Program %s activated at %ld\n", schedule->program, (long)started);
             schedule->lastlaunch = started;
