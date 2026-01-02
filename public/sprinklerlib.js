@@ -19,6 +19,7 @@
 //      hostname        the controler's host name.
 //      activezone      the currently active zone name, or else "Idle".
 //      activeprogram   the currently active program, or else "Idle".
+//      scheduletime    the current time used for scheduling.
 //      raindelay       'DISABLED', 'NONE' or remaining duration.
 //      weatherupdated  the time of the last weather update.
 //      temperature     the temperature in the last weather update.
@@ -144,6 +145,8 @@ function sprinklerApplyUpdate (text) {
    if (response.sprinkler.schedule.on == false) {
       program = 'OFF';
    }
+   scheduletime = new Date (response.timestamp * 1000);
+   sprinklerSetContent ('scheduletime', scheduletime.toLocaleString());
    sprinklerSetContent ('activeprogram', program);
    sprinklerSetContent ('activezone', content);
 

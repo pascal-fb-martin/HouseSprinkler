@@ -65,7 +65,8 @@ static time_t SprinklerSimStart = 0;
 
 time_t sprinkler_schedulingtime (time_t now) {
     if (!SprinklerSimStart) return now;
-    now += ((now - SprinklerSimStart) * SprinklerSimSpeed) + SprinklerSimDelta;
+    now = SprinklerSimStart + SprinklerSimDelta +
+              ((now - SprinklerSimStart) * SprinklerSimSpeed);
     // The scheduling logic is synchronized on the start of each minute.
     // This simulated time must match the beginning of each minute, or else
     // nothing will be started. (We have already enforced that the speed
@@ -115,7 +116,7 @@ static const char *sprinkler_status (const char *method, const char *uri,
 
     cursor = snprintf (buffer, sizeof(buffer),
                        "{\"host\":\"%s\",\"proxy\":\"%s\",\"timestamp\":%ld,\"sprinkler\":{\"zone\":{",
-              hostname, houseportal_server(), time(0));
+              hostname, houseportal_server(), sprinkler_schedulingtime(time(0)));
     cursor += housesprinkler_zone_status (buffer+cursor, sizeof(buffer)-cursor);
     cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
     cursor += housesprinkler_program_status (buffer+cursor, sizeof(buffer)-cursor);
@@ -300,13 +301,17 @@ int sprinkler_isdebug (void) {
     return SprinklerDebug;
 }
 
+int sprinkler_simulation (void) {
+    return SprinklerSimStart > 0;
+}
+
 static void sprinkler_initialize (int argc, const char **argv) {
     int i;
     const char *sim = 0;
     for (i = 0; i < argc; ++i) {
         if (echttp_option_present ("-debug", argv[i])) {
             SprinklerDebug = 1;
-        } else if (echttp_option_match ("-sim-speed=", argv[i], &sim)) {
+        } else if (echttp_option_match ("-simulate=", argv[i], &sim)) {
             SprinklerSimSpeed = atoi(sim);
             if (SprinklerSimSpeed > 60) {
                 // Not more than a minute per second.
@@ -315,7 +320,8 @@ static void sprinkler_initialize (int argc, const char **argv) {
                 // 60 must be a multiple of SprinklerSimSpeed.
                 while (60 % SprinklerSimSpeed) SprinklerSimSpeed -= 1;
             }
-            if (sprinkler_isdebug()) printf ("Running at x%d speed\n", SprinklerSimSpeed);
+        } else if (echttp_option_present ("-simulate", argv[i])) {
+            SprinklerSimSpeed = 60;
         } else if (echttp_option_match ("-sim-delta=", argv[i], &sim)) {
             SprinklerSimDelta = atoi(sim);
             if (*sim == '-') sim += 1;
@@ -325,9 +331,13 @@ static void sprinkler_initialize (int argc, const char **argv) {
                 case 'h': SprinklerSimDelta *= 3600; break;
                 case 'm': SprinklerSimDelta *= 60; break;
             }
+            if (SprinklerSimSpeed <= 0) SprinklerSimSpeed = 1;
         }
     }
-    if (SprinklerSimSpeed || SprinklerSimDelta) SprinklerSimStart = time(0);
+    if (SprinklerSimSpeed || SprinklerSimDelta) {
+        SprinklerSimStart = time(0);
+        printf ("Running in simulation mode at x%d speed\n", SprinklerSimSpeed);
+    }
 }
 
 const char *sprinkler_host(void) {

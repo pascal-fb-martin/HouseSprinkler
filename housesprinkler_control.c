@@ -186,9 +186,11 @@ int housesprinkler_control_start (const char *name,
     }
     DEBUG ("%ld: Start %s %s for %d seconds\n", now, control->type, name, pulse);
     if (control->url[0]) {
+        int simulation = sprinkler_simulation();
         if (!context || context[0] == 0) context = "MANUAL";
         if (control->event) {
-            houselog_event (control->type, name, "ACTIVATED",
+            houselog_event (control->type, name,
+                            simulation?"SIMULATED":"ACTIVATED",
                             "FOR %s USING %s (%s)",
                             housesprinkler_time_period_printable(pulse),
                             control->url, context);
@@ -197,20 +199,22 @@ int housesprinkler_control_start (const char *name,
                 control->once = 0;
             }
         }
-        static char url[256];
-        static char cause[256];
-        int l = snprintf (cause, sizeof(cause), "%s", "SPRINKLER%20");
-        echttp_escape (context, cause+l, sizeof(cause)-l);
-        snprintf (url, sizeof(url),
-                  "%s/set?point=%s&state=on&pulse=%d&cause=%s",
-                  control->url, name, pulse, cause);
-        const char *error = echttp_client ("GET", url);
-        if (error) {
-            houselog_trace (HOUSE_FAILURE, name, "cannot create socket for %s, %s", url, error);
-            return 0;
+        if (!simulation) {
+            static char url[256];
+            static char cause[256];
+            int l = snprintf (cause, sizeof(cause), "%s", "SPRINKLER%20");
+            echttp_escape (context, cause+l, sizeof(cause)-l);
+            snprintf (url, sizeof(url),
+                      "%s/set?point=%s&state=on&pulse=%d&cause=%s",
+                      control->url, name, pulse, cause);
+            const char *error = echttp_client ("GET", url);
+            if (error) {
+                houselog_trace (HOUSE_FAILURE, name, "cannot create socket for %s, %s", url, error);
+                return 0;
+            }
+            DEBUG ("GET %s\n", url);
+            echttp_submit (0, 0, housesprinkler_control_result, (void *)control);
         }
-        DEBUG ("GET %s\n", url);
-        echttp_submit (0, 0, housesprinkler_control_result, (void *)control);
         control->deadline = now + pulse;
         control->status = 'a';
         ControlsActive = 1;
@@ -221,6 +225,10 @@ int housesprinkler_control_start (const char *name,
 
 static void housesprinkler_control_stop (SprinklerControl *control) {
     if (control->url[0]) {
+        if (sprinkler_simulation()) {
+            control->status  = 'i';
+            return;
+        }
         static char url[256];
         snprintf (url, sizeof(url),
                   "%s/set?point=%s&state=off", control->url, control->name);
@@ -243,7 +251,8 @@ void housesprinkler_control_cancel (const char *name) {
     if (name) {
         SprinklerControl *control = housesprinkler_control_search (name);
         if (control) {
-            houselog_event (control->type, name, "CANCEL", "MANUAL");
+            houselog_event (control->type, name, "CANCEL",
+                            sprinkler_simulation()?"SIMULATED":"MANUAL");
             housesprinkler_control_stop (control);
             control->deadline = 0;
         }

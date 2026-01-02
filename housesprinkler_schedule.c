@@ -190,13 +190,18 @@ static int housesprinkler_schedule_new_onetime (void) {
 
 static void housesprinkler_schedule_restore (void) {
 
-    // Only one sprinkler controller can be active at a time.
-    SprinklerOn = housesprinkler_state_get (".on");
-    if (SprinklerOn) {
-        const char *active = housesprinkler_state_get_string (".host");
-        if (active && strcmp (active, sprinkler_host())) SprinklerOn = 0;
+    // Only one sprinkler controller can be active at a time, except in
+    // simulation mode.
+    if (sprinkler_simulation()) {
+        SprinklerOn = 1;
+    } else {
+        SprinklerOn = housesprinkler_state_get (".on");
+        if (SprinklerOn) {
+            const char *active = housesprinkler_state_get_string (".host");
+            if (active && strcmp (active, sprinkler_host())) SprinklerOn = 0;
+        }
+        housesprinkler_state_share (SprinklerOn);
     }
-    housesprinkler_state_share (SprinklerOn);
 
     RainDelay = (time_t)housesprinkler_state_get (".raindelay");
     if (RainDelay < time(0)) RainDelay = 0; // Expired.

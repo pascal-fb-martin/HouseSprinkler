@@ -199,6 +199,21 @@ The web interface includes a Panel page (/sprinkler/panel.html) that has no menu
 
 Note that each zone turns itself off after 60 seconds, to avoid wasting water by mistake: this panel is intended for testing the sprinklers, not for normal irrigation.
 
+## Testing
+
+The program supports two options in support of testing:
+
+- -simulate[=N]:       run the program at N times the normal speed. N must be between 1 and 60 (default: 60).
+- -sim-delta=N[d|h|m]: run the program with a time offset of N seconds, N minutes (suffix 'm'), N hours (suffix 'h') or N days (suffix 'd').
+
+If any of these two options is used, the program runs in simulation mode:
+
+- The scheduling function is active even if another sprinkler controller service is currently active.
+- No controls are issued.
+- No state is saved.
+
+This simulation mode is meant to speed run watering schedules to validate how accurately they are activated. A convenient trick to make testing easier is to use the Schedules page to force schedules to run as soon as possible (`Again` button).
+
 ## Debian Packaging
 
 The provided Makefile supports building private Debian packages. These are _not_ official packages:

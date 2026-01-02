@@ -373,8 +373,12 @@ void housesprinkler_state_periodic (time_t now) {
         if (StateDataHasChanged < now) {
             int size = housesprinkler_state_format();
             if (ShareStateData) {
-                houselog_event ("SYSTEM", "STATE", "SAVE", "TO DEPOT sprinkler.json");
-                housedepositor_put ("state", "sprinkler.json", BackupOutBuffer, size);
+                int simulation = sprinkler_simulation();
+                houselog_event ("SYSTEM", "STATE",
+                                simulation?"SIMULATED":"SAVE",
+                                "TO DEPOT sprinkler.json");
+                if (!simulation)
+                    housedepositor_put ("state", "sprinkler.json", BackupOutBuffer, size);
             }
             if (housesprinkler_state_save (size) == size)
                 StateDataHasChanged = 0;
