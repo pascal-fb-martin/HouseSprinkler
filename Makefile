@@ -29,6 +29,8 @@ INSTALL=/usr/bin/install
 HAPP=housesprinkler
 HCAT=automation
 
+EXTRADOC=/var/lib/house/note/extra
+
 # Local build ---------------------------------------------------
 
 OBJS= housesprinkler.o \
@@ -68,6 +70,8 @@ dev:
 install-ui: install-preamble
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public/sprinkler
 	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public/sprinkler
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(EXTRADOC)/$(HPKG)/gallery
+	$(INSTALL) -m 0644 gallery/* $(DESTDIR)$(EXTRADOC)/$(HPKG)/gallery
 
 install-runtime: install-preamble
 	$(INSTALL) -m 0755 -s housesprinkler $(DESTDIR)$(prefix)/bin
