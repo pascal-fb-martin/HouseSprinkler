@@ -50,7 +50,7 @@
  *
  *    Retrieve an array.
  * 
- * int housesprinkler_config_enumerate (int parent, int *index);
+ * int housesprinkler_config_enumerate (int parent, int *index, int size);
  *
  *    Retrieve the elements of an array or object.
  *
@@ -299,12 +299,12 @@ int housesprinkler_config_array_length (int array) {
     return ConfigParsed[array].length;
 }
 
-int housesprinkler_config_enumerate (int parent, int *index) {
+int housesprinkler_config_enumerate (int parent, int *index, int size) {
 
     int i, length;
 
     if (parent < 0 || parent >= ConfigTokenCount) return 0;
-    const char *error = echttp_json_enumerate (ConfigParsed+parent, index);
+    const char *error = echttp_json_enumerate (ConfigParsed+parent, index, size);
     if (error) {
         fprintf (stderr, "Cannot enumerate %s: %s\n",
                  ConfigParsed[parent].key, error);

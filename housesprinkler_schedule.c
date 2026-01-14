@@ -330,7 +330,7 @@ void housesprinkler_schedule_refresh (void) {
         j = 0;
         if (days > 0) {
             int daylist[8];
-            int daycount = housesprinkler_config_enumerate (days, daylist);
+            int daycount = housesprinkler_config_enumerate (days, daylist, 8);
             for (j = 0; j < daycount; ++j) {
                 Schedules[i].days[j] =
                     housesprinkler_config_boolean (daylist[j], "");

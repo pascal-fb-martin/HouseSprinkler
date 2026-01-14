@@ -274,14 +274,16 @@ char housesprinkler_control_state (const char *name) {
     return control->status;
 }
 
+#define TOKENS_LIMIT 256
+
 static void housesprinkler_control_discovered
                (void *origin, int status, char *data, int length) {
 
    const char *provider = (const char *) origin;
-   ParserToken tokens[100];
-   int  innerlist[100];
+   ParserToken tokens[TOKENS_LIMIT];
+   int  innerlist[TOKENS_LIMIT];
+   int  count = TOKENS_LIMIT;
    char path[256];
-   int  count = 100;
    int  i;
 
    status = echttp_redirected("GET");
@@ -319,7 +321,7 @@ static void housesprinkler_control_discovered
        return;
    }
 
-   error = echttp_json_enumerate (tokens+controls, innerlist);
+   error = echttp_json_enumerate (tokens+controls, innerlist, TOKENS_LIMIT);
    if (error) {
        houselog_trace (HOUSE_FAILURE, path, "%s", error);
        return;
