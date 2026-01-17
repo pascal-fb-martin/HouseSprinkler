@@ -31,9 +31,8 @@
 #include "echttp.h"
 
 time_t sprinkler_schedulingtime (time_t now);
-int sprinkler_isdebug (void);
-int sprinkler_simulation (void);
-void sprinkler_refresh (void);
+int    sprinkler_isdebug (void);
+int    sprinkler_simulation (void);
 
 const char *sprinkler_host(void);
 

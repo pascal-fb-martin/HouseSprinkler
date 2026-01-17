@@ -46,9 +46,9 @@
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "houseconfig.h"
 
 #include "housesprinkler.h"
-#include "housesprinkler_config.h"
 #include "housesprinkler_season.h"
 
 #define DEBUG if (sprinkler_isdebug()) printf
@@ -81,37 +81,37 @@ void housesprinkler_season_refresh (void) {
     int i, j;
     int count;
     int content;
-    char path[128];
 
     // Reload all seasons.
     //
     if (Seasons) free (Seasons);
     Seasons = 0;
     SeasonsCount = 0;
-    content = housesprinkler_config_array (0, ".seasons");
+    content = houseconfig_array (0, ".seasons");
     if (content > 0) {
-        SeasonsCount = housesprinkler_config_array_length (content);
+        SeasonsCount = houseconfig_array_length (content);
         if (SeasonsCount > 0) {
             Seasons = calloc (SeasonsCount, sizeof(SprinklerSeason));
             DEBUG ("Loading %d seasons\n", SeasonsCount);
         }
     }
 
+    int *list = calloc (SeasonsCount, sizeof(int));
+    houseconfig_enumerate (content, list, SeasonsCount);
     for (i = 0; i < SeasonsCount; ++i) {
-        snprintf (path, sizeof(path), "[%d]", i);
-        int season = housesprinkler_config_object (content, path);
+        int season = houseconfig_object (list[i], 0);
         if (season > 0) {
             Seasons[i].unit = SPRINKLER_SEASON_INVALID; // Safe default.
-            Seasons[i].name = housesprinkler_config_string (season, ".name");
+            Seasons[i].name = houseconfig_string (season, ".name");
             if (!Seasons[i].name) continue; // Bad entry.
 
             Seasons[i].priority =
-                housesprinkler_config_positive (season, ".priority");
+                houseconfig_positive (season, ".priority");
 
             count = 0;
-            int index = housesprinkler_config_array (season, ".weekly");
+            int index = houseconfig_array (season, ".weekly");
             if (index <= 0) {
-                index = housesprinkler_config_array (season, ".monthly");
+                index = houseconfig_array (season, ".monthly");
                 if (index <= 0) continue; // Bad entry.
                 Seasons[i].unit = SPRINKLER_SEASON_MONTHLY;
                 count = 12;
@@ -119,20 +119,21 @@ void housesprinkler_season_refresh (void) {
                 Seasons[i].unit = SPRINKLER_SEASON_WEEKLY;
                 count = 52;
             }
-            if (count != housesprinkler_config_array_length(index)) {
+            if (count != houseconfig_array_length(index)) {
                 Seasons[i].unit = SPRINKLER_SEASON_INVALID;
                 continue; // Bad entry.
             }
+            int innerlist[52]; // largest possible size.
+            if (houseconfig_enumerate (index, innerlist, count) != count) continue;
             for (j = 0; j < count; ++j) {
-                snprintf (path, sizeof(path), "[%d]", j);
-                Seasons[i].index[j] =
-                    housesprinkler_config_positive (index, path);
+                Seasons[i].index[j] = houseconfig_positive (innerlist[j], 0);
             }
             DEBUG ("\tSeason %s (%sly)\n",
                    Seasons[i].name,
                    (Seasons[i].unit==SPRINKLER_SEASON_WEEKLY)?"week":"month");
         }
     }
+    free (list);
 }
 
 int housesprinkler_season_priority (const char *name) {

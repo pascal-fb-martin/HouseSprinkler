@@ -81,10 +81,10 @@
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "houseconfig.h"
 
 #include "housesprinkler.h"
 #include "housesprinkler_state.h"
-#include "housesprinkler_config.h"
 #include "housesprinkler_zone.h"
 #include "housesprinkler_season.h"
 #include "housesprinkler_index.h"
@@ -124,7 +124,6 @@ void housesprinkler_program_refresh (void) {
     int i;
     short count;
     int content;
-    char path[128];
 
     housesprinkler_state_listen (housesprinkler_program_restore);
     housesprinkler_state_register (housesprinkler_program_backup);
@@ -142,15 +141,17 @@ void housesprinkler_program_refresh (void) {
     }
     Programs = 0;
     ProgramsCount = 0;
-    content = housesprinkler_config_array (0, ".programs");
+    content = houseconfig_array (0, ".programs");
     if (content > 0) {
-        ProgramsCount = housesprinkler_config_array_length (content);
+        ProgramsCount = houseconfig_array_length (content);
         if (ProgramsCount > 0) {
             Programs = calloc (ProgramsCount, sizeof(SprinklerProgram));
             DEBUG ("Loading %d programs\n", ProgramsCount);
         }
     }
 
+    int *list = calloc (ProgramsCount, sizeof(int));
+    houseconfig_enumerate (content, list, ProgramsCount);
     for (i = 0; i < ProgramsCount; ++i) {
         Programs[i].name = 0;
         Programs[i].zones = 0;
@@ -159,33 +160,39 @@ void housesprinkler_program_refresh (void) {
         Programs[i].running = 0;
         Programs[i].scheduled = 0;
 
-        snprintf (path, sizeof(path), "[%d]", i);
-        int program = housesprinkler_config_object (content, path);
+        int program = houseconfig_object (list[i], 0);
         if (program > 0) {
-            Programs[i].name = housesprinkler_config_string (program, ".name");
+            Programs[i].name = houseconfig_string (program, ".name");
             if (!Programs[i].name) continue;
 
-            Programs[i].season = housesprinkler_config_string (program, ".season");
-            int zones = housesprinkler_config_array (program, ".zones");
+            Programs[i].season = houseconfig_string (program, ".season");
+            int zones = houseconfig_array (program, ".zones");
             if (zones <= 0) continue;
 
-            count = housesprinkler_config_array_length (zones);
+            count = houseconfig_array_length (zones);
             if (count > 0) {
                 int j;
+                int *zonelist = calloc (count, sizeof(int));
+                count = houseconfig_enumerate (zones, zonelist, count);
                 Programs[i].zones = calloc (count, sizeof(SprinklerProgramZone));
                 for (j = 0; j < count; ++j) {
-                    snprintf (path, sizeof(path), "[%d]", j);
-                    int zone = housesprinkler_config_object (zones, path);
-                    Programs[i].zones[j].name =
-                        housesprinkler_config_string (zone, ".name");
-                    Programs[i].zones[j].runtime =
-                        housesprinkler_config_positive (zone, ".time");
+                    int zone = houseconfig_object (zonelist[j], 0);
+                    if (zone > 0) {
+                        Programs[i].zones[j].name =
+                            houseconfig_string (zone, ".name");
+                        Programs[i].zones[j].runtime =
+                            houseconfig_positive (zone, ".time");
+                    } else {
+                        Programs[i].zones[j].name = 0;
+                    }
                 }
+                free (zonelist);
             }
             Programs[i].count = count;
             DEBUG ("\tProgram %s (%d zones)\n", Programs[i].name, count);
         }
     }
+    free (list);
 }
 
 void housesprinkler_program_index (int state) {
@@ -288,6 +295,8 @@ static time_t housesprinkler_program_activate
     int i;
     for (i = 0; i < program->count; ++i) {
         int runtime = (program->zones[i].runtime * index) / 100;
+        if (runtime <= 0) continue;
+        if (program->zones[i].name <= 0) continue;
         housesprinkler_zone_activate
             (program->zones[i].name, runtime, context);
     }

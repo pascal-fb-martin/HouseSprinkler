@@ -85,13 +85,13 @@
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "houseconfig.h"
 #include "housediscover.h"
 
 #include "housesprinkler.h"
 #include "housesprinkler_time.h"
 #include "housesprinkler_zone.h"
 #include "housesprinkler_feed.h"
-#include "housesprinkler_config.h"
 #include "housesprinkler_control.h"
 
 #define DEBUG if (sprinkler_isdebug()) printf
@@ -131,8 +131,6 @@ void housesprinkler_zone_refresh (void) {
     int i;
     int count;
     int content;
-    char path[128];
-    int list[256];
 
     // Reload all zones.
     //
@@ -142,25 +140,26 @@ void housesprinkler_zone_refresh (void) {
     ZonesBusy = 0;
     PulseEnd = 0;
     ZonesCount = 0;
-    content = housesprinkler_config_array (0, ".zones");
+    content = houseconfig_array (0, ".zones");
     if (content > 0) {
-        ZonesCount = housesprinkler_config_array_length (content);
+        ZonesCount = houseconfig_array_length (content);
         if (ZonesCount > 0) {
             Zones = calloc (ZonesCount, sizeof(SprinklerZone));
             DEBUG ("Loading %d zones\n", ZonesCount);
         }
     }
 
+    int *list = calloc (ZonesCount, sizeof(int));
+    houseconfig_enumerate (content, list, ZonesCount);
     for (i = 0; i < ZonesCount; ++i) {
-        snprintf (path, sizeof(path), "[%d]", i);
-        int zone = housesprinkler_config_object (content, path);
+        int zone = houseconfig_object (list[i], 0);
         if (zone > 0) {
-            Zones[i].name = housesprinkler_config_string (zone, ".name");
-            Zones[i].feed = housesprinkler_config_string (zone, ".feed");
-            Zones[i].hydrate = housesprinkler_config_positive (zone, ".hydrate");
-            Zones[i].pulse = housesprinkler_config_positive (zone, ".pulse");
-            Zones[i].pause = housesprinkler_config_positive (zone, ".pause");
-            Zones[i].manual = housesprinkler_config_boolean (zone, ".manual");
+            Zones[i].name = houseconfig_string (zone, ".name");
+            Zones[i].feed = houseconfig_string (zone, ".feed");
+            Zones[i].hydrate = houseconfig_positive (zone, ".hydrate");
+            Zones[i].pulse = houseconfig_positive (zone, ".pulse");
+            Zones[i].pause = houseconfig_positive (zone, ".pause");
+            Zones[i].manual = houseconfig_boolean (zone, ".manual");
             Zones[i].status = 'i';
             housesprinkler_control_declare (Zones[i].name, "ZONE");
             DEBUG ("\tZone %s (hydrate=%d, pulse=%d, pause=%d, manual=%s)\n",
@@ -168,6 +167,7 @@ void housesprinkler_zone_refresh (void) {
                    Zones[i].manual?"true":"false");
         }
     }
+    free (list);
 
     // We support at max 1 activation per zone..
     // (If the same zone is activated more than once, the runtimes simply

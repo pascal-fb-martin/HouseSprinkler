@@ -47,9 +47,9 @@
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "houseconfig.h"
 
 #include "housesprinkler.h"
-#include "housesprinkler_config.h"
 #include "housesprinkler_interval.h"
 
 #define DEBUG if (sprinkler_isdebug()) printf
@@ -83,16 +83,15 @@ void housesprinkler_interval_refresh (void) {
     int i, j;
     int count;
     int content;
-    char path[128];
 
     // Reload all intervals.
     //
     if (Intervals) free (Intervals);
     Intervals = 0;
     IntervalsCount = 0;
-    content = housesprinkler_config_array (0, ".intervals");
+    content = houseconfig_array (0, ".intervals");
     if (content > 0) {
-        IntervalsCount = housesprinkler_config_array_length (content);
+        IntervalsCount = houseconfig_array_length (content);
         if (IntervalsCount > 0) {
             Intervals = calloc (IntervalsCount, sizeof(SprinklerIntervals));
         }
@@ -100,33 +99,36 @@ void housesprinkler_interval_refresh (void) {
 
     DEBUG ("Loading %d interval scales\n", IntervalsCount);
 
+    int *list = calloc (IntervalsCount, sizeof(int));
+    houseconfig_enumerate (content, list, IntervalsCount);
     for (i = 0; i < IntervalsCount; ++i) {
-        snprintf (path, sizeof(path), "[%d]", i);
-        int scale = housesprinkler_config_object (content, path);
+        int scale = houseconfig_object (list[i], 0);
         if (scale > 0) {
-            Intervals[i].name = housesprinkler_config_string (scale, ".name");
+            Intervals[i].name = houseconfig_string (scale, ".name");
             if (!Intervals[i].name) continue; // Bad entry.
 
-            int index = housesprinkler_config_array (scale, ".byindex");
+            int index = houseconfig_array (scale, ".byindex");
             if (index <= 0) {
                 DEBUG ("Bad interval scale array\n");
                 continue;
             }
-            count = housesprinkler_config_array_length(index);
+            count = houseconfig_array_length(index);
             if (count > SCALE_LIMIT) {
                 DEBUG ("Interval scale %s: array of %d truncated to %d\n",
                        Intervals[i].name, count, SCALE_LIMIT);
                 count = SCALE_LIMIT;
             }
+            int innerlist[SCALE_LIMIT];
+            count = houseconfig_enumerate (index, innerlist, count);
             for (j = 0; j < count; ++j) {
-                snprintf (path, sizeof(path), "[%d]", j);
                 Intervals[i].byindex[j] =
-                    housesprinkler_config_positive (index, path);
+                    houseconfig_positive (innerlist[j], 0);
             }
             Intervals[i].count = count;
             DEBUG ("\tInterval %s loaded (%d items).\n", Intervals[i].name, count);
         }
     }
+    free (list);
 }
 
 int housesprinkler_interval_get (const char *name, int index) {

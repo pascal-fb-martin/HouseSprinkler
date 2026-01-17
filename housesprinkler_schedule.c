@@ -84,11 +84,11 @@
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "houseconfig.h"
 
 #include "housesprinkler.h"
 #include "housesprinkler_time.h"
 #include "housesprinkler_state.h"
-#include "housesprinkler_config.h"
 #include "housesprinkler_program.h"
 #include "housesprinkler_interval.h"
 #include "housesprinkler_schedule.h"
@@ -140,7 +140,7 @@ static time_t housesprinkler_schedule_time (int index, const char *path) {
     struct tm local = {0};
     const char *p;
 
-    const char *date = housesprinkler_config_string (index, path);
+    const char *date = houseconfig_string (index, path);
     if (date) {
         local.tm_mon = atoi(date) - 1;
         p = strchr (date, '/');
@@ -272,7 +272,6 @@ void housesprinkler_schedule_refresh (void) {
     int i, j;
     int count;
     int content;
-    char path[128];
     const char *programname = ".program";
 
     // Keep the old schedule set on the side, to recover some live data.
@@ -282,29 +281,30 @@ void housesprinkler_schedule_refresh (void) {
     // Recalculate all watering schedules.
     Schedules = 0;
     SchedulesCount = 0;
-    content = housesprinkler_config_array (0, ".schedules");
+    content = houseconfig_array (0, ".schedules");
     if (content <= 0) {
         // Compatibility with previous generation of HouseSprinkler configs.
         DEBUG ("No schedules, loading from programs\n");
-        content = housesprinkler_config_array (0, ".programs");
+        content = houseconfig_array (0, ".programs");
         programname = ".name";
     }
     if (content > 0) {
-        SchedulesCount = housesprinkler_config_array_length (content);
+        SchedulesCount = houseconfig_array_length (content);
         if (SchedulesCount > 0) {
             Schedules = calloc (SchedulesCount, sizeof(SprinklerSchedule));
             DEBUG ("Loading %d schedules\n", SchedulesCount);
         }
     }
 
+    int *list = calloc (SchedulesCount, sizeof(int));
+    houseconfig_enumerate (content, list, SchedulesCount);
     for (i = 0; i < SchedulesCount; ++i) {
-        snprintf (path, sizeof(path), "[%d]", i);
-        int schedule = housesprinkler_config_object (content, path);
+        int schedule = houseconfig_object (list[i], 0);
         if (schedule <= 0) {
             DEBUG ("\tNo schedule at index %d\n", i);
             continue;
         }
-        Schedules[i].program = housesprinkler_config_string (schedule, programname);
+        Schedules[i].program = houseconfig_string (schedule, programname);
         if (!Schedules[i].program) {
             DEBUG ("\tSchedule with no name at index %d\n", i);
             continue;
@@ -317,7 +317,7 @@ void housesprinkler_schedule_refresh (void) {
         // Retrieve the schedule's ID. If none can be recovered, just
         // generate a new ID so that there is always one.
         //
-        const char *id = housesprinkler_config_string (schedule, ".id");
+        const char *id = houseconfig_string (schedule, ".id");
         if (id) {
             if (uuid_parse (id, Schedules[i].id)) {
                 uuid_generate_random (Schedules[i].id);
@@ -326,14 +326,13 @@ void housesprinkler_schedule_refresh (void) {
             uuid_generate_random (Schedules[i].id);
         }
 
-        int days = housesprinkler_config_array (schedule, ".days");
+        int days = houseconfig_array (schedule, ".days");
         j = 0;
         if (days > 0) {
             int daylist[8];
-            int daycount = housesprinkler_config_enumerate (days, daylist, 8);
+            int daycount = houseconfig_enumerate (days, daylist, 8);
             for (j = 0; j < daycount; ++j) {
-                Schedules[i].days[j] =
-                    housesprinkler_config_boolean (daylist[j], "");
+                Schedules[i].days[j] = houseconfig_boolean (daylist[j], 0);
             }
         }
         for (; j < 8; ++j) Schedules[i].days[j] = 0;
@@ -343,10 +342,10 @@ void housesprinkler_schedule_refresh (void) {
         // the current watering index range).
         //
         Schedules[i].interval.name =
-            housesprinkler_config_string (schedule, ".interval");
+            houseconfig_string (schedule, ".interval");
         if (!Schedules[i].interval.name) {
             Schedules[i].interval.days = 
-                housesprinkler_config_positive (schedule, ".interval");
+                houseconfig_positive (schedule, ".interval");
         } else {
             if (!housesprinkler_interval_exists (Schedules[i].interval.name)) {
                 houselog_event ("CONFIG", "SCHEDULE", "INVALID",
@@ -356,7 +355,7 @@ void housesprinkler_schedule_refresh (void) {
         }
         Schedules[i].begin = housesprinkler_schedule_time (schedule, ".begin");
         Schedules[i].until = housesprinkler_schedule_time (schedule, ".until");
-        const char *s = housesprinkler_config_string (schedule, ".start");
+        const char *s = houseconfig_string (schedule, ".start");
         if (s) {
             Schedules[i].start.hour = atoi(s);
             const char *m = strchr (s, ':');
@@ -366,10 +365,11 @@ void housesprinkler_schedule_refresh (void) {
         }
         Schedules[i].lastlaunch = 0;
         Schedules[i].disabled =
-            housesprinkler_config_boolean (schedule, ".disabled");
+            houseconfig_boolean (schedule, ".disabled");
         DEBUG ("\tSchedule program %s at %02d:%02d\n",
                Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute);
     }
+    free (list);
 
     if (oldschedules) {
         // This is a configuration change, not a program start.

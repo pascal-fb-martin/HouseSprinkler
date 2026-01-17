@@ -49,12 +49,12 @@
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "houseconfig.h"
 #include "housediscover.h"
 
 #include "housesprinkler.h"
 #include "housesprinkler_time.h"
 #include "housesprinkler_feed.h"
-#include "housesprinkler_config.h"
 #include "housesprinkler_control.h"
 
 #define DEBUG if (sprinkler_isdebug()) printf
@@ -82,37 +82,37 @@ void housesprinkler_feed_refresh (void) {
     int i;
     int count;
     int content;
-    char path[128];
-    int list[256];
 
     // Reload all feed items.
     //
     if (Feed) free (Feed);
     Feed = 0;
     FeedCount = 0;
-    content = housesprinkler_config_array (0, ".feeds");
+    content = houseconfig_array (0, ".feeds");
     if (content > 0) {
-        FeedCount = housesprinkler_config_array_length (content);
+        FeedCount = houseconfig_array_length (content);
         if (FeedCount > 0) {
             Feed = calloc (FeedCount, sizeof(SprinklerFeed));
             DEBUG ("Loading %d feed items\n", FeedCount);
         }
     }
 
+    int *list = calloc (FeedCount, sizeof(int));
+    houseconfig_enumerate (content, list, FeedCount);
     for (i = 0; i < FeedCount; ++i) {
-        snprintf (path, sizeof(path), "[%d]", i);
-        int item = housesprinkler_config_object (content, path);
+        int item = houseconfig_object (list[i], 0);
         if (item > 0) {
-            Feed[i].name = housesprinkler_config_string (item, ".name");
-            Feed[i].next = housesprinkler_config_string (item, ".next");
-            Feed[i].linger = housesprinkler_config_positive (item, ".linger");
-            Feed[i].manual = housesprinkler_config_boolean (item, ".manual");
+            Feed[i].name = houseconfig_string (item, ".name");
+            Feed[i].next = houseconfig_string (item, ".next");
+            Feed[i].linger = houseconfig_positive (item, ".linger");
+            Feed[i].manual = houseconfig_boolean (item, ".manual");
         }
         housesprinkler_control_declare (Feed[i].name, "FEED");
         housesprinkler_control_event (Feed[i].name, 0, 0);
         DEBUG ("\tFeed %s (manual=%s)\n",
                Feed[i].name, Feed[i].manual?"true":"false");
     }
+    free (list);
 
     // Detect loops in chains. Having any is bad.
     for (i = 0; i < FeedCount; ++i) {

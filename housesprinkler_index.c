@@ -74,7 +74,6 @@
 
 #include "housesprinkler.h"
 #include "housesprinkler_index.h"
-#include "housesprinkler_config.h"
 
 #define DEBUG if (sprinkler_isdebug()) printf
 

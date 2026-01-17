@@ -38,11 +38,11 @@
 #include "echttp_static.h"
 #include "houseportalclient.h"
 #include "houselog.h"
+#include "houseconfig.h"
 #include "housediscover.h"
 #include "housedepositor.h"
 
 #include "housesprinkler_state.h"
-#include "housesprinkler_config.h"
 #include "housesprinkler_index.h"
 #include "housesprinkler_feed.h"
 #include "housesprinkler_zone.h"
@@ -80,7 +80,7 @@ static void sprinkler_reset (void) {
     housediscover (0);
 }
 
-void sprinkler_refresh (void) {
+static const char *sprinkler_refresh (void) {
     housesprinkler_control_reset ();
     housesprinkler_zone_refresh ();
     housesprinkler_index_refresh ();
@@ -89,23 +89,28 @@ void sprinkler_refresh (void) {
     housesprinkler_interval_refresh ();
     housesprinkler_program_refresh ();
     housesprinkler_schedule_refresh ();
+    return 0;
 }
 
 static const char *sprinkler_config (const char *method, const char *uri,
                                      const char *data, int length) {
 
+    if (strcmp(method, "GET") == 0) {
+       echttp_content_type_json ();
+       return houseconfig_current ();
+    }
+
     if (strcmp(method, "POST") == 0) {
-       const char *error = housesprinkler_config_save (data);
+       const char *error = houseconfig_update (data, "USER CHANGE");
        if (error) {
-           echttp_error (500, error);
+           echttp_error (400, error);
            return "";
        }
-       sprinkler_refresh ();
        sprinkler_reset();
-    } else if (strcmp(method, "GET") == 0) {
-       echttp_content_type_json ();
-       return housesprinkler_config_latest ();
+       return "";
     }
+
+    echttp_error (400, "invalid method");
     return "";
 }
 
@@ -286,7 +291,7 @@ static void hs_background (int fd, int mode) {
     houselog_background (now);
     housediscover (now);
     housesprinkler_state_periodic(now);
-    housesprinkler_config_periodic();
+    houseconfig_background (now);
     housedepositor_periodic (now);
 }
 
@@ -368,10 +373,10 @@ int main (int argc, const char **argv) {
     housedepositor_initialize (argc, argv);
 
     housesprinkler_state_load (argc, argv);
-    const char *error = housesprinkler_config_load (argc, argv);
+    const char *error =
+        houseconfig_initialize ("sprinkler", sprinkler_refresh, argc, argv);
     if (error) {
-        houselog_trace
-            (HOUSE_FAILURE, housesprinkler_config_name(), "%s", error);
+        houselog_trace (HOUSE_FAILURE, houseconfig_name(), "%s", error);
     }
     housesprinkler_schedule_initialize (argc, argv);
     sprinkler_refresh ();
