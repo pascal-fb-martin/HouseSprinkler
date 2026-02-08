@@ -246,7 +246,6 @@ static time_t housesprinkler_program_activate
     // The first task during activation is to calculate the watering index
     // that applies at this time.
 
-    int priority = 0;
     int index = 100;
     const char *indexname = 0;
     char context[256];

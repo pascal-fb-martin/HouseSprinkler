@@ -281,7 +281,6 @@ const void housesprinkler_state_load (int argc, const char **argv) {
     }
 
     if (newconfig) {
-        const char *error;
         houselog_event ("SYSTEM", "STATE", "LOAD", "FILE %s", name);
         housesprinkler_state_new (newconfig);
     }

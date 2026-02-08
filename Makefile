@@ -57,7 +57,7 @@ clean:
 rebuild: clean all
 
 %.o: %.c
-	gcc -c -g -Os -o $@ $<
+	gcc -c -Wall -g -Os -o $@ $<
 
 housesprinkler: $(OBJS)
 	gcc -g -Os -o housesprinkler $(OBJS) -lhouseportal -lechttp -luuid -lssl -lcrypto -lmagic -lrt

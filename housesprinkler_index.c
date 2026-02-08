@@ -129,7 +129,6 @@ static void housesprinkler_index_response
    const char *service = (const char *) origin;
    ParserToken tokens[100];
    int  count = 100;
-   time_t now = time(0);
 
    status = echttp_redirected("GET");
    if (!status) {
@@ -236,9 +235,6 @@ static void housesprinkler_index_query
 void housesprinkler_index_periodic (time_t now) {
 
     static time_t LastInquiry = 0;
-
-    int i, h;
-    struct tm local = *localtime(&now);
 
     if (!now) { // This is a manual reset (force refresh request).
         SprinklerIndexTimestamp = 0;

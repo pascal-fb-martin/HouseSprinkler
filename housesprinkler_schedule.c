@@ -126,11 +126,6 @@ typedef struct {
 static SprinklerOneTimeSchedule *OneTimeSchedules = 0;
 static int OneTimeSchedulesCount = 0;
 
-static int         WateringIndexState = 1;
-static int         WateringIndex = 100;
-static const char *WateringIndexOrigin = 0;
-static int         WateringIndexTimestamp = 0;
-
 static int    RainDelayEnabled = 1;
 static time_t RainDelay = 0;
 
@@ -270,7 +265,6 @@ static void housesprinkler_schedule_restore (void) {
 void housesprinkler_schedule_refresh (void) {
 
     int i, j;
-    int count;
     int content;
     const char *programname = ".program";
 
@@ -626,7 +620,7 @@ int housesprinkler_schedule_status (char *buffer, int size) {
 
     if (RainDelayEnabled) {
         cursor += snprintf (buffer+cursor, size-cursor,
-                            ",\"raindelay\":%d", RainDelay);
+                            ",\"raindelay\":%lld", (long long)RainDelay);
         if (cursor >= size) goto overflow;
     }
 

@@ -142,7 +142,6 @@ static const char *sprinkler_status (const char *method, const char *uri,
 
 static const char *sprinkler_raindelay (const char *method, const char *uri,
                                         const char *data, int length) {
-    static char buffer[65537];
     int duration;
 
     const char *amount = echttp_parameter_get ("amount");
@@ -155,7 +154,6 @@ static const char *sprinkler_raindelay (const char *method, const char *uri,
 
 static const char *sprinkler_rain (const char *method, const char *uri,
                                    const char *data, int length) {
-    static char buffer[65537];
 
     const char *active = echttp_parameter_get ("active");
     if (!active) active = "true";
@@ -166,7 +164,6 @@ static const char *sprinkler_rain (const char *method, const char *uri,
 
 static const char *sprinkler_index (const char *method, const char *uri,
                                     const char *data, int length) {
-    static char buffer[65537];
 
     const char *active = echttp_parameter_get ("active");
     if (!active) active = "true";
@@ -252,7 +249,6 @@ static const char *sprinkler_weather (const char *method, const char *uri,
 
 static const char *sprinkler_weatheron (const char *method, const char *uri,
                                         const char *data, int length) {
-    static char buffer[65537];
 
     echttp_content_type_json ();
     return "";
@@ -260,7 +256,6 @@ static const char *sprinkler_weatheron (const char *method, const char *uri,
 
 static const char *sprinkler_weatheroff (const char *method, const char *uri,
                                          const char *data, int length) {
-    static char buffer[65537];
 
     echttp_content_type_json ();
     return "";

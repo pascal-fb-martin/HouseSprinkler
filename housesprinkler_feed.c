@@ -80,7 +80,6 @@ static SprinklerFeed *housesprinkler_feed_search (const char *name) {
 void housesprinkler_feed_refresh (void) {
 
     int i;
-    int count;
     int content;
 
     // Reload all feed items.

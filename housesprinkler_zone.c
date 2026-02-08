@@ -129,7 +129,6 @@ static int ZoneIndexValvePause = 1; // An optional pause for indexing valves.
 void housesprinkler_zone_refresh (void) {
 
     int i;
-    int count;
     int content;
 
     // Reload all zones.
@@ -416,10 +415,9 @@ int housesprinkler_zone_idle (void) {
 int housesprinkler_zone_status (char *buffer, int size) {
 
     int i;
-    int cursor;
     const char *prefix = "";
 
-    cursor = snprintf (buffer+cursor, size-cursor, "\"zones\":[");
+    int cursor = snprintf (buffer, size, "\"zones\":[");
     if (cursor >= size) goto overflow;
     prefix = "";
 

@@ -200,7 +200,7 @@ int housesprinkler_control_start (const char *name,
             }
         }
         if (!simulation) {
-            static char url[256];
+            static char url[550];
             static char cause[256];
             int l = snprintf (cause, sizeof(cause), "%s", "SPRINKLER%20");
             echttp_escape (context, cause+l, sizeof(cause)-l);
@@ -229,7 +229,7 @@ static void housesprinkler_control_stop (SprinklerControl *control) {
             control->status  = 'i';
             return;
         }
-        static char url[256];
+        static char url[512];
         snprintf (url, sizeof(url),
                   "%s/set?point=%s&state=off", control->url, control->name);
         const char *error = echttp_client ("GET", url);
