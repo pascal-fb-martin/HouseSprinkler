@@ -184,7 +184,7 @@ int housesprinkler_control_start (const char *name,
         houselog_event ("CONTROL", name, "UNKNOWN", "");
         return 0;
     }
-    DEBUG ("%ld: Start %s %s for %d seconds\n", now, control->type, name, pulse);
+    DEBUG ("%lld: Start %s %s for %d seconds\n", (long long)now, control->type, name, pulse);
     if (control->url[0]) {
         int simulation = sprinkler_simulation();
         if (!context || context[0] == 0) context = "MANUAL";
@@ -258,7 +258,7 @@ void housesprinkler_control_cancel (const char *name) {
         }
         return;
     }
-    DEBUG ("%ld: Cancel all zones and feeds\n", now);
+    DEBUG ("%lld: Cancel all zones and feeds\n", (long long)now);
     for (i = 0; i < ControlsCount; ++i) {
         if (Controls[i].deadline) {
             housesprinkler_control_stop ( Controls + i);

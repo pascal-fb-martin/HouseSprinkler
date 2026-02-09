@@ -233,7 +233,7 @@ void housesprinkler_zone_stop (void) {
     int i;
     time_t now = time(0);
 
-    DEBUG ("%ld: Stop all zones\n", now);
+    DEBUG ("%lld: Stop all zones\n", (long long)now);
     houselog_event ("ZONE", "ALL", "STOP", "MANUAL");
     for (i = 0; i < QueueNext; ++i) {
         Queue[i].hydrate = 0;
@@ -277,7 +277,7 @@ static void housesprinkler_zone_schedule (time_t now) {
 
         Queue[QueueNext-1].nexton = 0;
         QueueNext -= 1;
-        DEBUG ("%ld: Prune queue entry %d\n", now, QueueNext);
+        DEBUG ("%lld: Prune queue entry %d\n", (long long)now, QueueNext);
     }
 
     if (now <= ZonesBusy) return;

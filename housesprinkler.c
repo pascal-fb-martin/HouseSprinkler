@@ -120,8 +120,10 @@ static const char *sprinkler_status (const char *method, const char *uri,
     int cursor;
 
     cursor = snprintf (buffer, sizeof(buffer),
-                       "{\"host\":\"%s\",\"proxy\":\"%s\",\"timestamp\":%ld,\"sprinkler\":{\"zone\":{",
-              hostname, houseportal_server(), sprinkler_schedulingtime(time(0)));
+                       "{\"host\":\"%s\",\"proxy\":\"%s\","
+                           "\"timestamp\":%lld,\"sprinkler\":{\"zone\":{",
+                       hostname, houseportal_server(),
+                           (long long)sprinkler_schedulingtime(time(0)));
     cursor += housesprinkler_zone_status (buffer+cursor, sizeof(buffer)-cursor);
     cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
     cursor += housesprinkler_program_status (buffer+cursor, sizeof(buffer)-cursor);
