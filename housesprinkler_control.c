@@ -82,6 +82,7 @@
 
 #include <echttp.h>
 #include <echttp_json.h>
+#include <echttp_libc.h>
 
 #include "houselog.h"
 #include "housediscover.h"
@@ -202,7 +203,8 @@ int housesprinkler_control_start (const char *name,
         if (!simulation) {
             static char url[550];
             static char cause[256];
-            int l = snprintf (cause, sizeof(cause), "%s", "SPRINKLER%20");
+            int l = strtcpy (cause, "SPRINKLER%20", sizeof(cause));
+            if (l < 0) l = 0; // Never happens (cause is large enough), but..
             echttp_escape (context, cause+l, sizeof(cause)-l);
             snprintf (url, sizeof(url),
                       "%s/set?point=%s&state=on&pulse=%d&cause=%s",

@@ -100,6 +100,7 @@
 #include <fcntl.h>
 
 #include <echttp_json.h>
+#include <echttp_libc.h>
 
 #include "houselog.h"
 #include "housedepositor.h"
@@ -236,7 +237,7 @@ static void housesprinkler_state_listener (const char *name, time_t timestamp,
         BackupOutBuffer = strdup (data);
         BackupOutBufferSize = length;
     } else {
-        snprintf (BackupOutBuffer, BackupOutBufferSize, "%s", data);
+        strtcpy (BackupOutBuffer, data, BackupOutBufferSize);
     }
     housesprinkler_state_save (length); // Best effort only, ignore errors.
 

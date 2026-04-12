@@ -83,6 +83,7 @@
 
 #include <echttp.h>
 #include <echttp_json.h>
+#include <echttp_libc.h>
 
 #include "houselog.h"
 #include "houseconfig.h"
@@ -216,8 +217,8 @@ void housesprinkler_zone_activate (const char *name,
             Queue[QueueNext].hydrate = Zones[zone].hydrate;
             Queue[QueueNext].runtime = pulse;
             if (context)
-                snprintf (Queue[QueueNext].context, sizeof(Queue[0].context),
-                          "%s", context);
+                strtcpy (Queue[QueueNext].context,
+                         context, sizeof(Queue[0].context));
             else
                 Queue[QueueNext].context[0] = 0;
             Queue[QueueNext].nexton = now;
