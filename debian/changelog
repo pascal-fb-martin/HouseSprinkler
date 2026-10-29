@@ -1,3 +1,17 @@
+housesprinkler (1.7) UNRELEASED; urgency=low
+
+   * Make the watering index priority configurable
+   * Purist use of semantic web: nav, main and article
+   * strtcpy() is safe, faster than snprintf()
+   * Slightly more info in events
+   * Fix time_t size and compiler warnings
+   * Cleanup obsolete files
+   * Merge with the houseconfig module from the houseportal library
+   * Fix the array size limit issue with echttp_json_enumerate()
+   * Make simulation mode much easier to use
+
+ -- Pascal Martin <pascal.fb.martin@gmail.com>  Thu, 29 Oct 2026 12:00:00 PDT
+
 housesprinkler (1.6) UNRELEASED; urgency=low
 
    * Initial implementation for variable schedule interval.
