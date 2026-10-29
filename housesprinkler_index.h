@@ -23,10 +23,11 @@
 
 void housesprinkler_index_refresh (void);
 
-const char *housesprinkler_index_origin (void);
-int    housesprinkler_index_priority (void);
-time_t housesprinkler_index_timestamp (void);
-int    housesprinkler_index_get (void);
+int housesprinkler_index_preferred (void);
+
+const char *housesprinkler_index_origin (int index);
+int    housesprinkler_index_priority (int index);
+int    housesprinkler_index_value (int index);
 
 void housesprinkler_index_periodic (time_t now);
 

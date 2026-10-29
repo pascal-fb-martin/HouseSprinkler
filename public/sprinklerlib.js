@@ -168,8 +168,11 @@ function sprinklerApplyUpdate (text) {
    SprinklerUseIndex = response.sprinkler.program.useindex;
 
    if (response.sprinkler.program.useindex) {
-      sprinklerSetContent ('adjustment',
-          ''+response.sprinkler.index.value+'%'+' FROM '+response.sprinkler.index.origin);
+      if (response.sprinkler.index.origin)
+          sprinklerSetContent ('adjustment',
+              ''+response.sprinkler.index.value+'%'+' FROM '+response.sprinkler.index.origin);
+      else
+          sprinklerSetContent ('adjustment', 'NOT AVAILABLE');
    } else {
       sprinklerSetContent ('adjustment','DISABLED');
    }
@@ -258,7 +261,7 @@ function sprinklerSaveConfig (config) {
    command.setRequestHeader('Content-Type', 'application/json');
    command.onreadystatechange = function () {
       if (command.readyState === 4) {
-          if (command.status === 200) {
+          if ((command.status >= 200) && (command.status < 300)) {
              window.alert ('Configuration Saved.');
           } else {
              window.alert ('Operation failed (error '+command.status+')!');

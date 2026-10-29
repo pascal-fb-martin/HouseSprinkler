@@ -13,6 +13,7 @@ var ShownProgramCount = 0;
 var ShownScheduleCount = 0;
 var ShownSeasonCount = 0;
 var ShownIntervalCount = 0;
+var ShownIndexCount = 0;
 
 var ScheduleDictionary = new Array();
 
@@ -246,6 +247,24 @@ function saveConfig () {
           }
           count += 1;
        }
+    }
+
+    if (editing.indexes) {
+       var temp = new Array();
+
+       var count = 0;
+       for (var i = 0; i < editing.indexes.length; i++) {
+          var prefix = 'indexes_'+i+'_';
+          if (!form.indexes[prefix+'user'].checked) continue;
+
+          temp[count] = new Object();
+          temp[count].name = editing.indexes[i].name;
+          temp[count].priority =
+              parseInt(form.indexes[prefix+'priority'].value);
+
+          count += 1;
+       }
+       if (count > 0) newconfig.indexes = temp;
     }
 
     // console.log ("config = "+JSON.stringify(newconfig));
@@ -568,6 +587,52 @@ function showOneInterval (intervals, i, elements, count) {
    }
 }
 
+function showOneIndex (indexes, i, elements, count) {
+   for (var k = 0; k < elements.length; k++) {
+      const prefix = 'indexes_'+count+'_';
+      var outer = document.createElement("tr");
+
+      var column = document.createElement("td");
+      column.innerHTML = indexes[i].name;
+      outer.appendChild(column);
+
+      var column = document.createElement("td");
+      var input = document.createElement("input");
+      input.type = 'checkbox';
+      input.name = prefix+'user';
+      input.checked = indexes[i].user;
+      column.appendChild(input);
+      outer.appendChild(column);
+
+      var column = document.createElement("td");
+      var input = document.createElement("input");
+      input.type = 'number';
+      input.name = prefix+'priority';
+      input.value = indexes[i].priority;
+      column.appendChild(input);
+      outer.appendChild(column);
+
+      var column = document.createElement("td");
+      var input = document.createElement("input");
+      input.type = 'checkbox';
+      input.checked = indexes[i].active;
+      input.disabled = true;
+      column.appendChild(input);
+      outer.appendChild(column);
+
+      var column = document.createElement("td");
+      column.innerHTML = indexes[i].origin;
+      outer.appendChild(column);
+
+      var column = document.createElement("td");
+      const when = new Date(indexes[i].timestamp * 1000);
+      column.innerHTML = when.toDateString();
+      outer.appendChild(column);
+
+      elements[k].appendChild(outer);
+   }
+}
+
 function addSeasonMonthly () {
 
    var name = 'Unnamed';
@@ -683,6 +748,8 @@ function sprinklerRefresh (config) {
     showExistingSeasons (config.seasons);
     showExistingIntervals (config.intervals);
     hideAll();
+
+    sprinklerGetIndexes();
 }
 
 function sprinklerRequestRefresh () {
@@ -692,6 +759,23 @@ function sprinklerRequestRefresh () {
     command.onreadystatechange = function () {
         if (command.readyState === 4 && command.status === 200) {
             sprinklerRefresh (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+function sprinklerIndexesReceived (response) {
+    editing.indexes = response.sprinkler.index.preferences;
+    showExistingIndexes (response.sprinkler.index.preferences);
+    hideAll();
+}
+
+function sprinklerGetIndexes () {
+    var command = new XMLHttpRequest();
+    command.open("GET", "/sprinkler/status/index");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            sprinklerIndexesReceived (JSON.parse(command.responseText));
         }
     }
     command.send(null);
@@ -873,6 +957,23 @@ function showExistingIntervals (intervals) {
    }
 }
 
+function showExistingIndexes (indexes) {
+
+   var elements = document.getElementsByName('indexestable');
+
+   resetSection (elements);
+   ShownIndexCount = 0;
+
+   showTitle (elements, ["NAME", "USER", "PRIORITY", "PREFERRED", "ORIGIN", "TIMESTAMP"]);
+   if (!indexes) return;
+   for (var i = 0; i < indexes.length; i++) {
+      if (indexes[i]) {
+         showOneIndex (indexes, i, elements, ShownIndexCount);
+         ShownIndexCount += 1;
+      }
+   }
+}
+
 window.onload = function() {
 
    sprinklerConfig (sprinklerRefresh);
@@ -957,6 +1058,15 @@ window.onload = function() {
    <form name="intervals">
    <div name="configintervals" class="hidable" display="none">
      <table name="intervalstable">
+     </table>
+   </div>
+   </form>
+   <table width="100%"><tr>
+   <td width="100%"><button class="configbuttonwithadd" onclick="visible('configindexes')">Indexes</button></td>
+   </tr></table>
+   <form name="indexes">
+   <div name="configindexes" class="hidable" display="none">
+     <table name="indexestable">
      </table>
    </div>
    </form>

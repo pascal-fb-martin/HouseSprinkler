@@ -63,6 +63,8 @@ static int SprinklerSimSpeed = 0;
 static int SprinklerSimDelta = 0;
 static time_t SprinklerSimStart = 0;
 
+static char ResponseBuffer[65537];
+
 time_t sprinkler_schedulingtime (time_t now) {
     if (!SprinklerSimStart) return now;
     now = SprinklerSimStart + SprinklerSimDelta +
@@ -116,26 +118,49 @@ static const char *sprinkler_config (const char *method, const char *uri,
 
 static const char *sprinkler_status (const char *method, const char *uri,
                                      const char *data, int length) {
-    static char buffer[65537];
-    int cursor;
+    char *buffer = ResponseBuffer;
+    int size = sizeof(ResponseBuffer);
 
-    cursor = snprintf (buffer, sizeof(buffer),
-                       "{\"host\":\"%s\",\"proxy\":\"%s\","
-                           "\"timestamp\":%lld,\"sprinkler\":{\"zone\":{",
-                       hostname, houseportal_server(),
-                           (long long)sprinkler_schedulingtime(time(0)));
-    cursor += housesprinkler_zone_status (buffer+cursor, sizeof(buffer)-cursor);
-    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"program\":{");
-    cursor += housesprinkler_program_status (buffer+cursor, sizeof(buffer)-cursor);
-    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"schedule\":{");
-    cursor += housesprinkler_schedule_status (buffer+cursor, sizeof(buffer)-cursor);
-    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"control\":{");
-    cursor += housesprinkler_control_status (buffer+cursor, sizeof(buffer)-cursor);
-    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "},\"index\":{");
-    cursor += housesprinkler_index_status (buffer+cursor, sizeof(buffer)-cursor);
-    cursor += snprintf (buffer+cursor,sizeof(buffer)-cursor, "}}}");
+    int cursor = snprintf (buffer, size,
+                           "{\"host\":\"%s\",\"proxy\":\"%s\","
+                               "\"timestamp\":%lld,\"sprinkler\":{\"zone\":{",
+                           hostname, houseportal_server(),
+                               (long long)sprinkler_schedulingtime(time(0)));
 
-    if (cursor > sizeof(buffer))
+    cursor += housesprinkler_zone_status (buffer+cursor, size-cursor);
+    cursor += snprintf (buffer+cursor,size-cursor, "},\"program\":{");
+    cursor += housesprinkler_program_status (buffer+cursor, size-cursor);
+    cursor += snprintf (buffer+cursor,size-cursor, "},\"schedule\":{");
+    cursor += housesprinkler_schedule_status (buffer+cursor, size-cursor);
+    cursor += snprintf (buffer+cursor,size-cursor, "},\"control\":{");
+    cursor += housesprinkler_control_status (buffer+cursor, size-cursor);
+    cursor += snprintf (buffer+cursor,size-cursor, "},\"index\":{");
+    cursor += housesprinkler_index_status (buffer+cursor, size-cursor);
+    cursor += snprintf (buffer+cursor,size-cursor, "}}}");
+
+    if (cursor > size)
+        houselog_trace (HOUSE_FAILURE, "STATUS",
+                        "BUFFER TOO SMALL (NEED %d bytes)", cursor);
+    echttp_content_type_json ();
+    return buffer;
+}
+
+static const char *sprinkler_status_index (const char *method, const char *uri,
+                                           const char *data, int length) {
+
+    char *buffer = ResponseBuffer;
+    int size = sizeof(ResponseBuffer);
+
+    int cursor = snprintf (buffer, size,
+                           "{\"host\":\"%s\",\"proxy\":\"%s\","
+                               "\"timestamp\":%lld,\"sprinkler\":{\"index\":{",
+                           hostname, houseportal_server(),
+                               (long long)sprinkler_schedulingtime(time(0)));
+
+    cursor += housesprinkler_index_status (buffer+cursor, size-cursor);
+    cursor += snprintf (buffer+cursor,size-cursor, "}}}");
+
+    if (cursor > size)
         houselog_trace (HOUSE_FAILURE, "STATUS",
                         "BUFFER TOO SMALL (NEED %d bytes)", cursor);
     echttp_content_type_json ();
@@ -383,6 +408,8 @@ int main (int argc, const char **argv) {
 
     echttp_route_uri ("/sprinkler/config", sprinkler_config);
     echttp_route_uri ("/sprinkler/status", sprinkler_status);
+    echttp_route_uri ("/sprinkler/status/index",  sprinkler_status_index);
+
     echttp_route_uri ("/sprinkler/raindelay", sprinkler_raindelay);
     echttp_route_uri ("/sprinkler/rain", sprinkler_rain);
     echttp_route_uri ("/sprinkler/index", sprinkler_index);

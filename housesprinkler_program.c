@@ -229,9 +229,11 @@ static int housesprinkler_program_currentindex (SprinklerProgram *program,
     }
 
     // Uses the external index only if valid and of a higher priority.
-    if (housesprinkler_index_priority () > priority) {
-        index = housesprinkler_index_get ();
-        *origin = housesprinkler_index_origin ();
+    int preferred = housesprinkler_index_preferred ();
+    if ((preferred >= 0) &&
+        (housesprinkler_index_priority (preferred) > priority)) {
+        index = housesprinkler_index_value (preferred);
+        *origin = housesprinkler_index_origin (preferred);
     }
     if ((index <= 0) && manual) {
         *origin = 0;

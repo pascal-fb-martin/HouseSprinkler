@@ -22,23 +22,48 @@
  *
  * SYNOPSYS:
  *
- * This module handles watering index from external sources.
+ * This module handles watering indexes from external sources. It accumulates
+ * indexes from all detected sources, ready for consideration.
+ *
+ * Which index will be considered depends on the priority of each source:
+ * the available source with the highest priority is selected.
+ *
+ * A default priority is provided by each source. The user can overwrite
+ * this default by assigning an explicit priority to each source (user
+ * preference). Note that the user may set a lower priority than the
+ * default (source downgrade)..
+ *
+ * Thus this module considers two conceptual lists: a list of user preferences,
+ * which might include sources that are not currently available, and a list of
+ * available sources, which might include sources that have no user preference.
+ *
+ * For practical reasons, the module combines these two lists into one, with
+ * a flag to distinguish if the priority is user defined or a default.
+ *
+ * If the configuration changes, the module maintains the live values for
+ * those entries that are currently in the user preferences (even if these
+ * were not in the user preferences before), and forget all other entries.
+ * The "other" entries will be detected again, eventually.
+ *
+ * The same index source might be reported by multiple servers: as long as
+ * the name of the source is the same, there will be a single entry here.
+ * The duplication is simply a way to add redundancy.
  *
  * void housesprinkler_index_refresh (void);
  *
  *    This function must be called each time the configuration changes.
  *
- * const char *housesprinkler_index_origin (void);
- * int         housesprinkler_index_priority (void);
- * time_t      housesprinkler_index_timestamp (void);
+ * int housesprinkler_index_preferred (void);
  *
- *    Return the origin, priority  or timestamp corresponding to the current
- *    index value. If no valid index is available (or the latest index has
- *    expired), return origin "default", priority and timestamp 0.
+ *    Return the index of the preferred index, or -1 if no index is valid.
  *
- * int housesprinkler_index_get (void);
+ * const char *housesprinkler_index_origin (int index);
+ * int         housesprinkler_index_priority (int index);
+ * int         housesprinkler_index_value (int index);
  *
- *    Get the current index value. Return 100 if no valid index is available.
+ *    Return the origin, priority or value of the specified index (typically
+ *    the index referenced by housesprinkler_index_preferred()). If no valid
+ *    index is available return origin "default", priority 0 and value 100.
  *
  * void housesprinkler_index_periodic (time_t now);
  *
@@ -67,9 +92,12 @@
 #include <stdlib.h>
 
 #include <echttp.h>
+#include <echttp_libc.h>
+#include <echttp_hash.h>
 #include <echttp_json.h>
 
 #include "houselog.h"
+#include "houseconfig.h"
 #include "housediscover.h"
 
 #include "housesprinkler.h"
@@ -77,50 +105,192 @@
 
 #define DEBUG if (sprinkler_isdebug()) printf
 
-#define ONEDAY       86400
+#define EXPIRATION   (3 * 86400)
 #define DEFAULTINDEX   100
 
-static int         SprinklerIndex = DEFAULTINDEX;
-static int         SprinklerIndexPriority = 0;
-static time_t      SprinklerIndexTimestamp = 0;
-static char       *SprinklerIndexOrigin = 0;
-static int         SprinklerIndexOriginSize = 0;
+struct IndexSelection {
+    char *name;
+    unsigned int signature; // Faster search.
+    int priority;
+    int user;     // 1 if set by the user, 0 if default.
 
-static int housesprinkler_index_isvalid (void) {
+    // The following items are not saved
+    char *origin;
+    int value;
+    time_t timestamp;
+};
 
-    if (SprinklerIndexTimestamp <= 0) return 0; // No index.
+static struct IndexSelection *IndexPreferences = 0;
+static int                    IndexPreferencesCount = 0;
+static int                    IndexPreferencesSize = 0;
 
-    // Ignore the index if more than 3 days old.
-    int isvalid = (SprinklerIndexTimestamp > (time(0) - (3 * 86400)));
-    if (!isvalid) SprinklerIndexTimestamp = 0; // Do no repeat the same test.
+static int IndexWasDiscovered = 0;
 
-    return isvalid;
+int housesprinkler_index_preferred (void) {
+
+    int preferred = -1; // No preferred source, yet.
+    time_t expiration = time(0) - EXPIRATION;
+
+    int i;
+    for (i = 0; i < IndexPreferencesCount; ++i) {
+        struct IndexSelection *preference = IndexPreferences + i;
+        if (preference->timestamp < expiration) {
+            preference->timestamp = 0; // Mark it as dead.
+            continue;
+        }
+
+        if ((preferred < 0) ||
+            (preference->priority > IndexPreferences[preferred].priority))
+             preferred = i;
+    }
+    return preferred;
+}
+
+static int housesprinkler_index_search (const char *name,
+                                        unsigned int signature) {
+
+    int i;
+    for (i = IndexPreferencesCount-1; i >= 0; --i) {
+        struct IndexSelection *preference = IndexPreferences + i;
+        if (preference->signature != signature) continue; // Faster
+        if (!strsame (preference->name, name)) continue; // Slower
+        return i;
+    }
+    return -1;
 }
 
 void housesprinkler_index_refresh (void) {
-    // No static configuration at this time: based on service discovery.
+
+    struct IndexSelection *old = IndexPreferences;
+    int oldcount = IndexPreferencesCount;
+    int i;
+
+    IndexPreferences = 0;
+    IndexPreferencesCount = 0;
+
+    int content = houseconfig_array (0, ".indexes");
+    if (content <= 0) {
+        // Compatibility with previous generation of HouseSprinkler configs.
+        DEBUG ("No index choices, using default priorities\n");
+    }
+
+    int count = (content > 0)?houseconfig_array_length (content):0;
+    if (count < 0) count = 0;
+    DEBUG ("Loading %d index preferences\n", count);
+
+    IndexPreferencesSize = count + 8; // More may be discovered later.
+    IndexPreferences = calloc (IndexPreferencesSize,
+                               sizeof(struct IndexSelection));
+
+    if (count > 0) {
+        int *list = calloc (count, sizeof(int));
+        houseconfig_enumerate (content, list, count);
+        for (i = 0; i < count; ++i) {
+            int item = houseconfig_object (list[i], 0);
+            if (item <= 0) continue;
+            struct IndexSelection *preference =
+                         IndexPreferences + IndexPreferencesCount;
+            const char *name = houseconfig_string (item, ".name");
+            if (!name) continue; // Invalid, skip.
+            preference->name = strdup(name);
+            preference->signature = echttp_hash_signature (preference->name);
+            preference->priority = houseconfig_positive (item, ".priority");
+            preference->user = 1;
+
+            preference->origin = 0;
+            preference->value = DEFAULTINDEX;
+            preference->timestamp = 0;
+
+            IndexPreferencesCount += 1;
+        }
+        free (list);
+    }
+    housesprinkler_index_periodic (0); // Force refresh
+    if (!old) return;
+
+    // Recover the live data from the old configuration, and then discard it.
+
+    for (i = 0; i < oldcount; ++i) {
+        int new = housesprinkler_index_search (old[i].name, old[i].signature);
+        if (new >= 0) {
+            struct IndexSelection *preference = IndexPreferences + new;
+            preference->origin = old[i].origin;
+            old[i].origin = 0; // Don't free it: it is being reused.
+            preference->value = old[i].value;
+            preference->timestamp = old[i].timestamp;
+        }
+
+        // Not needed anymore.
+        if (old[i].name) free (old[i].name);
+        if (old[i].origin) free (old[i].origin);
+    }
+    free (old);
 }
 
-const char *housesprinkler_index_origin (void) {
-    if (!housesprinkler_index_isvalid()) return "default";
-    if (! SprinklerIndexOrigin ||
-        SprinklerIndexTimestamp + ONEDAY < time(0)) return "default";
-    return SprinklerIndexOrigin;
+static int housesprinkler_index_set (const char *name,
+                                     const char *origin,
+                                     int priority,
+                                     int value, time_t timestamp) {
+
+    unsigned int signature = echttp_hash_signature (name);
+
+    int i = housesprinkler_index_search (name, signature);
+    if (i >= 0) {
+        struct IndexSelection *preference = IndexPreferences + i;
+        if (!preference->user) preference->priority = priority;
+
+        // Update the live portion.
+        if (!preference->origin) preference->origin = strdup (origin);
+        if (preference->timestamp < timestamp) {
+            preference->value = value;
+            preference->timestamp = timestamp;
+
+            return 1; // Found and updated.
+        }
+    } else {
+        // This is a new index
+        if (IndexPreferencesCount >= IndexPreferencesSize) {
+           IndexPreferencesSize += 8;
+           IndexPreferences =
+               realloc (IndexPreferences,
+                        IndexPreferencesSize * sizeof(struct IndexSelection));
+        }
+        struct IndexSelection *preference =
+                     IndexPreferences + IndexPreferencesCount++;
+        preference->name = strdup (name);
+        preference->signature = signature;
+        preference->priority = priority; // Use the default
+        preference->user = 0;
+
+        // Update the live portion.
+        preference->origin = strdup (origin);
+        preference->value = value;
+        preference->timestamp = timestamp;
+
+        return 1; // New.
+    }
+    return 0; // Not a worthy update.
 }
 
-int housesprinkler_index_priority (void) {
-    if (!housesprinkler_index_isvalid()) return 0;
-    return SprinklerIndexPriority;
+static struct IndexSelection *housesprinkler_index_access (int index) {
+    if ((index > 0) && (index < IndexPreferencesCount))
+        return IndexPreferences + index;
+    return 0;
 }
 
-time_t housesprinkler_index_timestamp (void) {
-    if (!housesprinkler_index_isvalid()) return 0;
-    return SprinklerIndexTimestamp;
+int housesprinkler_index_priority (int index) {
+    struct IndexSelection *preference = housesprinkler_index_access (index);
+    return preference?preference->priority:0;
 }
 
-int housesprinkler_index_get (void) {
-    if (!housesprinkler_index_isvalid()) return DEFAULTINDEX;
-    return SprinklerIndex;
+const char *housesprinkler_index_origin (int index) {
+    struct IndexSelection *preference = housesprinkler_index_access (index);
+    return preference?preference->origin:0;
+}
+
+int housesprinkler_index_value (int index) {
+    struct IndexSelection *preference = housesprinkler_index_access (index);
+    return preference?preference->value:DEFAULTINDEX;
 }
 
 static void housesprinkler_index_response
@@ -158,61 +328,33 @@ static void housesprinkler_index_response
        return;
    }
    int received = echttp_json_search (tokens, ".waterindex.status.received");
-   int priority = echttp_json_search (tokens, ".waterindex.status.priority");
-   if (received <= 0 || priority <= 0) {
+   int priorityref = echttp_json_search (tokens, ".waterindex.status.priority");
+   if (received <= 0 || priorityref <= 0) {
        houselog_trace (HOUSE_FAILURE, service, "No timestamp or priority");
        return;
    }
+   time_t timestamp = (time_t) tokens[received].value.integer;
+   int    priority = (int)(tokens[priorityref].value.integer);
 
-   int    index = echttp_json_search (tokens, ".waterindex.status.index");
-   int    name = echttp_json_search (tokens, ".waterindex.status.name");
-   int    source = echttp_json_search (tokens, ".waterindex.status.origin");
-   if (index <= 0 || name <= 0 || source <= 0) {
+   int    indexref = echttp_json_search (tokens, ".waterindex.status.index");
+   int    nameref = echttp_json_search (tokens, ".waterindex.status.name");
+   int    sourceref = echttp_json_search (tokens, ".waterindex.status.origin");
+   if (indexref <= 0 || nameref <= 0 || sourceref <= 0) {
        houselog_trace (HOUSE_FAILURE, service, "No index or origin");
        return;
    }
+   const char *name = tokens[nameref].value.string;
+   int value = (int)(tokens[indexref].value.integer);
+   char *url = tokens[sourceref].value.string;
 
-   time_t timestamp = (time_t) tokens[received].value.integer;
-   int    ipriority = (int)(tokens[priority].value.integer);
-   int    rawindex  = (int)(tokens[index].value.integer);
-   char  *urlsource = tokens[source].value.string;
+   DEBUG ("Received index %s = %d at priority %d from %s (service %s)\n",
+          name, value, priority, url, service);
 
-   DEBUG ("Received index %d at priority %d from %s (service %s)\n",
-          rawindex, ipriority, urlsource, service);
-
-   // Ignore any new index if it is of lower priority, or too old.
-   //
-   if (ipriority < SprinklerIndexPriority ||
-       timestamp < SprinklerIndexTimestamp - ONEDAY ) return;
-
-   // Ignore any new index of the same priority if it is older.
-   //
-   if (ipriority == SprinklerIndexPriority &&
-       timestamp <= SprinklerIndexTimestamp) return;
-
-   // This index seems to be a better one than we currently have:
-   // store the data.
-   //
-   SprinklerIndex = rawindex;
-   SprinklerIndexPriority = ipriority;
-   SprinklerIndexTimestamp = timestamp;
-
-   int size = strlen(tokens[name].value.string) +
-              strlen(tokens[server].value.string) + 2; // Size needed.
-   if (size > SprinklerIndexOriginSize) {
-       if (SprinklerIndexOrigin) free (SprinklerIndexOrigin);
-       size += 32; // Avoid repeating the free/malloc sequence too often.
-       SprinklerIndexOrigin = (char *) malloc (size);
-       SprinklerIndexOriginSize = size;
+   if (housesprinkler_index_set (name, url, priority, value, timestamp)) {
+       houselog_event ("INDEX", name, "APPLY",
+                       "%d%% FROM %s (PRIORITY %d)", value, url, priority);
+       IndexWasDiscovered = 1;
    }
-   snprintf (SprinklerIndexOrigin, SprinklerIndexOriginSize, "%s@%s",
-             tokens[name].value.string, tokens[server].value.string);
-
-   // Record this brand new index.
-   //
-   houselog_event ("INDEX", SprinklerIndexOrigin, "APPLY",
-                   "%d%% FROM %s (PRIORITY %d)",
-                   SprinklerIndex, urlsource, ipriority);
 }
 
 static void housesprinkler_index_query
@@ -234,39 +376,57 @@ static void housesprinkler_index_query
 
 void housesprinkler_index_periodic (time_t now) {
 
-    static time_t LastInquiry = 0;
+    static time_t LastDiscovery = 0;
 
     if (!now) { // This is a manual reset (force refresh request).
-        SprinklerIndexTimestamp = 0;
-        LastInquiry = 0;
+        LastDiscovery = 0;
+        IndexWasDiscovered = 0;
         return;
     }
-    if (!SprinklerIndexTimestamp) {
-        // We do not know any index yet: try to get an index fast.
-        if (now < LastInquiry + 60) return; // Limit to one attempt per minute.
-    } else {
+    if (IndexWasDiscovered) {
         // We just want an update: go slower.
-        if (now < LastInquiry + 3600) return;
+        if (now < LastDiscovery + 3600) return;
+    } else {
+        // We do not know any index yet: try to get an index fast.
+        if (now < LastDiscovery + 5) return;
     }
-    LastInquiry = now;
-
-    // Forget a stale index.
-    //
-    if (now > SprinklerIndexTimestamp + ONEDAY) {
-        SprinklerIndexTimestamp = 0;
-        snprintf (SprinklerIndexOrigin, SprinklerIndexOriginSize, "default");
-    }
+    LastDiscovery = now;
 
     housediscovered ("waterindex", 0, housesprinkler_index_query);
 }
 
 int housesprinkler_index_status (char *buffer, int size) {
 
-    if (!housesprinkler_index_isvalid()) {
-        return snprintf (buffer, size, "\"origin\":\"default\",\"value\":100");
+    int preferred = housesprinkler_index_preferred ();
+    int cursor = 0;
+    if (preferred >= 0) {
+        struct IndexSelection *preference = IndexPreferences + preferred;
+        cursor = snprintf (buffer, size, "\"origin\":\"%s\",\"value\":%d,",
+                           preference->origin, preference->value);
     }
-    return snprintf (buffer, size, "\"origin\":\"%s\",\"value\":%d",
-                     SprinklerIndexOrigin?SprinklerIndexOrigin:"default",
-                     SprinklerIndex);
+    cursor += snprintf (buffer+cursor, size-cursor, "\"preferences\":[");
+    int empty = cursor;
+
+    int i;
+    for (i = 0; i < IndexPreferencesCount; ++i) {
+        struct IndexSelection *preference = IndexPreferences + i;
+        cursor += snprintf (buffer+cursor, size-cursor,
+                            "{\"name\":\"%s\",\"origin\":\"%s\""
+                                ",\"user\":%s,\"priority\":%d,\"active\":%s"
+                                ",\"value\":%d,\"timestamp\":%lld}",
+                     preference->name,
+                     preference->origin?preference->origin:"",
+                     preference->user?"true":"false",
+                     preference->priority,
+                     (i == preferred)?"true":"false",
+                     preference->value,
+                     (long long)(preference->timestamp));
+        if (cursor >= size) return 0;
+    }
+    if (cursor <= empty) return 0;
+
+    cursor += snprintf (buffer+cursor, size-cursor, "]");
+    if (cursor >= size) return 0;
+    return cursor;
 }
 

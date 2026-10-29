@@ -171,7 +171,13 @@ This irrigation controller allows selecting either mode on a per schedule basis:
 - If the schedule references an interval table, the schedule's interval will be estimated based on the current watering index for the launched program and that named interval table. The watering durations are not adjusted in this case.
 - Otherwise the program will uses its current watering index to adjust the watering durations.
 
-Note that which watering index is used for each program is the highest priority index among the online indexes available and the static seasonal index referenced by the program.
+This program supports interacting with multiple watering index services simultaneously. Which watering index is used by a program is the highest priority index among the online indexes available and the static seasonal index referenced by the program. Running multiple watering index services provides redundancy:
+
+- The same watering index service may run on multiple computers. If one computer fails, the service remains available. Such duplicated services still provide the same index: HouseSprinkler simply uses the most recently calculated value for a given index.
+
+- Index services may provide different indexes, each with a distinct priority. If one Internet source become unavailable, HouseSprinkler will automatically fallback to the next _best_ index.
+
+Each watering index service publish its index with a default (fixed) priority, but the user may change the priority used for each type of index in the HouseSPrinkler's configuration. This makes it easy to switch between watering indexes.
 
 ## Watering Program Execution
 
