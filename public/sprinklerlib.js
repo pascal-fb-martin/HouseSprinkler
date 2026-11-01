@@ -168,9 +168,9 @@ function sprinklerApplyUpdate (text) {
    SprinklerUseIndex = response.sprinkler.program.useindex;
 
    if (response.sprinkler.program.useindex) {
-      if (response.sprinkler.index.origin)
+      if (response.sprinkler.index.name)
           sprinklerSetContent ('adjustment',
-              ''+response.sprinkler.index.value+'%'+' FROM '+response.sprinkler.index.origin);
+              ''+response.sprinkler.index.value+'%'+' FROM '+response.sprinkler.index.name);
       else
           sprinklerSetContent ('adjustment', 'NOT AVAILABLE');
    } else {

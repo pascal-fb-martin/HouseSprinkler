@@ -406,8 +406,8 @@ int housesprinkler_index_status (char *buffer, int size) {
     int cursor = 0;
     if (preferred >= 0) {
         struct IndexSelection *preference = IndexPreferences + preferred;
-        cursor = snprintf (buffer, size, "\"origin\":\"%s\",\"value\":%d,",
-                           preference->origin, preference->value);
+        cursor = snprintf (buffer, size, "\"name\":\"%s\",\"value\":%d,",
+                           preference->name, preference->value);
     }
     cursor += snprintf (buffer+cursor, size-cursor, "\"preferences\":[");
     int empty = cursor;
