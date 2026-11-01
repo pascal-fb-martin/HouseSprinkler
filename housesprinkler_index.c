@@ -327,6 +327,11 @@ static void housesprinkler_index_response
        houselog_trace (HOUSE_FAILURE, service, "No host name");
        return;
    }
+   int stateref = echttp_json_search (tokens, ".waterindex.status.state");
+   if (stateref < 0) return; // No hope.
+   const char *state = tokens[stateref].value.string;
+   if (!state || (state[0] != 'a')) return; // This index service is not ready.
+
    int received = echttp_json_search (tokens, ".waterindex.status.received");
    int priorityref = echttp_json_search (tokens, ".waterindex.status.priority");
    if (received <= 0 || priorityref <= 0) {
@@ -407,13 +412,15 @@ int housesprinkler_index_status (char *buffer, int size) {
     cursor += snprintf (buffer+cursor, size-cursor, "\"preferences\":[");
     int empty = cursor;
 
+    const char *separator = "";
     int i;
     for (i = 0; i < IndexPreferencesCount; ++i) {
         struct IndexSelection *preference = IndexPreferences + i;
         cursor += snprintf (buffer+cursor, size-cursor,
-                            "{\"name\":\"%s\",\"origin\":\"%s\""
+                            "%s{\"name\":\"%s\",\"origin\":\"%s\""
                                 ",\"user\":%s,\"priority\":%d,\"active\":%s"
                                 ",\"value\":%d,\"timestamp\":%lld}",
+                     separator,
                      preference->name,
                      preference->origin?preference->origin:"",
                      preference->user?"true":"false",
@@ -422,6 +429,7 @@ int housesprinkler_index_status (char *buffer, int size) {
                      preference->value,
                      (long long)(preference->timestamp));
         if (cursor >= size) return 0;
+        separator = ",";
     }
     if (cursor <= empty) return 0;
 
