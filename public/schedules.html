@@ -27,6 +27,17 @@ function scheduleAgain () {
     command.send(null);
 }
 
+function schedulePretend () {
+    var command = new XMLHttpRequest();
+    command.open("GET", '/sprinkler/pretend?id='+this.scheduleId);
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            scheduleShow (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
 function scheduleCancel () {
     var command = new XMLHttpRequest();
     command.open("DELETE", '/sprinkler/cancel?id='+this.scheduleId);
@@ -55,13 +66,17 @@ function scheduleShow (status) {
       inner = document.createElement("td");
       if (schedule.launched) {
          var latest = new Date(schedule.launched * 1000);
-         inner.innerHTML = latest.toDateString();
+         if (schedule.pretend)
+             inner.innerHTML = '<em>'+latest.toDateString()+'</em>';
+         else
+             inner.innerHTML = latest.toDateString();
       } else {
          inner.innerHTML = '';
       }
       outer.appendChild(inner);
       inner = document.createElement("td");
       inner.appendChild (newScheduleAction ("Again", scheduleAgain, schedule.id));
+      inner.appendChild (newScheduleAction ("Pretend", schedulePretend, schedule.id));
       outer.appendChild(inner);
       tabular.appendChild(outer);
    }

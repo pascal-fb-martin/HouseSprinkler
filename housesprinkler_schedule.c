@@ -62,6 +62,16 @@
  *    day specified for the normal schedule entry, either this same day
  *    or the next day if this is too late.
  *
+ * void housesprinkler_schedule_pretend (const char *uid);
+ *
+ *    Mark the specified schedule as having been started, but do not start
+ *    it. The reason why is to delay the next time a day-interval schedule
+ *    is activated, for example when a rain delay has been activated.
+ *
+ *    FIXME: that feature should probably be automatic whenever a rain delay
+ *    has been set for a significant time. (Not when setting up a rain delay
+ *    and then cancelling it a few minutes later..)
+ *
  * void housesprinkler_schedule_cancel (const char *program);
  *
  *    Cancel the one-time schedule for the specified program.
@@ -81,6 +91,7 @@
 #include <uuid/uuid.h>
 
 #include <echttp.h>
+#include <echttp_hash.h>
 #include <echttp_json.h>
 
 #include "houselog.h"
@@ -99,6 +110,7 @@ static int SprinklerOn = 1;
 
 typedef struct {
     uuid_t id;
+    unsigned int signature; // Signature of the UUID ASCII representation
     const char *program;
     char disabled;
     time_t begin;
@@ -113,6 +125,7 @@ typedef struct {
        int days;
     } interval;
     time_t lastlaunch;
+    int pretend;   // 1 if the lastlaunch was just a pretend, 0 otherwise
 } SprinklerSchedule;
 
 static SprinklerSchedule *Schedules = 0;
@@ -129,6 +142,24 @@ static int OneTimeSchedulesCount = 0;
 static int    RainDelayEnabled = 1;
 static time_t RainDelay = 0;
 
+
+static SprinklerSchedule *housesprinkler_schedule_find (const char *id) {
+
+    if (!id) return 0;
+
+    uuid_t uuid;
+    uuid_parse (id, uuid);
+    unsigned int signature = echttp_hash_signature (id);
+
+    int i;
+    for (i = 0; i < SchedulesCount; ++i) {
+        SprinklerSchedule *schedule = Schedules + i;
+        if (signature != schedule->signature) continue; // Faster
+        if (!uuid_compare (uuid, schedule->id)) return schedule;
+    }
+    DEBUG ("Non-existent schedule %s\n", id);
+    return 0;
+}
 
 static time_t housesprinkler_schedule_time (int index, const char *path) {
 
@@ -234,29 +265,29 @@ static void housesprinkler_schedule_restore (void) {
     DEBUG ("Restore schedules live info from state backup\n");
     i = 0;
     for (;;) {
-        uuid_t uuid;
         char path[128];
         snprintf (path, sizeof(path), ".schedule[%d].id", i);
         const char *id = housesprinkler_state_get_string (path);
-        if (!id) break;
-        uuid_parse (id, uuid);
-        int j;
-        for (j = 0; j < SchedulesCount; ++j) {
-            if (uuid_compare (uuid, Schedules[j].id)) continue;
-            snprintf (path, sizeof(path), ".schedule[%d].launched", i);
-            Schedules[j].lastlaunch = housesprinkler_state_get (path);
-            DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from backup: lastlaunch = %ld\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, (long)(Schedules[j].lastlaunch));
-            housesprinkler_program_scheduled (Schedules[j].program,
-                                              Schedules[j].lastlaunch);
-            // If the name of the program launched has changed, also update
-            // the program that was used at the time of the launch.
-            snprintf (path, sizeof(path), ".schedule[%d].program", i);
-            const char *pgrm = housesprinkler_state_get_string (path);
-            if (pgrm && strcmp(pgrm, Schedules[j].program)) {
-                housesprinkler_program_scheduled (pgrm,
-                                                  Schedules[j].lastlaunch);
-            }
-            break;
+        if (!id) break; // End of array
+
+        SprinklerSchedule *schedule = housesprinkler_schedule_find (id);
+        if (!schedule) continue; // No longer present.
+
+        snprintf (path, sizeof(path), ".schedule[%d].launched", i);
+        schedule->lastlaunch = housesprinkler_state_get (path);
+        DEBUG ("Schedule %s at %02d:%02d recovers data from backup: lastlaunch = %lld\n", schedule->program, schedule->start.hour, schedule->start.minute, (long long)(schedule->lastlaunch));
+        housesprinkler_program_scheduled (schedule->program,
+                                          schedule->lastlaunch);
+
+        snprintf (path, sizeof(path), ".schedule[%d].pretend", i);
+        schedule->pretend = housesprinkler_state_get (path);
+
+        // If the name of the program launched has changed, also update
+        // the program that was used at the time of the launch.
+        snprintf (path, sizeof(path), ".schedule[%d].program", i);
+        const char *pgrm = housesprinkler_state_get_string (path);
+        if (pgrm && strcmp(pgrm, schedule->program)) {
+            housesprinkler_program_scheduled (pgrm, schedule->lastlaunch);
         }
         i += 1;
     }
@@ -311,14 +342,20 @@ void housesprinkler_schedule_refresh (void) {
         // Retrieve the schedule's ID. If none can be recovered, just
         // generate a new ID so that there is always one.
         //
+        char uuidascii[40];
         const char *id = houseconfig_string (schedule, ".id");
         if (id) {
             if (uuid_parse (id, Schedules[i].id)) {
                 uuid_generate_random (Schedules[i].id);
+                uuid_unparse (Schedules[i].id, uuidascii);
+                id = uuidascii;
             }
         } else {
             uuid_generate_random (Schedules[i].id);
+            uuid_unparse (Schedules[i].id, uuidascii);
+            id = uuidascii;
         }
+        Schedules[i].signature = echttp_hash_signature (id);
 
         int days = houseconfig_array (schedule, ".days");
         j = 0;
@@ -358,8 +395,8 @@ void housesprinkler_schedule_refresh (void) {
             Schedules[i].start.hour = -1; // Will never start, basically.
         }
         Schedules[i].lastlaunch = 0;
-        Schedules[i].disabled =
-            houseconfig_boolean (schedule, ".disabled");
+        Schedules[i].pretend = 0;
+        Schedules[i].disabled = houseconfig_boolean (schedule, ".disabled");
         DEBUG ("\tSchedule program %s at %02d:%02d\n",
                Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute);
     }
@@ -373,9 +410,13 @@ void housesprinkler_schedule_refresh (void) {
         for (i = 0; i < oldschedulescount; ++i) {
             if (oldschedules[i].disabled) continue; // Nothing to recover.
             for (j = 0; j < SchedulesCount; ++j) {
-                if (uuid_compare (oldschedules[i].id, Schedules[j].id)) continue;
+                if (oldschedules[i].signature != Schedules[j].signature)
+                    continue; // Faster than uuid_compare()
+                if (uuid_compare (oldschedules[i].id, Schedules[j].id))
+                    continue; // Slower but exact.
 
                 Schedules[j].lastlaunch = oldschedules[i].lastlaunch;
+                Schedules[j].pretend = oldschedules[i].pretend;
 
                 DEBUG ("Schedule %d (%s at %02d:%02d) recovers data from %d (%s at %02d:%02d)\n", j, Schedules[j].program, Schedules[j].start.hour, Schedules[j].start.minute, i, oldschedules[i].program, oldschedules[i].start.hour, oldschedules[i].start.minute);
                 break;
@@ -456,32 +497,43 @@ void housesprinkler_schedule_once (const char *program, time_t start) {
     housesprinkler_state_changed();
 }
 
-void housesprinkler_schedule_again (const char *id) {
+void housesprinkler_schedule_again (const char *uid) {
 
     if (!SprinklerOn) return;
 
-    uuid_t uuid;
-    uuid_parse (id, uuid);
-    int j;
-    for (j = 0; j < SchedulesCount; ++j) {
-        if (!uuid_compare (uuid, Schedules[j].id)) break;
-    }
-    if (j >= SchedulesCount) {
-        DEBUG ("Cannot run again non-existent schedule %s\n", id);
-        return; // This schedule does not exist.
-    }
+    SprinklerSchedule *schedule = housesprinkler_schedule_find (uid);
+    if (!schedule) return;
 
     int i = housesprinkler_schedule_new_onetime ();
-    OneTimeSchedules[i].program = strdup (Schedules[j].program);
+    OneTimeSchedules[i].program = strdup (schedule->program);
 
     time_t now = time(0);
     struct tm local = *localtime (&now);
     local.tm_sec = 0;
-    local.tm_min = Schedules[j].start.minute;
-    local.tm_hour = Schedules[j].start.hour;
+    local.tm_min = schedule->start.minute;
+    local.tm_hour = schedule->start.hour;
     time_t start = mktime (&local);
     if (start < now - 70) start += (24 * 60 * 60); // Past or close: next day.
     OneTimeSchedules[i].start = start;
+    housesprinkler_state_changed();
+}
+
+void housesprinkler_schedule_pretend (const char *uid) {
+
+    if (!SprinklerOn) return;
+
+    SprinklerSchedule *schedule = housesprinkler_schedule_find (uid);
+    if (!schedule) return;
+
+    time_t now = time(0);
+    struct tm local = *localtime(&now);
+
+    local.tm_hour = schedule->start.hour;
+    local.tm_min  = schedule->start.minute;
+    local.tm_sec  = 0;
+
+    schedule->lastlaunch = mktime (&local);
+    schedule->pretend = 1;
     housesprinkler_state_changed();
 }
 
@@ -607,6 +659,7 @@ void housesprinkler_schedule_periodic (time_t now) {
         if (started) {
             DEBUG ("== Program %s activated at %ld\n", schedule->program, (long)started);
             schedule->lastlaunch = started;
+            schedule->pretend = 0;
             housesprinkler_state_changed();
         }
     }
@@ -645,8 +698,8 @@ int housesprinkler_schedule_status (char *buffer, int size) {
     for (i = 0; i < SchedulesCount; ++i) {
         uuid_unparse (Schedules[i].id, ascii);
         cursor += snprintf (buffer+cursor, size-cursor,
-                            "%s{\"id\":\"%s\",\"program\":\"%s\",\"start\":\"%02d:%02d\",\"launched\":%ld}",
-                            sep, ascii, Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute, (long)(Schedules[i].lastlaunch));
+                            "%s{\"id\":\"%s\",\"program\":\"%s\",\"start\":\"%02d:%02d\",\"launched\":%lld%s}",
+                            sep, ascii, Schedules[i].program, Schedules[i].start.hour, Schedules[i].start.minute, (long long)(Schedules[i].lastlaunch), Schedules[i].pretend?",\"pretend\":true":"");
         if (cursor >= size) goto overflow;
         sep = ",";
     }
