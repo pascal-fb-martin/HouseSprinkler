@@ -319,7 +319,6 @@ static void housesprinkler_control_discovered
 
    int n = tokens[controls].length;
    if (n <= 0) {
-       houselog_trace (HOUSE_FAILURE, provider, "empty control data");
        return;
    }
 
