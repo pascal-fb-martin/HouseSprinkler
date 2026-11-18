@@ -170,7 +170,8 @@ static void housesprinkler_control_result
 
    if (status != 200) {
        if (control->status != 'e')
-           houselog_trace (HOUSE_FAILURE, control->name, "HTTP code %d", status);
+           houselog_trace (HOUSE_FAILURE, control->name,
+                           "HTTP %d %s", status, echttp_reason());
        control->status  = 'e';
        control->deadline  = 0;
    }
@@ -211,7 +212,7 @@ int housesprinkler_control_start (const char *name,
                       control->url, name, pulse, cause);
             const char *error = echttp_client ("GET", url);
             if (error) {
-                houselog_trace (HOUSE_FAILURE, name, "cannot create socket for %s, %s", url, error);
+                houselog_trace (HOUSE_FAILURE, name, "%s: %s", url, error);
                 return 0;
             }
             DEBUG ("GET %s\n", url);
@@ -236,7 +237,7 @@ static void housesprinkler_control_stop (SprinklerControl *control) {
                   "%s/set?point=%s&state=off", control->url, control->name);
         const char *error = echttp_client ("GET", url);
         if (error) {
-            houselog_trace (HOUSE_FAILURE, control->name, "cannot create socket for %s, %s", url, error);
+            houselog_trace (HOUSE_FAILURE, control->name, "%s: %s", url, error);
             return;
         }
         DEBUG ("GET %s\n", url);
@@ -285,8 +286,6 @@ static void housesprinkler_control_discovered
    ParserToken tokens[TOKENS_LIMIT];
    int  innerlist[TOKENS_LIMIT];
    int  count = TOKENS_LIMIT;
-   char path[256];
-   int  i;
 
    status = echttp_redirected("GET");
    if (!status) {
@@ -295,7 +294,8 @@ static void housesprinkler_control_discovered
    }
 
    if (status != 200) {
-       houselog_trace (HOUSE_FAILURE, provider, "HTTP error %d", status);
+       houselog_trace (HOUSE_FAILURE, provider,
+                       "HTTP %d %s", status, echttp_reason());
        return;
    }
 
@@ -324,10 +324,11 @@ static void housesprinkler_control_discovered
 
    error = echttp_json_enumerate (tokens+controls, innerlist, TOKENS_LIMIT);
    if (error) {
-       houselog_trace (HOUSE_FAILURE, path, "%s", error);
+       houselog_trace (HOUSE_FAILURE, ".control.status", "%s", error);
        return;
    }
 
+   int  i;
    for (i = 0; i < n; ++i) {
        ParserToken *inner = tokens + controls + innerlist[i];
        SprinklerControl *control = housesprinkler_control_search (inner->key);
@@ -357,7 +358,7 @@ static void housesprinkler_control_scan_server
     DEBUG ("Attempting discovery at %s\n", url);
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, provider, "%s", error);
+        houselog_trace (HOUSE_FAILURE, provider, "%s: %s", url, error);
         return;
     }
     echttp_submit (0, 0, housesprinkler_control_discovered, (void *)provider);
@@ -461,7 +462,7 @@ int housesprinkler_control_status (char *buffer, int size) {
 
 overflow:
     houselog_trace (HOUSE_FAILURE, "STATUS",
-                    "BUFFER TOO SMALL (NEED %d bytes)", cursor);
+                    "Buffer too small (need %d bytes)", cursor);
     buffer[0] = 0;
     return 0;
 }
