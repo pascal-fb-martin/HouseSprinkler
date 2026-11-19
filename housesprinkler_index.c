@@ -306,13 +306,13 @@ static void housesprinkler_index_response
        return;
    }
 
-   if (status != 200) {
+   if (!ECHTTP_SUCCESS(status)) {
        houselog_trace (HOUSE_FAILURE, service, "HTTP code %d", status);
        return;
    }
+   if (!data | !length) return; // No data to parse
 
-   const char *error;
-   error = echttp_json_parse (data, tokens, &count);
+   const char *error = echttp_json_parse (data, tokens, &count);
    if (error) {
        houselog_trace (HOUSE_FAILURE, service, "syntax error, %s", error);
        return;

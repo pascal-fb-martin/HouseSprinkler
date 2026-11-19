@@ -105,6 +105,7 @@ typedef struct {
     char once;
     time_t deadline;
     char url[256];
+    char context[256];
 } SprinklerControl;
 
 static SprinklerControl *Controls = 0;
@@ -168,13 +169,41 @@ static void housesprinkler_control_result
        return;
    }
 
-   if (status != 200) {
-       if (control->status != 'e')
+   char newstatus = ECHTTP_SUCCESS(status) ? 'a' : 'e';
+   if (control->status != newstatus) {
+       if (newstatus == 'e') {
            houselog_trace (HOUSE_FAILURE, control->name,
                            "HTTP %d %s", status, echttp_reason());
-       control->status  = 'e';
-       control->deadline  = 0;
+       } else {
+           houselog_trace (HOUSE_INFO, control->name,
+                           "HTTP %d %s", status, echttp_reason());
+       }
+       control->status  = newstatus;
    }
+}
+
+static int housesprinkler_control_send (SprinklerControl *control, int pulse) {
+
+    static char url[550];
+    static char cause[256];
+
+    int l = strtcpy (cause, "SPRINKLER%20", sizeof(cause));
+    if (l < 0) l = 0; // Never happens (cause is large enough), but..
+
+    echttp_escape (control->context, cause+l, sizeof(cause)-l);
+
+    snprintf (url, sizeof(url),
+              "%s/set?point=%s&state=on&pulse=%d&cause=%s",
+              control->url, control->name, pulse, cause);
+    const char *error = echttp_client ("GET", url);
+    if (error) {
+        houselog_trace (HOUSE_FAILURE, control->name, "%s: %s", url, error);
+        control->status  = 'e';
+        return 0;
+    }
+    DEBUG ("GET %s\n", url);
+    echttp_submit (0, 0, housesprinkler_control_result, (void *)control);
+    return 1;
 }
 
 int housesprinkler_control_start (const char *name,
@@ -202,21 +231,9 @@ int housesprinkler_control_start (const char *name,
             }
         }
         if (!simulation) {
-            static char url[550];
-            static char cause[256];
-            int l = strtcpy (cause, "SPRINKLER%20", sizeof(cause));
-            if (l < 0) l = 0; // Never happens (cause is large enough), but..
-            echttp_escape (context, cause+l, sizeof(cause)-l);
-            snprintf (url, sizeof(url),
-                      "%s/set?point=%s&state=on&pulse=%d&cause=%s",
-                      control->url, name, pulse, cause);
-            const char *error = echttp_client ("GET", url);
-            if (error) {
-                houselog_trace (HOUSE_FAILURE, name, "%s: %s", url, error);
+            strtcpy (control->context, context, sizeof(control->context));
+            if (!housesprinkler_control_send (control, pulse))
                 return 0;
-            }
-            DEBUG ("GET %s\n", url);
-            echttp_submit (0, 0, housesprinkler_control_result, (void *)control);
         }
         control->deadline = now + pulse;
         control->status = 'a';
@@ -224,6 +241,17 @@ int housesprinkler_control_start (const char *name,
         return 1;
     }
     return 0;
+}
+
+void housesprinkler_control_retry (SprinklerControl *control) {
+
+    if (control->url[0]) {
+        time_t now = time(0);
+        if (now > control->deadline) return;
+
+        int pulse = (int)(control->deadline - now);
+        housesprinkler_control_send (control, pulse);
+    }
 }
 
 static void housesprinkler_control_stop (SprinklerControl *control) {
@@ -293,11 +321,12 @@ static void housesprinkler_control_discovered
        return;
    }
 
-   if (status != 200) {
-       houselog_trace (HOUSE_FAILURE, provider,
-                       "HTTP %d %s", status, echttp_reason());
+   if (!ECHTTP_SUCCESS(status)) {
+       houselog_trace (HOUSE_FAILURE, "scan",
+                       "%s: HTTP %d %s", provider, status, echttp_reason());
        return;
    }
+   if (!data | !length) return; // No data to parse
 
    // Analyze the answer and retrieve the control points matching ours.
    const char *error = echttp_json_parse (data, tokens, &count);
@@ -335,7 +364,7 @@ static void housesprinkler_control_discovered
        if (!control) continue;
        if (strcmp (control->url, provider)) {
            snprintf (control->url, sizeof(control->url), provider);
-           control->status = 'i';
+           if (control->status == 'u') control->status = 'i';
            houselog_event_local
                (control->type, control->name, "ROUTE", "TO %s", control->url);
        }
@@ -408,13 +437,16 @@ void housesprinkler_control_periodic (time_t now) {
     if (ControlsActive) {
         ControlsActive = 0;
         for (i = 0; i < ControlsCount; ++i) {
-            if (Controls[i].deadline) {
-                if (Controls[i].deadline < now) {
+            SprinklerControl *control = Controls + i;
+            if (control->deadline) {
+                if (control->deadline < now) {
                     // No request: it automatically stops on end of pulse.
-                    Controls[i].deadline = 0;
-                    Controls[i].status  = 'i';
+                    control->deadline = 0;
+                    control->status  = 'i';
                 } else {
                     ControlsActive = 1;
+                    if (control->status == 'e')
+                        housesprinkler_control_retry (control);
                 }
             }
         }
