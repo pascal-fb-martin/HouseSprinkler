@@ -24,8 +24,6 @@ The following dependencies are optional, but highly recommended:
 
 - [housecimis](https://github.com/pascal-fb-martin/housecimis) (A water index service using data from the state of California CIMIS web site.),
 
-- [waterwise](https://github.com/pascal-fb-martin/waterwise) (A water index service using the bewaterwise.com service of the Metropolitan Water District of Southern California.)
-
 (If housedepot was not installed, you must add the --use-local-storage command line option when launching HouseSprinkler.)
 
 The primary intent of this project is to create a sprinkler controller that:
@@ -48,7 +46,7 @@ Instead of installing drivers for different types of relay/triac interfaces, the
 
 The House family of projects provides other implementations of the control web API, typically intended for other types of devices, like TP-Link Kasa or Philips Wiz. These interfaces can be used to control feeds. For example a Kasa plug can be used to control the solenoid's 24 vold power supply, or to turn on and off a water pump.
 
-Instead of implementing multiple weather and watering index interfaces, this project relies on a generic waterindex web API, and the specific weather/index interfaces themselves are implemented as web services. The [waterwise](https://github.com/pascal-fb-martin/waterwise) web service is a minimal implementation that relies on the bewaterwise.com web site maintained by the Metropolitan Water District of Southern California (and is therefore of interest only for those living in the Los Angeles and San Diego areas).
+Instead of implementing multiple weather and watering index interfaces, this project relies on a generic waterindex web API, and the specific weather/index interfaces themselves are implemented as web services. The [housecimis](https://github.com/pascal-fb-martin/housecimis) web service is a minimal implementation that relies on the cimis.com web site maintained by the California Department of Water and Power (and is therefore of interest only for those living in the state of California..).
 
 ## Installation
 
@@ -64,7 +62,7 @@ The simplest case is that the sprinkler valves are all controlled from one singl
 
 - Install [housedepot](https://github.com/pascal-fb-martin/housedepot)
 
-- Install [waterwise](https://github.com/pascal-fb-martin/waterwise)
+- Install [housecimis](https://github.com/pascal-fb-martin/housecimis)
 
 - Install [houserelays](https://github.com/pascal-fb-martin/houserelays)
 
@@ -88,7 +86,7 @@ Sprinkler control computer:
 
 - Install [housedepot](https://github.com/pascal-fb-martin/housedepot)
 
-- Install [waterwise](https://github.com/pascal-fb-martin/waterwise) when in the Los Angeles area.
+- Install [housecimis](https://github.com/pascal-fb-martin/housecimis) if you live in California.
 
 - Install [HouseCIMIS](https://github.com/pascal-fb-martin/housecimis) when located almost anywhere in California.
 
