@@ -327,14 +327,12 @@ static void housesprinkler_index_response
        houselog_trace (HOUSE_FAILURE, service, "No host name");
        return;
    }
-   int stateref = echttp_json_search (tokens, ".waterindex.status.state");
-   if (stateref < 0) return; // No hope.
-   const char *state = tokens[stateref].value.string;
-   if (!state || (state[0] != 'a')) return; // This index service is not ready.
 
    int received = echttp_json_search (tokens, ".waterindex.status.received");
+   if (received <= 0) return; // This index service is not ready.
+
    int priorityref = echttp_json_search (tokens, ".waterindex.status.priority");
-   if (received <= 0 || priorityref <= 0) {
+   if (priorityref <= 0) {
        houselog_trace (HOUSE_FAILURE, service, "No timestamp or priority");
        return;
    }
