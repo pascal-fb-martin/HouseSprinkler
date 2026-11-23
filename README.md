@@ -14,7 +14,7 @@ This project is one piece of a complete system that also includes the following:
 
 - [houseportal](https://github.com/pascal-fb-martin/houseportal) and
 
-- [houserelays](https://github.com/pascal-fb-martin/houserelays).
+- [houserelays](https://github.com/pascal-fb-martin/houserelays) or [housepicod](https://github.com/pascal-fb-martin/housepicod). The former is for a relay board directly connected to the local GPIO while the later is for a relay board connected to the GPIO pins of a Raspberry Pi Pico attached to the local computer and running [picod](https://github.com/joan2937/picod). These services may run on separate computers.
 
 The following dependencies are optional, but highly recommended:
 
@@ -42,7 +42,7 @@ The primary intent of this project is to create a sprinkler controller that:
 
 - Can be integrated as part of a suite of applications managed from a central point.
 
-Instead of installing drivers for different types of relay/triac interfaces, the design relies on a generic control web API, and the specific interfaces themselves are implemented as web services. The [houserelays](https://github.com/pascal-fb-martin/houserelays) web service is the first implementation that follows this new design. A benefit is that a new interface can be developped, maintained and deployed independently of the HouseSprinkler code base, which is the essence of the microservice philosophy. This also makes it possible to support multiple interfaces simultaneously, both geographically distributed and possibly using different hardware interfaces.
+Instead of installing drivers for different types of relay/triac interfaces, the design relies on a generic control web API, and the specific interfaces themselves are implemented as web services. The [houserelays](https://github.com/pascal-fb-martin/houserelays) web service is the first implementation that follows this new design. A benefit is that a new interface can be developped, maintained and deployed independently of the HouseSprinkler code base, which is the essence of the microservice philosophy. This also makes it possible to support multiple interfaces simultaneously, both geographically distributed and possibly using different hardware interfaces. See [housepicod](https://github.com/pascal-fb-martin/housepicod) and [housekasa](https://github.com/pascal-fb-martin/housekasa) for alternate implementations of that web API.
 
 The House family of projects provides other implementations of the control web API, typically intended for other types of devices, like TP-Link Kasa or Philips Wiz. These interfaces can be used to control feeds. For example a Kasa plug can be used to control the solenoid's 24 vold power supply, or to turn on and off a water pump.
 
