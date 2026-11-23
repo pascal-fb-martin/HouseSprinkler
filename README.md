@@ -18,11 +18,11 @@ This project is one piece of a complete system that also includes the following:
 
 The following dependencies are optional, but highly recommended:
 
-- [housedepot](https://github.com/pascal-fb-martin/housedepot) (A centralized configuration management service.)
+- [housedepot](https://github.com/pascal-fb-martin/housedepot) (A centralized configuration management service),
 
-- [housesaga](https://github.com/pascal-fb-martin/housesaga) (A log consolidation and archival service.)
+- [housesaga](https://github.com/pascal-fb-martin/housesaga) (A log consolidation and archival service),
 
-- [housecimis](https://github.com/pascal-fb-martin/housecimis) (A water index service using data from the state of California CIMIS web site.),
+- [housecimis](https://github.com/pascal-fb-martin/housecimis) (A water index service using data from the state of California CIMIS web site).
 
 (If housedepot was not installed, you must add the --use-local-storage command line option when launching HouseSprinkler.)
 
@@ -32,7 +32,7 @@ The primary intent of this project is to create a sprinkler controller that:
 
 - Controls the sprinkler valves through the network, to offer access to a distributed network of control computers. Valve can be controlled from multiple points on the network: the valve wiring does not have to be all run to a single point.
 
-- Adjusts watering automatically, based on an online index (Southern California for now) or on a season-based index table (monthly or weekly).
+- Adjusts watering automatically, based on an online index (California for now) or on a season-based index table (monthly or weekly).
 
 - Splits the watering periods into short pulse separated by pauses, to avoid water poodles and run-off, facilitating water absorbtion.
 
